@@ -1,0 +1,65 @@
+{
+  "skill_name": "harness-dev",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "할 일 관리 앱 만들어줘 — 카테고리별 분류, 우선순위, 마감일 알림, 통계 대시보드 포함. HTML/CSS/JS 단일 파일로.",
+      "expected_output": "docs/harness/{slug}/feature_list.json에 5개 이상의 기능이 분해되고, 스프린트별 구현 후 Evaluator가 각 스프린트를 5기준 7점 기준으로 평가. 최종 산출물은 동작하는 HTML 앱.",
+      "files": [],
+      "expectations": [
+        "docs/harness/ 하위에 slug 디렉토리가 존재하며 그 안에 feature_list.json이 유효한 JSON으로 존재한다",
+        "feature_list.json에 project_slug 필드가 존재하며 kebab-case 형식이다",
+        "feature_list.json에 5개 이상의 기능이 포함되어 있다",
+        "feature_list.json의 모든 기능의 초기 status가 'fail'이다 ('pending'이 아님)",
+        "docs/harness/{slug}/project_spec.md 파일이 존재한다",
+        "docs/harness/{slug}/progress.md에 2개 이상의 스프린트 기록이 있다",
+        "docs/harness/{slug}/sprint_reports/에 1개 이상의 평가 보고서가 존재한다",
+        "평가 보고서에 5가지 기준(기능성/완성도/코드품질/디자인/독창성) 점수가 포함되어 있다",
+        "평가 보고서에 PreCompletion Checklist 섹션이 있다",
+        "feature_list.json의 모든 기능에 status가 pass 또는 fail로 업데이트되었다",
+        "최종 HTML 파일이 존재하며 10KB 이상이다",
+        "HTML 파일에 TODO, placeholder, stub 문자열이 없다"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Create a 2D retro game maker with a level editor, sprite editor, entity behaviors, and playable test mode. Use HTML5 Canvas.",
+      "expected_output": "10+ features decomposed into sprints with dependency ordering under docs/harness/{slug}/. Each sprint evaluated independently with 5-criteria scoring and PreCompletion Checklist. Final output is a working game editor.",
+      "files": [],
+      "expectations": [
+        "docs/harness/ 하위에 slug 디렉토리가 존재하며 그 안에 feature_list.json이 유효한 JSON으로 존재한다",
+        "feature_list.json에 project_slug 필드가 존재하며 kebab-case 형식이다",
+        "feature_list.json에 10개 이상의 기능이 포함되어 있다",
+        "feature_list.json의 모든 기능의 초기 status가 'fail'이다 ('pending'이 아님)",
+        "기능들이 논리적 의존성 순서로 스프린트에 배분되어 있다",
+        "docs/harness/{slug}/progress.md에 Generator 기록과 Evaluator 결과가 모두 있다",
+        "평가 보고서에 5가지 기준(기능성/완성도/코드품질/디자인/독창성) 점수가 포함되어 있다",
+        "평가 보고서에 실패 시 위치/원인/수정방향이 포함되어 있다",
+        "최종 HTML 파일에 Canvas 기반 sprite editor가 구현되어 있다",
+        "feature_list.json의 acceptance_criteria가 원본에서 변경되지 않았다",
+        "HTML 파일에 TODO, placeholder, stub 문자열이 없다",
+        "최종 HTML 파일이 20KB 이상이다"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "실시간 채팅 웹앱 만들어줘 — 채팅방, 유저 프로필, 이모지 반응, 파일 공유 기능. Python Flask + HTML 프론트엔드로.",
+      "expected_output": "기능이 docs/harness/{slug}/ 아래 스프린트로 분해되고, Flask 백엔드 + HTML 프론트엔드가 구현된 후 각 스프린트마다 5기준 독립 평가 수행.",
+      "files": [],
+      "expectations": [
+        "docs/harness/ 하위에 slug 디렉토리가 존재하며 그 안에 feature_list.json이 유효한 JSON으로 존재한다",
+        "feature_list.json에 project_slug 필드가 존재하며 kebab-case 형식이다",
+        "feature_list.json에 채팅방/프로필/이모지/파일공유 기능이 포함된다",
+        "feature_list.json의 모든 기능의 초기 status가 'fail'이다 ('pending'이 아님)",
+        "Generator가 의존성 순서를 준수한다",
+        "docs/harness/{slug}/progress.md에 스프린트별 기록이 순차적으로 작성되어 있다",
+        "7점 미만 항목이 있을 때 스프린트가 FAIL로 판정되었다",
+        "평가 보고서에 5가지 기준(기능성/완성도/코드품질/디자인/독창성) 점수가 포함되어 있다",
+        "Flask 서버 파일이 존재하며 라우트가 정의되어 있다",
+        "HTML 프론트엔드에 채팅 UI가 구현되어 있다",
+        "코드에 TODO, placeholder, stub 문자열이 없다",
+        "feature_list.json의 acceptance_criteria가 수정/삭제되지 않았다"
+      ]
+    }
+  ]
+}

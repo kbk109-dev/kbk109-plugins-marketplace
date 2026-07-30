@@ -1,0 +1,19 @@
+{
+  "name": "harness-devkit",
+  "version": "1.0.0",
+  "description": "Harness Engineering 원칙으로 스킬을 설계·집필하는 도구와 dev 서버 로그 감시·오류 분석 모니터",
+  "author": {
+    "name": "kbk109",
+    "url": "https://github.com/kbk109-dev"
+  },
+  "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/harness-devkit",
+  "repository": "https://github.com/kbk109-dev/kbk109-plugins-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "skill-development",
+    "harness-engineering",
+    "dev-server",
+    "log-monitoring",
+    "evals"
+  ]
+}

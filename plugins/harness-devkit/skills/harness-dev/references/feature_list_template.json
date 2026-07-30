@@ -1,0 +1,18 @@
+{
+  "project_name": "",
+  "project_slug": "",
+  "total_features": 0,
+  "sprints": 0,
+  "features": [
+    {
+      "id": "F001",
+      "name": "",
+      "description": "",
+      "acceptance_criteria": [],
+      "priority": "high",
+      "sprint": 1,
+      "status": "fail",
+      "dependencies": []
+    }
+  ]
+}

@@ -1,0 +1,130 @@
+{
+  "skill_name": "dev-monitor",
+  "evals": [
+    {
+      "id": "eval-001",
+      "prompt": "/harness-devkit:dev-monitor",
+      "acceptance_criteria": [
+        "Phase 0: 포트 인자가 비어 있음을 감지하고 즉시 중단한다",
+        "출력에 '포트번호는 필수 입력입니다' 문구가 포함된다",
+        "사용법 블록(/harness-devkit:dev-monitor <port> [log-path]) 전체가 출력된다",
+        "Bash 도구를 통한 lsof/kill/nohup 호출이 0회이다",
+        "Grep/Glob을 통한 CLAUDE.md 탐색이 수행되지 않는다",
+        "응답 상단에 '[YYYY-MM-DD HH:MM]' 형식의 KST 24시간제 헤더가 있다",
+        "안내 메시지가 한국어로 작성된다"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-002",
+      "prompt": "/harness-devkit:dev-monitor 443",
+      "acceptance_criteria": [
+        "Phase 0: well-known reserved port(443, HTTPS)를 감지한다",
+        "경고 메시지를 출력하고 사용자의 명시적 확인 응답을 기다린다",
+        "확인 응답 없이 Phase 1(CLAUDE.md 탐색)으로 진행하지 않는다",
+        "확인 응답 없이 `lsof -ti :443` 또는 `kill`이 실행되지 않는다",
+        "응답 상단에 '[YYYY-MM-DD HH:MM]' 헤더가 있다",
+        "경고가 한국어로 작성되고 '예약 포트' 또는 '루트 권한' 맥락을 포함한다"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-003",
+      "prompt": "CLAUDE.md가 ./, ./.claude/, ./docs/, ~/.claude/ 어느 경로에도 존재하지 않는 임시 디렉토리에서 /harness-devkit:dev-monitor 3000 을 실행한다.",
+      "acceptance_criteria": [
+        "Phase 1-1의 4개 경로(./CLAUDE.md, ./.claude/CLAUDE.md, ./docs/CLAUDE.md, ~/.claude/CLAUDE.md)를 순차 탐색한 증거가 있다",
+        "CLAUDE.md 전무 확인 후 즉시 중단한다 (Phase 2 진입 없음)",
+        "Phase 1-5 가이드 스니펫(## Dev Server 섹션 + ```bash 예시 + `- dev server:` 키-값 예시)을 출력한다",
+        "'추가 후 /harness-devkit:dev-monitor <port> 를 다시 실행해 주세요' 안내를 포함한다",
+        "`lsof -ti :3000` 호출이 0회이다",
+        "`nohup`/`kill` 호출이 0회이다",
+        "응답 상단에 '[YYYY-MM-DD HH:MM]' 헤더가 있다"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-004",
+      "prompt": "CLAUDE.md에 '## Dev Server' 섹션(```bash\\nuv run uvicorn api.main:app --reload --port 8000\\n```)과 '## Getting Started' 섹션(```bash\\npnpm dev\\n```)이 둘 다 있을 때 /harness-devkit:dev-monitor 3000 을 실행한다.",
+      "acceptance_criteria": [
+        "Phase 1-2 전략 A/C 스캔 결과 서버 실행 후보를 2개 이상 감지한다",
+        "후보 목록을 '[1]', '[2]' 형식으로 번호 매겨 출력한다",
+        "각 후보의 출처 섹션명(예: '## Dev Server 섹션', '## Getting Started 섹션')을 표시한다",
+        "사용자 선택을 대기하며 '중단' 선택지를 명시적으로 제공한다",
+        "사용자 응답 전 서버 기동(`nohup`)을 실행하지 않는다",
+        "사용자 응답 전 임의로 '가장 그럴듯한' 후보를 자동 선택하지 않는다",
+        "응답 상단에 '[YYYY-MM-DD HH:MM]' 헤더가 있다"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-005",
+      "prompt": "CLAUDE.md의 '## Dev Server' 섹션에 'uv run uvicorn api.main:app --reload --port 8000' 명령이 있을 때 /harness-devkit:dev-monitor 3000 을 실행한다.",
+      "acceptance_criteria": [
+        "추출된 명령에서 포트 플래그(--port 8000)를 파싱하고 인자 포트(3000)와 불일치를 감지한다",
+        "3지선다(A/B/C)를 제시한다: A=CLAUDE.md 명령의 --port를 3000으로 치환, B=입력 포트를 8000으로 변경, C=중단",
+        "각 선택지의 결과를 한국어로 설명한다",
+        "선택지 C(중단)가 명시적으로 포함되어 탈출구가 보장된다",
+        "사용자 선택 전 `lsof`/`kill`/`nohup`을 실행하지 않는다",
+        "응답 상단에 '[YYYY-MM-DD HH:MM]' 헤더가 있다"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-006",
+      "prompt": "서버가 정상 기동된 상태에서 /tmp/fake_dev_3000.log에 '[error] proxy_pool_exhausted: no healthy upstream available' 라인이 추가되었다. Monitor 루프가 이 라인을 감지했다고 가정하고 분석 보고를 생성한다.",
+      "acceptance_criteria": [
+        "응답 상단 헤더가 정규식 '^\\[\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}\\]'에 일치한다 (KST 24시간제)",
+        "심각도 이모지 🔴/🟠/🟡 중 하나가 포함된다 ([error] + proxy_pool_exhausted 이므로 🟠 권장)",
+        "원본 로그 라인 '[error] proxy_pool_exhausted: no healthy upstream available'이 코드블록으로 인용된다",
+        "'원인' 섹션(근본 원인 해설)과 '해결 방향' 표(우선순위 | 조치 | 효과)가 포함된다",
+        "현재 영향 범위와 자동 복구 가능 여부를 명시한다",
+        "기술적 단정(예: upstream 헬스체크 동작, 프록시 풀 동작 원리) 전에 context7:resolve-library-id 또는 context7:query-docs 호출 증거가 있다",
+        "전체 응답이 한국어로 작성된다 (기술 용어/식별자는 허용)",
+        "로그에 없는 이벤트를 추가로 생성하지 않는다 (hallucination 방지)"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-007",
+      "prompt": "이전 세션에서 /harness-devkit:dev-monitor 8000 을 이미 실행하여 ~/.claude/dev-monitor/port-8000.state.json 파일이 존재하고, 그 안의 server_pid·monitor_pid 모두 `ps -p`로 생존이 확인되는 상태에서 /loop 가 /harness-devkit:dev-monitor 8000 을 재호출한다. (TaskList는 새 세션이므로 비어 있음)",
+      "acceptance_criteria": [
+        "Phase 0.5에서 상태 파일 ~/.claude/dev-monitor/port-8000.state.json 을 읽는 증거가 있다",
+        "server_pid와 monitor_pid의 생존을 `ps -p` 혹은 동등한 방법으로 확인한다",
+        "기존 세션 재연결 메시지('기존 Monitor 재연결' 또는 동등한 한국어 표현)를 출력한다",
+        "Phase 1의 CLAUDE.md 재탐색을 수행하지 않는다 (중복 탐색 금지)",
+        "Phase 2의 `lsof -ti :8000` 이후 `kill` 호출이 0회이다 (생존 서버 재기동 금지)",
+        "Phase 4의 `nohup` 서버 기동 명령이 실행되지 않는다",
+        "Phase 5의 새 Monitor `tail -f` 루프가 등록되지 않는다",
+        "상태 파일이 덮어써지거나 재생성되지 않는다 (last_heartbeat_at 갱신은 허용)",
+        "TaskList가 비어 있다는 이유만으로 '새 Monitor를 만들어야 한다'고 판단하지 않는다",
+        "응답 상단에 '[YYYY-MM-DD HH:MM]' 헤더가 있다"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-008",
+      "prompt": "~/.claude/dev-monitor/ 디렉토리에 port-8000.state.json과 port-3000.state.json 두 파일이 존재하고, 각각의 server_pid·monitor_pid가 모두 생존 중인 상태에서 사용자가 /harness-devkit:dev-monitor stop 을 입력한다.",
+      "acceptance_criteria": [
+        "Phase 0-0 특수 하위 명령 선분기에서 'stop'을 감지하여 Phase 8로 직행한다",
+        "Phase 1(CLAUDE.md 탐색)을 수행하지 않는다",
+        "~/.claude/dev-monitor/port-*.state.json 파일 2개를 모두 순회한다",
+        "각 상태 파일의 monitor_pid를 먼저 종료(SIGTERM → 2초 대기 → SIGKILL)한다",
+        "각 상태 파일의 server_pid를 다음으로 종료(SIGTERM → 3초 대기 → SIGKILL)한다",
+        "상태 파일에 기록된 PID만 kill하고, 외부 프로세스(Chrome 등)는 건드리지 않는다",
+        "종료 후 port-8000.state.json, port-3000.state.json 을 삭제한다",
+        "종료 리포트 표(포트 | Server PID | Monitor PID | 결과)를 출력한다",
+        "응답 상단에 '[YYYY-MM-DD HH:MM, /harness-devkit:dev-monitor stop 실행]' 헤더가 있다",
+        "정리 결과가 한국어로 요약된다"
+      ],
+      "status": "fail",
+      "files": []
+    }
+  ]
+}
