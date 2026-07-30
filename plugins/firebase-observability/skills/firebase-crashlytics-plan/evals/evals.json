@@ -1,0 +1,23 @@
+{
+  "skill_name": "firebase-crashlytics-plan",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Firebase Crashlytics 어디에 넣을지 계획 세워줘. Error Boundary 배치부터 recordError 삽입 위치까지 전부.",
+      "expected_output": "docs/plan/CRASHLYTICS_PLAN.md 최초 생성 — 4명 에이전트 리포트 + 프로젝트 구조 분석 + Error Boundary 배치 테이블 + recordError 삽입 테이블 + custom key/breadcrumb 테이블 + 모니터링 체계",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "CRASHLYTICS_PLAN.md에 결제 화면 Error Boundary 추가하고, API 인터셉터에 non-fatal 리포팅도 추가해줘.",
+      "expected_output": "기존 CRASHLYTICS_PLAN.md 읽기 → 해당 섹션만 증분 업데이트 → Last Updated 갱신 → Changelog에 변경사항 기록",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "이 앱에 크래시 리포팅을 어떻게 설정하면 좋을지 전략 좀 세워줘. crash-free rate 목표도 잡고, non-fatal 에러 분류 체계도 만들어줘.",
+      "expected_output": "Reliability Engineer 주도의 모니터링 전략 + Crashlytics Strategist의 에러 분류 체계 + Privacy 검수 포함 + CRASHLYTICS_PLAN.md 생성",
+      "files": []
+    }
+  ]
+}

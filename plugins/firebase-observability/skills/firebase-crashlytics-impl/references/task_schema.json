@@ -1,0 +1,213 @@
+{
+  "$schema": "CRASHLYTICS_FEATURES.json schema",
+  "description": "Task State Machine for Firebase Crashlytics implementation. Sprint-based structure with dependency tracking and Context7 API references.",
+  "example": {
+    "project": "firebase-crashlytics-impl",
+    "plan_source": "docs/plan/CRASHLYTICS_PLAN.md",
+    "harness_dir": "docs/harness/firebase/crashlytics/",
+    "plan_last_updated": "2026-04-04",
+    "context7_checked": true,
+    "reference_files": ["src/services/AdService.ts", "src/stores/gameStore.ts"],
+    "sprints": [
+      {
+        "id": "sprint-1",
+        "title": "패키지 설치 + SDK 초기화 + 유틸리티 셋업",
+        "tasks": [
+          {
+            "id": "crash-001",
+            "title": "Crashlytics 패키지 설치 및 Expo 설정",
+            "category": "package-install",
+            "target_file": "package.json",
+            "action": "modify",
+            "status": "fail",
+            "acceptance_criteria": [
+              "package.json에 @react-native-firebase/app 의존성이 존재한다",
+              "package.json에 @react-native-firebase/crashlytics 의존성이 존재한다",
+              "app.config.js plugins에 @react-native-firebase/app이 등록되어 있다",
+              "app.config.js plugins에 @react-native-firebase/crashlytics가 등록되어 있다",
+              "googleServicesFile 경로가 android/ios 섹션에 설정되어 있다"
+            ],
+            "context7_apis": [],
+            "plan_reference": "CRASHLYTICS_PLAN.md > 패키지/설정 섹션",
+            "depends_on": [],
+            "evaluator_feedback": null,
+            "retry_count": 0
+          },
+          {
+            "id": "crash-002",
+            "title": "Crashlytics 유틸리티 모듈 생성",
+            "category": "setup",
+            "target_file": "src/utils/crashlytics.ts",
+            "action": "create",
+            "status": "fail",
+            "acceptance_criteria": [
+              "src/utils/crashlytics.ts 파일이 존재한다",
+              "initCrashlytics, reportError, logBreadcrumb, setUserContext, clearUserContext 함수가 export된다",
+              "@react-native-firebase/crashlytics import가 정확하다 (default import)",
+              "TypeScript 타입 정의가 포함된다 (에러 도메인, 심각도 레벨)",
+              "__DEV__ 분기로 개발 모드 처리가 포함된다 (SDK 호출을 건너뛰지 않음)",
+              "Context7 최신 API 시그니처와 일치한다"
+            ],
+            "context7_apis": [
+              "crashlytics().recordError",
+              "crashlytics().log",
+              "crashlytics().setAttribute",
+              "crashlytics().setUserId"
+            ],
+            "plan_reference": "CRASHLYTICS_PLAN.md > 유틸리티 모듈 섹션",
+            "depends_on": ["crash-001"],
+            "evaluator_feedback": null,
+            "retry_count": 0
+          },
+          {
+            "id": "crash-003",
+            "title": "에러 도메인 상수 및 타입 정의",
+            "category": "setup",
+            "target_file": "src/constants/crashlyticsKeys.ts",
+            "action": "create",
+            "status": "fail",
+            "acceptance_criteria": [
+              "src/constants/crashlyticsKeys.ts 파일이 존재한다",
+              "에러 도메인 상수가 정의되어 있다 (PLAN에 명시된 도메인)",
+              "심각도 레벨 enum/union이 정의되어 있다",
+              "커스텀 속성 키가 타입 안전하게 정의되어 있다",
+              "하드코딩된 문자열 키가 없다"
+            ],
+            "context7_apis": [],
+            "plan_reference": "CRASHLYTICS_PLAN.md > 에러 분류/속성 섹션",
+            "depends_on": [],
+            "evaluator_feedback": null,
+            "retry_count": 0
+          }
+        ]
+      },
+      {
+        "id": "sprint-2",
+        "title": "글로벌 에러 핸들링 + Error Boundary",
+        "tasks": [
+          {
+            "id": "crash-004",
+            "title": "글로벌 JS 에러 핸들러 설정",
+            "category": "global-error-handling",
+            "target_file": "src/utils/errorHandler.ts",
+            "action": "create",
+            "status": "fail",
+            "acceptance_criteria": [
+              "src/utils/errorHandler.ts 파일이 존재한다",
+              "ErrorUtils.setGlobalHandler가 호출된다",
+              "기존 핸들러가 있으면 체이닝되어 기존 동작이 보존된다",
+              "recordError() 호출 시 에러 객체와 커스텀 속성이 전달된다",
+              "미처리 Promise rejection 캡처가 포함된다",
+              "개발 모드에서는 console.error도 함께 호출된다",
+              "import 문에 타입 에러가 없다"
+            ],
+            "context7_apis": ["crashlytics().recordError", "crashlytics().log"],
+            "plan_reference": "CRASHLYTICS_PLAN.md > 글로벌 에러 핸들링 섹션",
+            "depends_on": ["crash-002", "crash-003"],
+            "evaluator_feedback": null,
+            "retry_count": 0
+          },
+          {
+            "id": "crash-005",
+            "title": "Error Boundary 컴포넌트 생성",
+            "category": "error-boundary",
+            "target_file": "src/components/CrashBoundary.tsx",
+            "action": "create",
+            "status": "fail",
+            "acceptance_criteria": [
+              "src/components/CrashBoundary.tsx 파일이 존재한다",
+              "React Class Component로 구현되어 있다 (componentDidCatch 사용)",
+              "getDerivedStateFromError가 구현되어 있다",
+              "componentDidCatch에서 crashlytics().recordError()를 호출한다",
+              "componentDidCatch에서 crashlytics().log()로 컴포넌트 스택을 기록한다",
+              "폴백 UI에 재시도 버튼이 포함되어 있다",
+              "name prop을 받아 error_boundary_name 커스텀 속성으로 전달한다",
+              "TypeScript Props/State interface가 정의되어 있다"
+            ],
+            "context7_apis": [
+              "crashlytics().recordError",
+              "crashlytics().log",
+              "crashlytics().setAttribute"
+            ],
+            "plan_reference": "CRASHLYTICS_PLAN.md > Error Boundary 섹션",
+            "depends_on": ["crash-002"],
+            "evaluator_feedback": null,
+            "retry_count": 0
+          },
+          {
+            "id": "crash-006",
+            "title": "SDK 초기화 및 Error Boundary 배치",
+            "category": "sdk-init",
+            "target_file": "app/_layout.tsx",
+            "action": "modify",
+            "status": "fail",
+            "acceptance_criteria": [
+              "app/_layout.tsx에 initCrashlytics() 초기화 코드가 삽입된다",
+              "setupGlobalErrorHandler() 호출이 포함된다",
+              "CrashBoundary가 루트 레벨에 배치된다",
+              "기존 _layout.tsx 코드와 충돌하지 않는다",
+              "기존 hooks (fonts, splash screen) 뒤에 배치된다"
+            ],
+            "context7_apis": ["crashlytics().setCrashlyticsCollectionEnabled"],
+            "plan_reference": "CRASHLYTICS_PLAN.md > 초기화/배치 섹션",
+            "depends_on": ["crash-004", "crash-005"],
+            "evaluator_feedback": null,
+            "retry_count": 0
+          }
+        ]
+      },
+      {
+        "id": "sprint-3",
+        "title": "recordError 삽입 + 커스텀 로그",
+        "tasks": []
+      },
+      {
+        "id": "sprint-4",
+        "title": "커스텀 속성 + 사용자 식별",
+        "tasks": []
+      },
+      {
+        "id": "sprint-5",
+        "title": "동의 관리 + 네이티브 빌드 설정",
+        "tasks": []
+      }
+    ],
+    "summary": {
+      "total_tasks": 6,
+      "passed": 0,
+      "failed": 6,
+      "blocked": 0
+    }
+  },
+  "field_definitions": {
+    "project": "Project identifier",
+    "plan_source": "Path to the planning document",
+    "harness_dir": "Path to the harness output directory",
+    "plan_last_updated": "Date when CRASHLYTICS_PLAN.md was last updated. Used for session continuity and change detection.",
+    "context7_checked": "Whether Context7 was consulted during Planner phase",
+    "reference_files": "List of existing project files that Generator should reference for style/patterns. Planner selects only good-pattern files to prevent bad-pattern replication.",
+    "sprints": "Array of sprint objects grouping related tasks",
+    "sprints[].id": "Sprint identifier (sprint-N)",
+    "sprints[].title": "Sprint description",
+    "sprints[].tasks": "Array of task objects within this sprint",
+    "tasks[].id": "Unique task identifier. Format: crash-NNN",
+    "tasks[].title": "Short descriptive title",
+    "tasks[].category": "Task category: package-install, setup, sdk-init, global-error-handling, error-boundary, record-error, breadcrumb, custom-attributes, user-identification, non-fatal-errors, native-crash-config, consent-management, debug-config",
+    "tasks[].target_file": "Primary file this task creates or modifies",
+    "tasks[].action": "create (new file) or modify (existing file)",
+    "tasks[].status": "One of: fail (not yet passed), pass (verified by Evaluator), blocked (failed after max retries), existing (already implemented)",
+    "tasks[].acceptance_criteria": "Array of strings. Each criterion must be programmatically verifiable by checking file contents, grep results, or command output.",
+    "tasks[].context7_apis": "Array of API method names to verify via Context7 MCP",
+    "tasks[].plan_reference": "Which section of CRASHLYTICS_PLAN.md this task implements",
+    "tasks[].depends_on": "Array of task IDs that must be 'pass' before this task can start",
+    "tasks[].evaluator_feedback": "String or null. Evaluator writes specific, actionable feedback here on failure",
+    "tasks[].retry_count": "Integer. Incremented each time Generator-Evaluator loop repeats. Max 3 before blocked."
+  },
+  "status_transitions": {
+    "fail -> pass": "Only when Evaluator verifies ALL acceptance_criteria",
+    "fail -> blocked": "After Generator-Evaluator loop repeats 3 times and still fails",
+    "fail -> existing": "When Planner detects the task is already implemented in the codebase",
+    "pass -> fail": "Never. Once passed, a task stays passed.",
+    "blocked -> fail": "User intervention can unblock and reset to fail for retry"
+  }
+}

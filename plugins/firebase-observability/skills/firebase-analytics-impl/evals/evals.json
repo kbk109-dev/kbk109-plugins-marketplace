@@ -1,0 +1,23 @@
+{
+  "skill_name": "firebase-analytics-impl",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "GA_PLAN.md 기반으로 Firebase Analytics 전체 구현해줘. Harness로 스프린트별 Generator-Evaluator 루프 실행해서 진행해줘.",
+      "expected_output": "Phase 1: Planner가 GA_PLAN.md 파싱 → docs/harness/firebase/analytics/ga-feature-list.json 생성 (모든 status=fail) + ga-progress.txt 초기화. Phase 2: 스프린트별 task 루프 (한 번에 하나씩 구현 → Evaluator 독립 검증 → pass/fail). Phase 3: GA_IMPL_REPORT.md 생성. Context7으로 최신 API 검증.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "analytics 구현 이어서 해줘. 지난번에 Sprint 1까지 끝났어.",
+      "expected_output": "이어하기 모드: docs/harness/firebase/analytics/ga-feature-list.json + ga-progress.txt 읽기 → Planner 재실행 안 함 → Sprint 2의 fail 태스크부터 Generator-Evaluator 루프 재개. Context7 재조회로 최신성 확보.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "스크린 트래킹 코드만 추가해줘. GA_PLAN에 있는 화면 매핑 테이블 보고 구현해줘.",
+      "expected_output": "Planner: 스크린 트래킹 관련 task만 ga-feature-list.json에 생성. Generator: screenTracker.ts + useScreenTracking.ts 생성, app/_layout.tsx 수정. Evaluator: acceptance_criteria 기반 독립 검증 (매핑 테이블 완전성, import 정확성, 중복 발화 방지). 모든 task pass 후 GA_IMPL_REPORT.md 생성.",
+      "files": []
+    }
+  ]
+}

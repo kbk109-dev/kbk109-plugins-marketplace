@@ -1,0 +1,134 @@
+{
+  "$schema": "ga-feature-list.json schema",
+  "description": "Task State Machine for Firebase Analytics implementation. Sprint-based structure with dependency tracking and Context7 API references.",
+  "example": {
+    "project": "firebase-analytics-impl",
+    "plan_source": "docs/plan/GA_PLAN.md",
+    "harness_dir": "docs/harness/firebase/analytics/",
+    "plan_last_updated": "2026-04-04",
+    "context7_checked": true,
+    "reference_files": ["src/services/AdService.ts", "src/stores/gameStore.ts"],
+    "sprints": [
+      {
+        "id": "sprint-1",
+        "title": "SDK 초기화 및 유틸리티 셋업",
+        "tasks": [
+          {
+            "id": "ga-001",
+            "title": "Analytics 유틸리티 파일 생성",
+            "category": "setup",
+            "target_file": "src/utils/analytics.ts",
+            "action": "create",
+            "status": "fail",
+            "acceptance_criteria": [
+              "src/utils/analytics.ts 파일이 존재한다",
+              "logEvent, logScreenView, setUserProperty 래퍼 함수가 export된다",
+              "@react-native-firebase/analytics import가 정확하다",
+              "TypeScript 타입 정의가 포함된다",
+              "Context7 최신 API 시그니처와 일치한다"
+            ],
+            "context7_apis": [
+              "analytics().logEvent",
+              "analytics().logScreenView"
+            ],
+            "plan_reference": "GA_PLAN.md > Section 2",
+            "depends_on": [],
+            "evaluator_feedback": null,
+            "retry_count": 0
+          },
+          {
+            "id": "ga-002",
+            "title": "SDK 초기화 코드 삽입",
+            "category": "setup",
+            "target_file": "app/_layout.tsx",
+            "action": "modify",
+            "status": "fail",
+            "acceptance_criteria": [
+              "app/_layout.tsx에 Firebase Analytics 초기화 코드가 삽입된다",
+              "setAnalyticsCollectionEnabled 동의 기반 활성화 로직이 포함된다",
+              "__DEV__ 분기로 개발 모드 처리가 포함된다",
+              "기존 _layout.tsx 코드와 충돌하지 않는다"
+            ],
+            "context7_apis": ["analytics().setAnalyticsCollectionEnabled"],
+            "plan_reference": "GA_PLAN.md > Section 2",
+            "depends_on": ["ga-001"],
+            "evaluator_feedback": null,
+            "retry_count": 0
+          }
+        ]
+      },
+      {
+        "id": "sprint-2",
+        "title": "스크린 트래킹",
+        "tasks": [
+          {
+            "id": "ga-003",
+            "title": "스크린 트래커 및 매핑 테이블 생성",
+            "category": "screen-tracking",
+            "target_file": "src/utils/screenTracker.ts",
+            "action": "create",
+            "status": "fail",
+            "acceptance_criteria": [
+              "src/utils/screenTracker.ts 파일이 존재한다",
+              "GA_PLAN.md의 라우트-스크린 매핑 테이블이 모두 포함된다",
+              "정적 라우트와 동적 라우트 모두 처리된다",
+              "logScreenView 함수가 export된다"
+            ],
+            "context7_apis": ["analytics().logScreenView"],
+            "plan_reference": "GA_PLAN.md > Screen Tracking Section",
+            "depends_on": ["ga-001"],
+            "evaluator_feedback": null,
+            "retry_count": 0
+          }
+        ]
+      },
+      {
+        "id": "sprint-3",
+        "title": "커스텀 이벤트",
+        "tasks": []
+      },
+      {
+        "id": "sprint-4",
+        "title": "사용자 속성 및 퍼널 이벤트",
+        "tasks": []
+      }
+    ],
+    "summary": {
+      "total_tasks": 3,
+      "passed": 0,
+      "failed": 3,
+      "blocked": 0
+    }
+  },
+  "field_definitions": {
+    "project": "Project identifier",
+    "plan_source": "Path to the planning document",
+    "harness_dir": "Path to the harness output directory",
+    "plan_last_updated": "Date when GA_PLAN.md was last updated. Used for session continuity and change detection.",
+    "context7_checked": "Whether Context7 was consulted during Planner phase",
+    "reference_files": "List of existing project files that Generator should reference for style/patterns. Planner selects only good-pattern files to prevent bad-pattern replication.",
+    "sprints": "Array of sprint objects grouping related tasks",
+    "sprints[].id": "Sprint identifier (sprint-N)",
+    "sprints[].title": "Sprint description",
+    "sprints[].tasks": "Array of task objects within this sprint",
+    "tasks[].id": "Unique task identifier. Format: ga-NNN",
+    "tasks[].title": "Short descriptive title",
+    "tasks[].category": "Task category: setup, screen-tracking, event, user-property, consent, cleanup",
+    "tasks[].target_file": "Primary file this task creates or modifies",
+    "tasks[].action": "create (new file) or modify (existing file)",
+    "tasks[].status": "One of: fail (not yet passed), pass (verified by Evaluator), blocked (failed after max retries), existing (already implemented)",
+    "tasks[].acceptance_criteria": "Array of strings. Each criterion must be programmatically verifiable by checking file contents, grep results, or command output.",
+    "tasks[].context7_apis": "Array of API method names to verify via Context7 MCP",
+    "tasks[].plan_reference": "Which section of GA_PLAN.md this task implements",
+    "tasks[].depends_on": "Array of task IDs that must be 'pass' before this task can start",
+    "tasks[].evaluator_feedback": "String or null. Evaluator writes specific, actionable feedback here on failure",
+    "tasks[].retry_count": "Integer. Incremented each time Generator-Evaluator loop repeats. Max 3 before blocked."
+  },
+  "status_transitions": {
+    "fail -> pass": "Only when Evaluator verifies ALL acceptance_criteria",
+    "fail -> blocked": "After Generator-Evaluator loop repeats 3 times and still fails",
+    "fail -> existing": "When Planner detects the task is already implemented in the codebase",
+    "pass -> fail": "Never. Once passed, a task stays passed.",
+    "blocked -> fail": "User intervention can unblock and reset to fail for retry"
+  }
+}

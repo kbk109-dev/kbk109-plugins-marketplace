@@ -1,0 +1,23 @@
+{
+  "skill_name": "firebase-crashlytics-impl",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "CRASHLYTICS_PLAN.md 기반으로 구현해줘. 전체 구현이 필요해 — 유틸리티 모듈, Error Boundary, 글로벌 에러 핸들러, recordError 삽입까지 다 해줘.",
+      "expected_output": "Phase 1: Planner가 CRASHLYTICS_FEATURES.json 생성 (모든 task status:fail) + Phase 2: Generator가 스프린트별 구현 + Evaluator가 acceptance_criteria 기반 검증 + Phase 3: CRASHLYTICS_IMPL_REPORT.md 생성. Harness 파일이 docs/harness/firebase/crashlytics/에 생성됨.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "이미 src/components/ErrorBoundary.tsx가 있고 Sentry captureException도 쓰고 있는데, CRASHLYTICS_PLAN.md 보고 Crashlytics도 같이 연동해줘. 기존 코드는 건드리지 말고 Crashlytics만 추가해.",
+      "expected_output": "Planner가 기존 ErrorBoundary를 감지하여 관련 task를 existing/pass로 초기화 + Generator가 기존 ErrorBoundary에 Crashlytics recordError만 추가 (Sentry 보존) + 기존 글로벌 에러 핸들러 체이닝 + FEATURES.json에 증분 상태 반영 + Evaluator가 체이닝/중복 방지 검증",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "crashlytics 구현 이어서 해줘. 지난번에 글로벌 에러 핸들러랑 Error Boundary까지 했는데, recordError 삽입이랑 커스텀 로그 부분이 아직 안 됐어.",
+      "expected_output": "이어하기 모드: CRASHLYTICS_FEATURES.json 로드 → CRASHLYTICS_PROGRESS.txt 확인 → Planner 재실행 없이 남은 fail task부터 Generator-Evaluator 루프 실행 → recordError + 커스텀 로그 구현 → FEATURES.json/PROGRESS.txt/EVAL_LOG.md 업데이트",
+      "files": []
+    }
+  ]
+}
