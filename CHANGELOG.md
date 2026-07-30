@@ -31,7 +31,7 @@ v1.9.1 의 스킬 14개를 플러그인 마켓플레이스로 재구성했다. �
 
 ### 제외한 것
 
-- **`test-*` 13개** — `oh-my-connect-cowork-url` 프로젝트 루트의 `agents/N_*.md` 와
+- **`test-*` 16개** — `oh-my-connect-cowork-url` 프로젝트 루트의 `agents/N_*.md` 와
   `data/{date}_vN/` 에 직접 의존해 다른 환경에서 동작하지 않는다. 해당 프로젝트에 남긴다.
 - **`brand-application`, `decision-council`** — ClaudeCodeSkills 에 없는 외부 유래 스킬.
   출처가 불명확한 상태로 MIT 재배포하지 않는다.
