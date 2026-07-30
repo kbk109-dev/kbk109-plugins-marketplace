@@ -1,0 +1,17 @@
+{
+  "skill_name": "admob-impl",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "ADMOB-PLAN.md 기반으로 AdMob 구현해줘",
+      "expected_output": "src/ads/ 모듈 생성, 화면별 광고 배치, app.json 플러그인 설정, .env.local 업데이트, ADMOB_IMPL_REPORT.md 생성",
+      "files": []
+    },
+    {
+      "id": 1,
+      "prompt": "광고 구현해줘",
+      "expected_output": "ADMOB-PLAN.md 미존재 시 즉시 중단 메시지 출력. ADMOB-PLAN.md 존재 시 전체 구현",
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "skill_name": "admob-impl-harness",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "ADMOB-PLAN.md 기반으로 AdMob 구현해줘",
+      "expected_output": "ADMOB-PLAN.md를 읽고, Context7 API를 조회하고, ADMOB_TASKS.json을 생성한 뒤, task-by-task로 구현을 시작. Hard Gate 통과 후 Planner → Generator → Evaluator 루프를 실행.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "어제 하다 말았는데, 나머지 광고도 구현해줘",
+      "expected_output": "기존 ADMOB_TASKS.json과 ADMOB_PROGRESS.md를 읽어 세션 재개. fail 상태인 task 중 우선순위 높은 것부터 이어서 진행. 이미 pass인 task는 건너뜀.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "Apply the AdMob ads from the plan document to all screens",
+      "expected_output": "영어 요청이지만 동일한 Planner→Generator→Evaluator 플로우 실행. 한국어로 응답하며 ADMOB_TASKS.json 생성 및 task loop 시작.",
+      "files": []
+    }
+  ]
+}

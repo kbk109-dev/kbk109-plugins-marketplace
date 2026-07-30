@@ -1,0 +1,20 @@
+{
+  "name": "expo-app-kit",
+  "version": "1.0.0",
+  "description": "Expo/React Native 앱의 AdMob 광고 배치 계획·구현과 EAS Update(OTA) 핫픽스 자동화",
+  "author": {
+    "name": "kbk109",
+    "url": "https://github.com/kbk109-dev"
+  },
+  "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/expo-app-kit",
+  "repository": "https://github.com/kbk109-dev/kbk109-plugins-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "expo",
+    "react-native",
+    "admob",
+    "monetization",
+    "eas-update",
+    "ota"
+  ]
+}

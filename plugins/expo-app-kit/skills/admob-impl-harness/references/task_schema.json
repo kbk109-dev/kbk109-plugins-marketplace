@@ -1,0 +1,68 @@
+{
+  "$schema": "ADMOB_TASKS.json schema",
+  "description": "Task State Machine for AdMob implementation. Each task represents one atomic unit of work.",
+  "example": {
+    "meta": {
+      "plan_source": "docs/plan/ADMOB-PLAN.md",
+      "plan_last_updated": "2026-04-04 00:00",
+      "created_at": "2026-04-04T12:00:00Z",
+      "updated_at": "2026-04-04T12:00:00Z",
+      "total_tasks": 2,
+      "pass_count": 0,
+      "fail_count": 2,
+      "blocked_count": 0
+    },
+    "tasks": [
+      {
+        "id": "admob-001",
+        "title": "Package installation and initial setup",
+        "spec": "react-native-google-mobile-ads package must be installed and configured in app.json/app.config.ts with AdMob App IDs.",
+        "acceptance_criteria": [
+          "react-native-google-mobile-ads exists in package.json dependencies",
+          "app.json or app.config.ts contains react-native-google-mobile-ads plugin config",
+          "Android AdMob App ID is configured",
+          "iOS AdMob App ID is configured",
+          "expo-dev-client is installed (required for custom native modules)"
+        ],
+        "status": "fail",
+        "priority": 1,
+        "dependencies": [],
+        "evaluator_feedback": null,
+        "retry_count": 0
+      },
+      {
+        "id": "admob-002",
+        "title": "Environment variables setup",
+        "spec": "All ad unit IDs from ADMOB-PLAN.md Section 5 must be present in .env.local with Google test IDs.",
+        "acceptance_criteria": [
+          "All ADMOB_* environment variable keys from the plan exist in .env.local",
+          "Values are Google official test ad unit IDs",
+          "App IDs (ADMOB_ANDROID_APP_ID, ADMOB_IOS_APP_ID) are present",
+          "src/ads/adUnitIds.ts reads from environment variables with test ID fallbacks"
+        ],
+        "status": "fail",
+        "priority": 2,
+        "dependencies": ["admob-001"],
+        "evaluator_feedback": null,
+        "retry_count": 0
+      }
+    ]
+  },
+  "field_definitions": {
+    "id": "Unique task identifier. Format: admob-NNN",
+    "title": "Short descriptive title",
+    "spec": "What this task must accomplish. Derived from ADMOB-PLAN.md",
+    "acceptance_criteria": "Array of strings. Each criterion must be programmatically verifiable by checking file contents, grep results, or command output. Vague criteria like 'works correctly' are not allowed.",
+    "status": "One of: fail (not yet passed), pass (verified by Evaluator), blocked (failed after max retries)",
+    "priority": "Integer. Lower number = higher priority. Determines execution order.",
+    "dependencies": "Array of task IDs that must be 'pass' before this task can start",
+    "evaluator_feedback": "String or null. Evaluator writes specific, actionable feedback here on failure",
+    "retry_count": "Integer. Incremented each time Generator re-attempts after Evaluator failure. Max 2."
+  },
+  "status_transitions": {
+    "fail -> pass": "Only when Evaluator verifies ALL acceptance_criteria",
+    "fail -> blocked": "After retry_count reaches 2 and Evaluator still fails it",
+    "pass -> fail": "Never. Once passed, a task stays passed.",
+    "blocked -> fail": "User intervention can unblock and reset to fail for retry"
+  }
+}

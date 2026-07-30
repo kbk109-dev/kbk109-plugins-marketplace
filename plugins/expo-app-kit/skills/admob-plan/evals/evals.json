@@ -1,0 +1,75 @@
+{
+  "skill_name": "admob-plan",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "EdgeBook에 AdMob 광고 배치 계획 세워줘",
+      "expected_output": "docs/plan/ADMOB-PLAN.md 생성 + .env.local에 테스트 광고 ID 추가. 5인 전문가 에이전트 분석 포함, 화면별 배치 맵 테이블 완성",
+      "files": [],
+      "assertions": [
+        {
+          "id": "has_5_expert_agents",
+          "text": "5인 전문가 에이전트 분석 섹션이 모두 존재"
+        },
+        {
+          "id": "has_screen_mapping_table",
+          "text": "화면별 광고 배치 맵 테이블 존재"
+        },
+        {
+          "id": "has_ad_unit_id_table",
+          "text": "배치당 개별 Ad Unit ID 목록 테이블 존재"
+        },
+        { "id": "has_env_local", "text": ".env.local 테스트 광고 ID 포함" },
+        {
+          "id": "has_conflict_resolution",
+          "text": "에이전트 간 충돌 조율 결과 존재"
+        },
+        { "id": "has_frequency_capping", "text": "광고 빈도 캡핑 전략 포함" },
+        {
+          "id": "no_ads_on_focus_screens",
+          "text": "집중 화면(카메라/뷰어) 광고 미배치 판단 명시"
+        },
+        { "id": "written_in_korean", "text": "문서 전체 한글 작성" }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "ADMOB-PLAN.md에 검색 화면 배너 광고 추가하고 싶어",
+      "expected_output": "기존 ADMOB-PLAN.md를 읽고 검색 화면 배너 광고만 증분 추가. Changelog에 변경 이력 기록. .env.local에 ADMOB_BANNER_SEARCH 추가",
+      "files": [],
+      "assertions": [
+        {
+          "id": "incremental_update",
+          "text": "기존 플랜을 덮어쓰지 않고 증분 업데이트"
+        },
+        { "id": "has_changelog", "text": "Changelog에 변경 이력 기록" },
+        {
+          "id": "banner_search_added",
+          "text": "검색 화면 배너 광고가 배치 맵에 추가"
+        },
+        { "id": "env_var_added", "text": "ADMOB_BANNER_SEARCH 환경변수 추가" }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "이 앱에 보상형 광고 넣으면 어디가 좋을까? admob으로 하려고",
+      "expected_output": "보상형 광고에 초점을 맞춘 전체 ADMOB-PLAN.md 생성. 보상 설계, 트리거 화면, 사용자 선택권 등 상세 분석 포함",
+      "files": [],
+      "assertions": [
+        {
+          "id": "rewarded_ad_detailed",
+          "text": "보상형 광고 상세 분석 (보상 설계, 트리거, 선택권, eCPM)"
+        },
+        { "id": "has_reward_design", "text": "앱 기능 연동 보상 설계 존재" },
+        {
+          "id": "has_screen_mapping_table",
+          "text": "전체 화면별 배치 맵 존재"
+        },
+        {
+          "id": "has_ad_unit_id_table",
+          "text": "보상형 광고 Ad Unit ID 배치별 구분"
+        }
+      ]
+    }
+  ]
+}
