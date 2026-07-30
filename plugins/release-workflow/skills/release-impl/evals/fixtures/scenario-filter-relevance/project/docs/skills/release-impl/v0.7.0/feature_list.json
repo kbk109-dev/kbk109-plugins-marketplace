@@ -1,0 +1,55 @@
+{
+  "version": "v0.7.0",
+  "source": "release-plan/task_list.json",
+  "notion_page": "PayFlow Release Notes",
+  "notion_database": "Release Plan",
+  "created_at": "2026-04-15",
+  "current_task_id": null,
+  "summary": {
+    "total": 2,
+    "pass": 2,
+    "fail": 0,
+    "blocked": 0
+  },
+  "acceptance_criteria_hashes": {
+    "TASK-001": "ed025877e77f0dd50e682ec6c06f34c3dbfa2b43ef4eabb9fc71eeaadf2345e6",
+    "TASK-002": "1b38058d8024172b88dfc3b5e6d8655af87d5127c03148384831b1ec9a3735e6"
+  },
+  "previous_context": [],
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "[Task 1] 홈 화면 fade-in 애니메이션",
+      "description": "reanimated useFadeIn",
+      "acceptance_criteria": [
+        "src/hooks/useFadeIn.ts 존재"
+      ],
+      "status": "pass",
+      "priority": 1,
+      "dependencies": [],
+      "retry_count": 0,
+      "evaluator_feedback": null,
+      "completed_at": "2026-03-05T17:30:00",
+      "evidence_logs": {
+        "0": "logs/TASK-001/0.log"
+      }
+    },
+    {
+      "id": "TASK-002",
+      "title": "[Task 2] i18n 리소스 로더",
+      "description": "i18n 로더 분리",
+      "acceptance_criteria": [
+        "src/lib/i18nLoader.ts 존재"
+      ],
+      "status": "pass",
+      "priority": 2,
+      "dependencies": [],
+      "retry_count": 0,
+      "evaluator_feedback": null,
+      "completed_at": "2026-03-05T17:30:00",
+      "evidence_logs": {
+        "0": "logs/TASK-002/0.log"
+      }
+    }
+  ]
+}

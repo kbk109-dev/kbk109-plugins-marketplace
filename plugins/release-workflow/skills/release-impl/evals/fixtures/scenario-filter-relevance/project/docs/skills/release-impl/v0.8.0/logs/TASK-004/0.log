@@ -1,0 +1,4 @@
+# eval fixture log for TASK-004 criterion 0
+# acceptance_criteria[0]: src/lib/payment.ts formatError
+# assertion: matched
+# exit=0

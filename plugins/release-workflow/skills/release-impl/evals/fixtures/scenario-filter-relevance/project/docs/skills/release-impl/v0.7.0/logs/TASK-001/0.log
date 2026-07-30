@@ -1,0 +1,4 @@
+# eval fixture log for TASK-001 criterion 0
+# acceptance_criteria[0]: src/hooks/useFadeIn.ts 존재
+# assertion: matched
+# exit=0

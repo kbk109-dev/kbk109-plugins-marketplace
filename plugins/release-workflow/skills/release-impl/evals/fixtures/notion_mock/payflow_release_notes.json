@@ -1,0 +1,63 @@
+{
+  "_comment": "Mock payload returned when the runner intercepts notion-search / notion-fetch for 'PayFlow Release Notes'. Used only by evals that intentionally bypass the local task_list.json path (forcing release-impl into Step 4 of Phase 1). For scenario-has-prior / scenario-first-release / scenario-filter-relevance, the local task_list.json exists and this mock is not consulted.",
+  "page": {
+    "id": "mock-page-payflow-release-notes",
+    "title": "PayFlow Release Notes",
+    "children": [
+      {
+        "type": "child_database",
+        "id": "mock-db-release-plan",
+        "title": "Release Plan"
+      }
+    ]
+  },
+  "database": {
+    "id": "mock-db-release-plan",
+    "title": "Release Plan",
+    "data_source_id": "mock-ds-release-plan",
+    "properties": {
+      "버전": { "type": "rich_text" },
+      "작업": { "type": "title" },
+      "상태": { "type": "select", "options": ["계획", "진행", "완료", "차단"] },
+      "수용 기준": { "type": "rich_text" }
+    }
+  },
+  "rows_by_version": {
+    "v0.9.0": [
+      {
+        "id": "mock-row-TASK-001",
+        "version": "v0.9.0",
+        "title": "[Task 1] 결제 에러 핸들링 개선",
+        "status": "계획",
+        "acceptance_criteria": [
+          "src/screens/PaymentScreen.tsx에서 결제 실패 시 토스트 메시지 표시",
+          "src/lib/payment.ts의 processPayment()가 네트워크 에러를 분류하여 반환",
+          "src/screens/__tests__/PaymentScreen.test.tsx에서 에러 케이스 통과"
+        ]
+      },
+      {
+        "id": "mock-row-TASK-002",
+        "version": "v0.9.0",
+        "title": "[Task 2] 결제 웹훅 재시도 큐 구현",
+        "status": "계획",
+        "acceptance_criteria": [
+          "src/lib/webhookQueue.ts에 재시도 큐가 구현됨",
+          "최대 3회 재시도, 지수 backoff (2s, 4s, 8s)",
+          "src/lib/__tests__/webhookQueue.test.ts 통과"
+        ]
+      }
+    ],
+    "v0.1.0": [
+      {
+        "id": "mock-row-v01-TASK-001",
+        "version": "v0.1.0",
+        "title": "[Task 1] 초기 프로젝트 스캐폴딩",
+        "status": "계획",
+        "acceptance_criteria": [
+          "src/App.tsx 엔트리 파일 존재",
+          "npm test 명령이 0개 이상의 테스트를 실행"
+        ]
+      }
+    ]
+  }
+}

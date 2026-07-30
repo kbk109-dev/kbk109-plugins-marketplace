@@ -1,0 +1,4 @@
+# eval fixture log for TASK-003 criterion 0
+# acceptance_criteria[0]: src/screens/ProfileScreen.tsx 캐시 레이어
+# assertion: matched
+# exit=0

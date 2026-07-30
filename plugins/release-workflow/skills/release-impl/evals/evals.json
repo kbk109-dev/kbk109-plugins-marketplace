@@ -1,0 +1,177 @@
+{
+  "skill_name": "release-impl",
+  "schema_version": 2,
+  "comparison": {
+    "baseline": "without_skill",
+    "treatment": "with_skill",
+    "note": "Each eval runs two sub-agents in parallel. The treatment sub-agent loads SKILL.md and its references; the baseline does not. differential_assertions describe observable differences that are only expected under the treatment run."
+  },
+  "fixtures_root": "fixtures/",
+  "evals": [
+    {
+      "id": "eval-0-has-prior",
+      "prompt": "v0.9.0 릴리즈 구현 시작해줘. 노션 페이지는 'PayFlow Release Notes', 데이터베이스 이름은 'Release Plan'. (참고: docs/skills/release-plan/release-plan/v0.9.0/task_list.json에 계획이 이미 있음)",
+      "fixture": "scenario-has-prior",
+      "expected_behavior": "세 입력(페이지·DB·버전)이 모두 주어졌고 로컬 task_list.json이 존재하므로 Notion 조회를 생략하고 contract_consumer 매핑으로 feature_list.json을 생성. v0.7.0은 무관, v0.8.0의 blocked TASK-005(결제 웹훅 재시도 큐, Stripe 서명 로테이션, setTimeout/BackgroundTimer 이슈)는 현재 TASK-002와 영역이 겹쳐 previous_context에 포함되어야 한다.",
+      "output_artifacts": [
+        "docs/skills/release-impl/v0.9.0/feature_list.json",
+        "docs/skills/release-impl/v0.9.0/PROGRESS.md"
+      ],
+      "assertions": [
+        "feature_list.json 파일이 docs/skills/release-impl/v0.9.0/에 생성됨",
+        "feature_list.json의 validate_feature_list.py 검증 통과 (exit 0)",
+        "feature_list.json.version == 'v0.9.0'",
+        "feature_list.json.notion_database == 'Release Plan'",
+        "feature_list.json.source == 'release-plan/task_list.json'",
+        "feature_list.json.acceptance_criteria_hashes에 TASK-001, TASK-002 해시 존재",
+        "previous_context 배열 길이 >= 1",
+        "previous_context에 v0.8.0 참조 항목 존재",
+        "previous_context에 'setTimeout' 또는 'BackgroundTimer' 또는 'Stripe' 관련 내용 포함",
+        "previous_context의 최소 하나가 type=blocked_task 또는 known_issue",
+        "PROGRESS.md에 '이전 버전 컨텍스트' 섹션 존재",
+        "PROGRESS.md 이전 버전 컨텍스트 섹션이 'v0.8.0' 포함",
+        "tasks 배열이 2개 (TASK-001, TASK-002)",
+        "모든 task.status == 'fail'",
+        "모든 task.retry_count == 0"
+      ],
+      "differential_assertions": [
+        "without_skill: feature_list.json이 없거나 acceptance_criteria_hashes 필드가 없거나 previous_context가 스캔되지 않음",
+        "with_skill에서만 v0.8.0 blocked 이슈가 previous_context로 이월됨"
+      ]
+    },
+    {
+      "id": "eval-1-first-release",
+      "prompt": "v0.1.0 릴리즈 작업 시작해줘. 노션 페이지는 'PayFlow Release Notes', 데이터베이스 이름은 'Release Plan'. release-plan에 task_list.json은 이미 올려놨어.",
+      "fixture": "scenario-first-release",
+      "expected_behavior": "이전 버전 기록이 없는 첫 릴리즈이므로 previous_context는 빈 배열. 가짜 과거 기록을 만들지 않는다. PROGRESS.md에는 '해당 없음 — 첫 릴리즈' 표현이 들어간다.",
+      "output_artifacts": [
+        "docs/skills/release-impl/v0.1.0/feature_list.json",
+        "docs/skills/release-impl/v0.1.0/PROGRESS.md"
+      ],
+      "assertions": [
+        "feature_list.json 파일이 docs/skills/release-impl/v0.1.0/에 생성됨",
+        "feature_list.json의 validate_feature_list.py 검증 통과 (exit 0)",
+        "previous_context가 빈 배열([])",
+        "PROGRESS.md에 '이전 버전 컨텍스트' 섹션 존재",
+        "PROGRESS.md의 이전 버전 컨텍스트 섹션이 '첫 릴리즈' 또는 '해당 없음' 포함",
+        "tasks 배열에 TASK-001 존재",
+        "acceptance_criteria_hashes에 TASK-001 해시 존재"
+      ],
+      "differential_assertions": [
+        "without_skill: 존재하지 않는 이전 버전의 가짜 previous_context를 환각할 가능성"
+      ]
+    },
+    {
+      "id": "eval-2-filter-relevance",
+      "prompt": "v0.9.0 개발 시작. 'PayFlow Release Notes' 페이지, 'Release Plan' 데이터베이스. task_list.json은 release-plan 폴더에 있어.",
+      "fixture": "scenario-filter-relevance",
+      "expected_behavior": "v0.7.0(홈 화면 애니메이션, i18n — 무관)과 v0.8.0(usePaymentForm validate, ja i18n — 결제 관련은 관련)을 모두 스캔하되, 현재 TASK-001(결제 에러 핸들링)과 관련있는 v0.8.0의 결제 관련 항목만 previous_context에 포함. v0.7.0의 홈 화면 애니메이션이나 reanimated 이슈는 포함되지 않는다.",
+      "output_artifacts": [
+        "docs/skills/release-impl/v0.9.0/feature_list.json",
+        "docs/skills/release-impl/v0.9.0/PROGRESS.md"
+      ],
+      "assertions": [
+        "feature_list.json이 docs/skills/release-impl/v0.9.0/에 생성됨",
+        "feature_list.json의 validate_feature_list.py 검증 통과 (exit 0)",
+        "previous_context에 v0.8.0 결제 관련 항목 존재",
+        "previous_context에 usePaymentForm 또는 validate 또는 에러 메시지 포맷 언급",
+        "previous_context 중 type=blocked_task 또는 known_issue 항목 존재",
+        "previous_context에 reanimated / fade-in / 홈 화면 애니메이션 관련 항목 없음 (무관 필터링)",
+        "previous_context에 일본어(ja) i18n 또는 번역 리소스 관련 항목 없음 (무관 필터링)",
+        "PROGRESS.md 이전 버전 컨텍스트 섹션 존재"
+      ],
+      "differential_assertions": [
+        "without_skill: 관련성 필터 없이 v0.7.0 애니메이션/i18n 항목까지 previous_context에 쏟아내거나, 반대로 아무 기록도 스캔하지 않음"
+      ]
+    },
+    {
+      "id": "eval-3-db-name-required",
+      "prompt": "v0.9.0 릴리즈 구현 시작해줘. 노션 페이지는 'PayFlow Release Notes'.",
+      "fixture": "scenario-has-prior",
+      "expected_behavior": "입력값 #2(데이터베이스 이름)가 누락됐으므로 스킬은 구현을 시작하지 않고 DB 이름을 질의한다. 'Release Plan'을 자동 가정하고 진행하면 실패.",
+      "output_artifacts": [],
+      "assertions": [
+        "feature_list.json이 생성되지 않음",
+        "응답에 데이터베이스 이름을 묻는 질문이 포함됨",
+        "응답에 'release-plan에서 사용한 DB 이름' 또는 동등한 문구 포함"
+      ],
+      "differential_assertions": [
+        "without_skill: DB 이름을 'Release Plan'으로 하드코딩 가정하고 즉시 진행해 feature_list.json을 생성"
+      ]
+    },
+    {
+      "id": "eval-4-db-name-mismatch",
+      "prompt": "v0.9.0 릴리즈 구현 시작해줘. 노션 페이지는 'PayFlow Release Notes', 데이터베이스 이름은 'v2.1 Tasks'.",
+      "fixture": "scenario-has-prior",
+      "expected_behavior": "입력 DB 이름 'v2.1 Tasks'로 슬러그('v2-1-tasks')를 산출하지만 fixture의 경로는 'release-plan'. 로컬 task_list.json을 찾지 못하고 Notion 조회 경로로 이동하거나, 찾지 못함을 사용자에게 알린다. 'Release Plan' DB를 자동으로 찾아서 사용하지 않는다.",
+      "output_artifacts": [],
+      "assertions": [
+        "응답에 'v2.1 Tasks' 또는 그 슬러그 'v2-1-tasks'가 참조됨",
+        "기존 'release-plan' 슬러그 경로의 task_list.json을 자동으로 소비하지 않음",
+        "DB 이름 불일치 또는 탐색 실패를 사용자에게 알림"
+      ],
+      "differential_assertions": [
+        "without_skill: 입력을 무시하고 docs/skills/release-plan/release-plan/v0.9.0/task_list.json을 소비해 잘못된 계약 충족"
+      ]
+    },
+    {
+      "id": "eval-5-retry-to-blocked",
+      "prompt": "v1.0.0 릴리즈 구현 시작해줘. 노션 페이지 'PayFlow Release Notes', 데이터베이스 'Release Plan'.",
+      "fixture": "scenario-retry-to-blocked",
+      "expected_behavior": "TASK-001의 acceptance_criteria가 도달 불가능(가상의 파일·클래스 요구). Generator가 2회 구현을 시도하고 Evaluator가 2회 연속 fail 판정 → status='blocked', retry_count=2, 사용자에게 4지선다 에스컬레이션 출력. 3번째 재시도는 자동 실행되지 않아야 한다.",
+      "output_artifacts": [
+        "docs/skills/release-impl/v1.0.0/feature_list.json",
+        "docs/skills/release-impl/v1.0.0/PROGRESS.md"
+      ],
+      "assertions": [
+        "feature_list.json의 TASK-001.status == 'blocked'",
+        "feature_list.json의 TASK-001.retry_count == 2",
+        "TASK-001.evaluator_feedback이 non-null 문자열 (구체적 피드백)",
+        "summary.blocked == 1, summary.fail == 0",
+        "응답에 '[1] 재시도' 및 '[2]' 및 '[3]' 및 '[4]' 같은 4지선다 에스컬레이션 토큰 포함",
+        "validate_feature_list.py 검증 통과 (exit 0) — retry_count=2 ⇔ blocked 조건부 검증"
+      ],
+      "differential_assertions": [
+        "without_skill: 무한 재시도 루프 또는 'pass'를 억지로 설정하고 미완성 상태로 종료"
+      ]
+    },
+    {
+      "id": "eval-6-stub-rejection",
+      "prompt": "v1.0.0 릴리즈 구현 시작해줘. 노션 페이지 'PayFlow Release Notes', 데이터베이스 'Release Plan'.",
+      "fixture": "scenario-stub-rejection",
+      "expected_behavior": "Generator가 임시로 TODO/FIXME가 남은 초안을 제출하면 Evaluator의 scan_stubs.py 선결 조건이 reject. 최종 pass 판정 시 해당 파일에 스텁 잔존 0건이어야 하며, evidence_logs가 모든 criterion을 커버.",
+      "output_artifacts": [
+        "docs/skills/release-impl/v1.0.0/feature_list.json"
+      ],
+      "assertions": [
+        "최종 feature_list.json의 TASK-001.status는 'pass' 또는 'blocked' 중 하나 (임의의 fail 상태에서 종료되지 않음)",
+        "TASK-001.status == 'pass'인 경우: src/lib/formatter.ts에 TODO/FIXME/NotImplementedError 모두 없음 (scan_stubs.py exit 0)",
+        "TASK-001.status == 'pass'인 경우: evidence_logs가 criterion 0·1 모두 포함",
+        "TASK-001.status == 'pass'인 경우: check_evidence_logs.py 통과 (exit 0)"
+      ],
+      "differential_assertions": [
+        "without_skill: TODO가 남은 초안으로 status='pass'를 설정하고 completed_at 기입"
+      ]
+    },
+    {
+      "id": "eval-7-session-resume",
+      "prompt": "v0.9.0 릴리즈 작업 이어서 해줘. 'PayFlow Release Notes' 페이지, 'Release Plan' 데이터베이스.",
+      "fixture": "scenario-session-resume",
+      "expected_behavior": "이전 세션이 TASK-002 구현 도중 중단 (current_task_id='TASK-002'). 재개 시 TASK-003부터 시작하지 않고 TASK-002로 강제 진입. TASK-001은 이미 pass 상태이므로 재구현 금지. 스프린트 계약 TASK-002.md가 존재하므로 Generator는 재계약 없이 이어서 구현 가능.",
+      "output_artifacts": [
+        "docs/skills/release-impl/v0.9.0/feature_list.json",
+        "docs/skills/release-impl/v0.9.0/PROGRESS.md"
+      ],
+      "assertions": [
+        "응답 초반에 TASK-002를 언급하며 재개 모드로 진입함 (TASK-003 선행 금지)",
+        "TASK-001.status는 변함 없이 'pass', completed_at 유지",
+        "acceptance_criteria_hashes의 TASK-001 해시 변경 없음 (check_state_transition.py 통과)",
+        "TASK-002 관련 파일만 수정됨 (TASK-003 관련 파일은 건드리지 않음)"
+      ],
+      "differential_assertions": [
+        "without_skill: TASK-003부터 시작하거나 TASK-001을 재구현하여 pass→fail 전이 시도",
+        "without_skill: 스프린트 계약 파일을 덮어써서 원래 예상 실패 가능점 기록을 잃음"
+      ]
+    }
+  ]
+}

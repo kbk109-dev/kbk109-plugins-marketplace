@@ -1,0 +1,107 @@
+{
+  "version": "v0.8.0",
+  "source": "release-plan/task_list.json",
+  "notion_page": "PayFlow Release Notes",
+  "notion_database": "Release Plan",
+  "created_at": "2026-04-15",
+  "current_task_id": null,
+  "summary": {
+    "total": 5,
+    "pass": 4,
+    "fail": 0,
+    "blocked": 1
+  },
+  "acceptance_criteria_hashes": {
+    "TASK-001": "1ff06cdcf24056d735a1e3d4f0a25b41967e83342f058efb47ecde0ea6de6ef5",
+    "TASK-002": "cf4c6ec06949e591866c56ac7a61dfd5a7d6efdbf4b4cd9ea160f742f26fb35d",
+    "TASK-003": "6d6379ced1780d0aad63bf47afbdbc2142ed8b5d5776bf630bfa9db392dda945",
+    "TASK-004": "3faeabfce8907bb1ea4a6ab955530bd8143b04fcf4aeb627a2194dad7cdc55c2",
+    "TASK-005": "17cae9df326657cb15ef0933cfc00aebf63444321e38d971204a6bd42b77d855"
+  },
+  "previous_context": [],
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "[Task 1] 결제 입력 검증 개선",
+      "description": "usePaymentForm validate 분리",
+      "acceptance_criteria": [
+        "src/hooks/usePaymentForm.ts에서 validate 함수 분리"
+      ],
+      "status": "pass",
+      "priority": 1,
+      "dependencies": [],
+      "retry_count": 0,
+      "evaluator_feedback": null,
+      "completed_at": "2026-03-25T18:00:00",
+      "evidence_logs": {
+        "0": "logs/TASK-001/0.log"
+      }
+    },
+    {
+      "id": "TASK-002",
+      "title": "[Task 2] 일본어 i18n 추가",
+      "description": "ja 번역 리소스",
+      "acceptance_criteria": [
+        "src/i18n/ja.json 존재"
+      ],
+      "status": "pass",
+      "priority": 2,
+      "dependencies": [],
+      "retry_count": 0,
+      "evaluator_feedback": null,
+      "completed_at": "2026-03-25T18:00:00",
+      "evidence_logs": {
+        "0": "logs/TASK-002/0.log"
+      }
+    },
+    {
+      "id": "TASK-003",
+      "title": "[Task 3] 프로필 캐시 개선",
+      "description": "ProfileScreen",
+      "acceptance_criteria": [
+        "src/screens/ProfileScreen.tsx 캐시 레이어"
+      ],
+      "status": "pass",
+      "priority": 3,
+      "dependencies": [],
+      "retry_count": 0,
+      "evaluator_feedback": null,
+      "completed_at": "2026-03-25T18:00:00",
+      "evidence_logs": {
+        "0": "logs/TASK-003/0.log"
+      }
+    },
+    {
+      "id": "TASK-004",
+      "title": "[Task 4] 결제 에러 메시지 포맷 통일",
+      "description": "포맷 통일",
+      "acceptance_criteria": [
+        "src/lib/payment.ts formatError"
+      ],
+      "status": "pass",
+      "priority": 4,
+      "dependencies": [],
+      "retry_count": 0,
+      "evaluator_feedback": null,
+      "completed_at": "2026-03-25T18:00:00",
+      "evidence_logs": {
+        "0": "logs/TASK-004/0.log"
+      }
+    },
+    {
+      "id": "TASK-005",
+      "title": "[Task 5] 결제 웹훅 재시도 큐",
+      "description": "Stripe 서명 로테이션 이슈로 blocked",
+      "acceptance_criteria": [
+        "src/lib/webhookQueue.ts 큐 구현"
+      ],
+      "status": "blocked",
+      "priority": 5,
+      "dependencies": [],
+      "retry_count": 2,
+      "evaluator_feedback": "Stripe 서명 로테이션 이후 401 반환, 재시도 backoff 미구현으로 rate limit",
+      "completed_at": null,
+      "evidence_logs": {}
+    }
+  ]
+}

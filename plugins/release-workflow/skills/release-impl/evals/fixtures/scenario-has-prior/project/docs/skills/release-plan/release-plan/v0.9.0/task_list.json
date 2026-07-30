@@ -1,0 +1,58 @@
+{
+  "version": "v0.9.0",
+  "created_at": "2026-04-10",
+  "notion_page": "PayFlow Release Notes",
+  "notion_database": "Release Plan",
+  "input_version": "0.9.0",
+  "base_version": "0.8.0",
+  "summary": {
+    "total": 2,
+    "pass": 0,
+    "fail": 2,
+    "blocked": 0
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "task_number": 1,
+      "name": "[Task 1] 결제 에러 핸들링 개선",
+      "version": "0.9.0",
+      "category": "feature",
+      "status": "fail",
+      "acceptance_criteria": [
+        "src/screens/PaymentScreen.tsx에서 결제 실패 시 토스트 메시지 표시",
+        "src/lib/payment.ts의 processPayment()가 네트워크 에러를 분류하여 반환",
+        "src/screens/__tests__/PaymentScreen.test.tsx에서 에러 케이스 통과"
+      ],
+      "implementation_details": [
+        "usePaymentForm 훅의 onSubmit에서 try/catch로 결제 에러 분류",
+        "UI 레이어에서 표시 메시지 매핑 테이블 추가"
+      ],
+      "depends_on_labels": [],
+      "parallel_with_labels": [],
+      "retry_count": 0,
+      "completed_at": null
+    },
+    {
+      "id": "TASK-002",
+      "task_number": 2,
+      "name": "[Task 2] 결제 웹훅 재시도 큐 구현",
+      "version": "0.9.0",
+      "category": "feature",
+      "status": "fail",
+      "acceptance_criteria": [
+        "src/lib/webhookQueue.ts에 재시도 큐가 구현됨",
+        "최대 3회 재시도, 지수 backoff (2s, 4s, 8s)",
+        "src/lib/__tests__/webhookQueue.test.ts 통과"
+      ],
+      "implementation_details": [
+        "v0.8.0에서 blocked 상태로 남겨진 동일 주제 재개",
+        "Stripe 서명 로테이션 이슈는 v0.8.0 이슈 노트 참조"
+      ],
+      "depends_on_labels": ["[Task 1]"],
+      "parallel_with_labels": [],
+      "retry_count": 0,
+      "completed_at": null
+    }
+  ]
+}

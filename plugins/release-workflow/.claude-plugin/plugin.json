@@ -1,0 +1,20 @@
+{
+  "name": "release-workflow",
+  "version": "1.0.0",
+  "description": "Notion 데이터베이스를 상태 저장소로 쓰는 Harness Engineering 릴리즈 파이프라인 — 계획 수립, 구현 검증, 패치 릴리즈, main 머지",
+  "author": {
+    "name": "kbk109",
+    "url": "https://github.com/kbk109-dev"
+  },
+  "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/release-workflow",
+  "repository": "https://github.com/kbk109-dev/kbk109-plugins-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "release",
+    "notion",
+    "harness-engineering",
+    "changelog",
+    "semver",
+    "git-workflow"
+  ]
+}

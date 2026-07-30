@@ -1,0 +1,71 @@
+{
+  "version": "v0.9.0",
+  "source": "release-plan/task_list.json",
+  "notion_page": "PayFlow Release Notes",
+  "notion_database": "Release Plan",
+  "created_at": "2026-04-15",
+  "current_task_id": "TASK-002",
+  "summary": {
+    "total": 3,
+    "pass": 1,
+    "fail": 2,
+    "blocked": 0
+  },
+  "acceptance_criteria_hashes": {
+    "TASK-001": "0e791cbfa5e017f46e548c4ecc3d6ca2fd5409c49b340c6f32d98f11a972a51c",
+    "TASK-002": "056af01eab274ac87ac5b84782781a5e0a3a5ea8983eb3db01b5fc256fff6c3e",
+    "TASK-003": "f3b2a7a2b5d2fd6c22aa4586f7f05b4a2b12deab651334d034d1a587c13548b2"
+  },
+  "previous_context": [],
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "[Task 1] 결제 에러 핸들링",
+      "description": "PaymentScreen 에러 케이스",
+      "acceptance_criteria": [
+        "PaymentScreen에서 에러 토스트 표시"
+      ],
+      "status": "pass",
+      "priority": 1,
+      "dependencies": [],
+      "retry_count": 0,
+      "evaluator_feedback": null,
+      "completed_at": "2026-04-15T10:00:00",
+      "evidence_logs": {
+        "0": "logs/TASK-001/0.log"
+      }
+    },
+    {
+      "id": "TASK-002",
+      "title": "[Task 2] 결제 웹훅 재시도 큐",
+      "description": "v0.8.0 blocked 재개",
+      "acceptance_criteria": [
+        "webhookQueue.ts 재시도 구현"
+      ],
+      "status": "fail",
+      "priority": 2,
+      "dependencies": [
+        "TASK-001"
+      ],
+      "retry_count": 0,
+      "evaluator_feedback": null,
+      "completed_at": null,
+      "evidence_logs": {}
+    },
+    {
+      "id": "TASK-003",
+      "title": "[Task 3] 프로필 캐시 TTL",
+      "description": "캐시 만료 구현",
+      "acceptance_criteria": [
+        "캐시 TTL 5분"
+      ],
+      "status": "fail",
+      "priority": 3,
+      "dependencies": [],
+      "retry_count": 0,
+      "evaluator_feedback": null,
+      "completed_at": null,
+      "evidence_logs": {}
+    }
+  ]
+}

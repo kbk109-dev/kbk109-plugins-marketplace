@@ -1,0 +1,191 @@
+{
+  "skill_name": "release-plan",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' 데이터베이스에 v2.1.0으로 릴리즈 계획 등록해줘. 게임 완료 시 축하 애니메이션 추가",
+      "acceptance_criteria": [
+        "단일 feature 요청을 복수의 논리적 작업 단위로 분해한다 (예: 애니메이션 컴포넌트, 게임 완료 판정 연동, 축하 화면 UI 등 2개 이상).",
+        "모든 작업의 버전이 입력값 '2.1.0'으로 통일되어 있다.",
+        "모든 작업 제목이 정규식 '^\\[Task \\d+\\] .+' 에 매치된다.",
+        "Task 번호가 1부터 시작하여 N까지 연속된 정수이다.",
+        "선행 관계/병렬 진행 가능 컬럼이 각 작업에 존재하며, 값은 '-' 또는 '^\\[Task \\d+\\](, \\[Task \\d+\\])*$' 형식이다.",
+        "선행 관계와 병렬 진행 가능에 등장하는 모든 [Task N] 라벨이 이번 배치 또는 기존 DB에 실제로 존재한다.",
+        "각 작업의 '작업 상세'에 [구현 내용]과 [수용 기준] 섹션이 모두 포함되어 있다.",
+        "사용자에게 미리보기를 표시하고 확인을 받기 전에는 notion-create-pages를 호출하지 않는다.",
+        "미리보기에 '## 추가 제안' 섹션이 포함된다 (과거 계획이 없으면 '(해당 없음)' 표기)."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v2.1.0으로 릴리즈 계획 등록해줘. 로그인 화면에 소셜 로그인(Google, Apple) 추가하고, 기존 퍼즐 생성 알고리즘 성능 최적화하고, 메인 화면 배너 광고가 간헐적으로 안 뜨는 버그 수정",
+      "acceptance_criteria": [
+        "세 가지 성격(feature/performance/hotfix)의 요청을 각각 분리된 작업으로 분해한다.",
+        "각 작업의 '구분' 값이 feature, performance, hotfix 중 적절한 하나로 지정되어 있다.",
+        "기본적으로 입력된 버전 '2.1.0'을 사용하되, 성격이 명확히 다른 hotfix/performance에 대해서는 미리보기에 '별도 버전 분리 제안'을 명시적으로 포함한다.",
+        "버전 분리는 사용자의 명시적 확인이 있기 전에는 적용되지 않는다.",
+        "모든 작업이 '^\\[Task \\d+\\] .+' 형식의 제목을 가지며, 동일 버전 내에서 Task 번호가 1부터 연속된다.",
+        "선행 관계/병렬 진행 가능 컬럼이 채워져 있으며, 서로 다른 도메인 작업은 병렬 진행 가능으로 표기된다.",
+        "notion-create-pages는 사용자 확인 후에만 호출된다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "릴리즈 계획 등록해줘. 다크모드 지원 추가",
+      "acceptance_criteria": [
+        "노션 페이지 이름이 없으므로 '릴리즈 계획을 등록할 노션 페이지 이름을 알려주세요.' 문구를 출력한다.",
+        "즉시 종료하며 Step 1 이후의 단계를 실행하지 않는다.",
+        "notion-search, notion-fetch, notion-create-database, notion-create-pages 등 Notion MCP 도구를 호출하지 않는다.",
+        "업데이트 내용('다크모드 지원 추가')을 임의로 분해하지 않는다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "Stage Sudoku 페이지에 릴리즈 계획 등록해줘. 다크모드 지원 추가",
+      "acceptance_criteria": [
+        "데이터베이스 이름이 없으므로 '릴리즈 계획을 등록할 데이터베이스 이름을 알려주세요.' 문구를 출력한다.",
+        "즉시 종료하며 이후 단계를 실행하지 않는다.",
+        "notion-create-database / notion-create-pages를 호출하지 않는다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 릴리즈 계획 등록해줘. 다크모드 지원 추가",
+      "acceptance_criteria": [
+        "버전이 입력되지 않았으므로 '등록할 버전을 X.Y.Z 형식으로 알려주세요. (예: 1.0.0)' 문구를 출력한다.",
+        "즉시 종료하며 이후 단계를 실행하지 않는다.",
+        "notion-create-pages를 호출하지 않는다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 버전 2.1로 릴리즈 계획 등록해줘. 다크모드 지원 추가",
+      "acceptance_criteria": [
+        "버전 '2.1'이 정규식 '^\\d+\\.\\d+\\.\\d+$'에 매치되지 않아 검증을 실패로 판정한다.",
+        "'등록할 버전을 X.Y.Z 형식으로 알려주세요. (예: 1.0.0)' 문구를 출력한다.",
+        "즉시 종료하며 이후 단계를 실행하지 않는다.",
+        "notion-create-pages를 호출하지 않는다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v2.2.0으로 릴리즈 계획 등록해줘. 이메일 로그인 이후에 로그인 유지(토큰 갱신) 기능 추가",
+      "acceptance_criteria": [
+        "Step 3에서 기존 Notion DB 레코드와 로컬 관리 문서(docs/skills/release-plan/{slug}/v*/)를 조회한다.",
+        "Step 4-0에서 연관/이월/누락 후속 제안 중 최소 하나 이상을 식별한다.",
+        "미리보기 출력에 '## 추가 제안' 섹션이 반드시 포함된다 ('해당 없음' 단독 출력은 불가 — 과거 '이메일 로그인' 관련 연관 또는 후속 항목이 제시되어야 한다).",
+        "과거의 '이메일 로그인' 작업과 신규 '토큰 갱신' 작업 사이의 선행 관계 또는 연관이 식별된다.",
+        "모든 작업 제목이 '^\\[Task \\d+\\] .+' 형식이며, 버전은 '2.2.0'을 공유한다.",
+        "기존 DB의 v2.2.0 레코드가 있으면 Task 번호가 max+1부터 이어서 부여된다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v2.1.0으로 릴리즈 계획 등록해줘. 이미 등록된 [Task 1] 이메일 로그인 구현을 한 번 더 등록해줘.",
+      "acceptance_criteria": [
+        "Step 6 실행 전에 (버전, 작업명) 조합으로 기존 레코드 중복 여부를 확인한다.",
+        "중복이 탐지되면 사용자에게 skip/upsert/abort 중 하나를 선택하도록 안내한다.",
+        "사용자가 명시적으로 선택하기 전까지 notion-create-pages를 호출하지 않는다.",
+        "기본 동작은 abort이며, 추측으로 덮어쓰지 않는다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 9,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v3.0.0으로 릴리즈 계획 등록해줘. 앱 전반 리뉴얼: 디자인 시스템 교체, 다크모드, 설정 화면 재설계, 온보딩 플로우, 알림 센터, 통계 대시보드, 백업/복원, 다국어(i18n), 접근성 개선, 푸시 알림 재구성, 광고 SDK 업그레이드, 인증 토큰 회전 도입",
+      "acceptance_criteria": [
+        "12개 요구사항 각각에 대응되는 Task가 식별되어 총 12~20개의 작업으로 분해된다.",
+        "모든 작업의 Task 번호가 1부터 시작하여 N까지 연속된 정수이며 중복·건너뜀이 없다.",
+        "모든 작업 제목이 정규식 '^\\[Task \\d+\\] .+'을 만족한다.",
+        "선행 관계/병렬 진행 가능에 쓰인 모든 [Task N] 라벨이 이번 배치 내에 존재하며, 두 컬럼에 동시 등장하는 라벨이 없다.",
+        "breaking change 가능성(디자인 시스템 교체, 인증 토큰 회전)이 있으므로 '## SemVer 점검' 섹션에 major 릴리즈 관련 경고가 표시된다.",
+        "데이터/스키마 성격 작업(예: 다국어 리소스 구조, 백업 스키마)이 로직·UI 성격 작업의 선행 관계로 배치된다.",
+        "미리보기 출력에 '## 추가 제안' 섹션이 포함되며, '## SemVer 점검' 섹션도 포함된다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 10,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v2.3.0으로 릴리즈 계획 등록해줘. 다크모드 지원 추가. (notion-create-database가 권한 부족으로 실패하는 상황을 가정)",
+      "acceptance_criteria": [
+        "notion-create-database가 권한 오류로 실패하면 사용자에게 명확한 원인(예: '데이터베이스 생성 권한이 없습니다')과 함께 실행을 중단한다.",
+        "부분 상태(DB는 만들어졌으나 레코드는 없음 등)를 남기지 않는다 — 실패 시 이후 Step 6/7을 실행하지 않는다.",
+        "다음 호출에서 같은 상태로 재개할 수 있도록, progress.md 또는 사용자 메시지에 실패 지점과 재시도 방법을 기록한다.",
+        "로컬 관리 문서(release-plan.md / task_list.json)는 DB 등록이 성공하기 전에는 생성하지 않는다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 11,
+      "prompt": "[오케스트레이터 모드] fix-plan-impl이 호출: '이번 릴리즈를 2.1.1로 고정해주세요. Stage Sudoku 페이지의 릴리즈 플랜 DB에 등록. 로그인 후 간헐적으로 토큰 갱신이 실패하여 자동 로그아웃되는 버그와, 퍼즐 생성 알고리즘이 일부 난이도에서 3초 이상 걸리는 성능 이슈를 수정'",
+      "acceptance_criteria": [
+        "호출 프롬프트에 '버전 고정' 의도 문구가 포함되어 있으므로 오케스트레이터 모드로 동작한다.",
+        "모든 작업이 입력 버전 '2.1.1'을 공유하며, 'hotfix와 performance가 섞였으니 버전을 분리할까요?' 같은 분리 제안을 하지 않는다.",
+        "미리보기의 '## SemVer 점검' 섹션에는 경고가 표시되지 않거나 '관행 일치'로 표기된다 (hotfix+performance + patch 증가는 정상).",
+        "사용자 개입 없이도 Step 6으로 진행 가능해야 하지만, 중복 검사(6-1)와 validator(7-3) 게이트는 여전히 실행된다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 12,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v2.4.0으로 릴리즈 계획 등록해줘. 변경 내용: README와 CONTRIBUTING 문서 최신화, 내부 상태 관리 코드 Redux → Zustand 리팩토링(동작 변화 없음), EAS Build 프로필 재구성 및 캐시 정책 업데이트",
+      "acceptance_criteria": [
+        "세 가지 성격의 작업이 각각 docs, refactor, infra 구분으로 분류된다.",
+        "'README/CONTRIBUTING 최신화'는 'docs' 단독 구분으로 등록된다.",
+        "'Redux → Zustand 리팩토링'은 'refactor' 구분이며, 동작 변화가 없음을 '작업 상세'에 명시한다.",
+        "'EAS Build 프로필 재구성'은 'infra' 구분이며, 앱 런타임 코드 변경이 함께 있지 않으면 다른 구분이 섞이지 않는다.",
+        "feature/hotfix/performance 구분은 이 배치에서 사용되지 않는다.",
+        "모든 작업 제목이 '^\\[Task \\d+\\] .+' 형식이고 번호가 1부터 연속된다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 13,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v2.5.0으로 릴리즈 계획 등록해줘. gemma-4-27b-it 모델로 난이도 분석기를 구현하고, @react-native-firebase/analytics-next 패키지로 사용자 이벤트를 전송",
+      "acceptance_criteria": [
+        "Step 4-9 extract_tech_tokens.py 실행 시 'gemma-4-27b-it' 와 '@react-native-firebase/analytics-next' 두 토큰이 tokens.json에 추출된다.",
+        "Step 4-10 fact-checker 서브에이전트가 별개 Task 도구 호출로 기동되며, 같은 컨텍스트에서 순차 실행되지 않는다.",
+        "fact-checker가 두 토큰을 Context7과 WebSearch 모두에서 매치하지 못하고, task_list.json의 fact_check.verdict 가 'fail'로 기록된다 — Gemma 4 라인업은 E2B/E4B/26B/31B이며 27B 사이즈가 부재하고, '@react-native-firebase/analytics-next' 또한 npm 레지스트리에 없는 가공 패키지이므로.",
+        "fact_check.unverified_tokens 배열에 두 토큰이 각각 reason과 함께 기록되며, 각 토큰별 evidence 로그 파일(logs/fact_check/<token-slug>.log)이 실제로 생성되고 비어 있지 않다.",
+        "Step 4-11 verify_tech_tokens.py 가 비-영(非零) exit code 를 반환하여 Step 5 미리보기 생성을 차단한다.",
+        "사용자가 토큰을 수정하기 전에는 notion-create-pages가 호출되지 않으며, task_list.json·tokens.json·logs/fact_check/ 가 사용자 결정 전까지 디스크에 보존된다."
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": 14,
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v2.5.0으로 릴리즈 계획 등록해줘. gemma-3-27b-it 모델(실존 Gemma 3 인스트럭션 튠)로 난이도 분석기를 구현하고, expo-router로 새 라우팅 추가",
+      "acceptance_criteria": [
+        "Step 4-9 extract_tech_tokens.py 실행 시 'gemma-3-27b-it' (model_id) 와 'expo-router' (npm_known_prefix) 가 tokens.json에 추출된다.",
+        "Step 4-10 fact-checker 서브에이전트가 Context7 mcp__plugin_context7_context7__resolve-library-id 를 1차 호출하여 두 토큰을 매치한다 (gemma-3 패밀리에서 27B+it suffix 확인, expo-router 라이브러리 ID 확인).",
+        "task_list.json의 fact_check.verdict 가 'pass', verified_count 가 2, unverified_tokens 가 빈 배열로 기록된다.",
+        "각 토큰별 evidence 로그 파일이 logs/fact_check/ 아래에 생성되고 호출한 도구·정확한 쿼리·응답 원문·판정 한 줄을 포함한다.",
+        "Step 4-11 verify_tech_tokens.py 가 exit 0 을 반환하여 Step 5 미리보기로 진행하며, 미리보기에 '✅ 외부 사실 검증: 2개 토큰 통과 ... verdict: pass' 라인이 포함된다.",
+        "Step 7-3에서 validate_task_list.py 와 verify_tech_tokens.py 가 모두 exit 0 으로 통과해야 Step 8 완료 보고에 도달한다.",
+        "Context7 또는 WebSearch 가 응답 실패한 경우, fact-checker 가 자동으로 verdict='unverified-user-approved' 를 부여하지 않고 호출 측에 사용자 명시 승인을 요청한다."
+      ],
+      "status": "fail",
+      "files": []
+    }
+  ]
+}

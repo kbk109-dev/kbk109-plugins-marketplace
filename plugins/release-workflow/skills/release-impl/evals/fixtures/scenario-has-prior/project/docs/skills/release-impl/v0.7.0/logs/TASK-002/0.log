@@ -1,0 +1,4 @@
+# eval fixture log for TASK-002 criterion 0
+# acceptance_criteria[0]: src/lib/i18nLoader.ts 존재
+# assertion: matched
+# exit=0

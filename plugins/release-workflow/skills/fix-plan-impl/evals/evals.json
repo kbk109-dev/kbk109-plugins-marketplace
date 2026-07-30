@@ -1,0 +1,151 @@
+{
+  "skill_name": "fix-plan-impl",
+  "evals": [
+    {
+      "id": "eval-001",
+      "prompt": "로그인 화면에서 이메일 검증 정규식이 잘못되어 특정 도메인이 거부되는 버그랑, 결제 완료 페이지에서 금액이 두 번 합산되는 버그 두 개를 fix 릴리즈로 묶어서 바로 구현까지 해줘. 노션 페이지는 'MyApp Releases'야. (현재 브랜치: dev, working tree clean)",
+      "acceptance_criteria": [
+        "`git branch --show-current` 실행 결과가 `dev`임을 로그에 출력한다",
+        "Read로 `CLAUDE.md`를 읽는다",
+        "`notion-search`로 'MyApp Releases' 페이지를 찾고, `notion-fetch`로 하위 Release Plan DB의 레코드 목록을 가져온다",
+        "버전 계산에 `${CLAUDE_PLUGIN_ROOT}/skills/fix-plan-impl/scripts/compute_next_patch.py`를 stdin JSON 방식으로 호출한다 (LLM이 직접 patch+1을 계산하지 않는다)",
+        "스크립트 출력의 `new_version`이 `latest_version`의 patch 자리만 +1 증가된 값이고, major/minor는 변경되지 않았다",
+        "작업 브랜치 이름을 `fix/v{new_version}` 포맷으로 결정하고 Phase 2 확인 메시지에 포함한다",
+        "Phase 2 확인 메시지에 `이관 예정 미커밋 파일: 0개 (또는 '없음')`이 포함된다 (working tree clean)",
+        "사용자 명시적 확인('yes'/'확인') 전에는 `git checkout -b`, `/release-workflow:release-plan`, `/release-workflow:release-impl` 중 어느 것도 실행하지 않는다",
+        "Phase 3 Step 0에서 `notion-fetch`로 동일 `new_version` 레코드 race 재조회를 1회 수행한다",
+        "Phase 3 Step 1에서 `git rev-parse --verify fix/v{new_version}` 와 `git ls-remote --heads origin fix/v{new_version}` 를 모두 실행한다",
+        "`git checkout -b fix/v{new_version}` 실행 후 `git branch --show-current` 가 `fix/v{new_version}` 임을 검증한다",
+        "`docs/skills/fix-plan-impl/v{new_version}/state.json` 파일이 생성되고 `phase`, `new_version`, `branch`, `confirmed_at` 필드를 포함한다",
+        "Phase 4 완료 검증에 `bash ${CLAUDE_PLUGIN_ROOT}/skills/fix-plan-impl/scripts/verify_plan.sh {new_version}` 실행 로그가 존재하고 종료코드 0을 받는다",
+        "Phase 5에서 `/release-workflow:release-impl`을 호출하며 노션 페이지 이름·DB 이름·`v{new_version}` 3개 값을 모두 명시 전달한다",
+        "Phase 6 완료 보고에 이전 버전, 새 버전, 작업 브랜치, 작업 수, `git push -u origin fix/v{new_version}` 복사용 명령이 포함된다"
+      ],
+      "status": "fail",
+      "files": [
+        "docs/skills/fix-plan-impl/v*/state.json",
+        "docs/skills/release-plan/**/v*/task_list.json"
+      ]
+    },
+    {
+      "id": "eval-002",
+      "prompt": "푸시 알림이 안드로이드 13 이상에서 안 뜨는 문제 패치 릴리즈로 만들어서 바로 개발까지 진행해줘. 근데 나 지금 feature/notification-fix 브랜치에 있어. 노션은 'AppHub'.",
+      "acceptance_criteria": [
+        "`git branch --show-current` 출력이 `dev`가 아님을 확인한다",
+        "출력 메시지에 `dev 브랜치에서만 실행할 수 있습니다` 문구가 포함된다",
+        "출력 메시지에 `git checkout dev` 를 실행하라는 안내가 포함된다",
+        "`notion-search`, `notion-fetch`, `git checkout -b`, `git stash`, `/release-workflow:release-plan`, `/release-workflow:release-impl` 중 어느 것도 호출하지 않는다",
+        "`docs/skills/fix-plan-impl/` 아래 어떤 파일도 생성하지 않는다",
+        "사용자의 현재 브랜치를 자동으로 `dev`로 checkout하지 않는다"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-003",
+      "prompt": "프로필 이미지 업로드 시 iOS에서만 앱이 크래시 나는 버그 fix 릴리즈로 돌려줘. 노션 페이지는 'Mobile Release Hub'. 지금 dev 브랜치이고, src/screens/Profile.tsx 파일에 아직 커밋 안 한 수정사항이 있는데 이건 이번 fix 작업의 일부니까 새 브랜치로 같이 가져가줘.",
+      "acceptance_criteria": [
+        "Phase 0에서 현재 브랜치가 dev임을 확인한다",
+        "`git status --porcelain` 결과에 `src/screens/Profile.tsx` 가 포함됨을 감지한다",
+        "Phase 2 확인 메시지의 `이관 예정 미커밋 파일` 섹션에 `src/screens/Profile.tsx` 가 명시된다",
+        "`compute_next_patch.py` 를 통해 새 버전을 결정하고, 브랜치 이름을 `fix/v{new_version}` 로 고정한다",
+        "확인 이후 `git checkout -b fix/v{new_version}` (기본 경로)만 사용하고 `git stash` 는 호출하지 않는다",
+        "브랜치 전환 후 `git status` 로 `src/screens/Profile.tsx` 가 새 브랜치 위에 그대로 존재함을 검증한다",
+        "사용자 출력에 `이관된 수정 파일: 1개 (src/screens/Profile.tsx)` 취지의 안내가 포함된다",
+        "사용자의 미커밋 변경을 `git reset` / `git checkout --` / 강제 삭제하지 않는다",
+        "Phase 4 → Phase 5 순서로 진행하며 `verify_plan.sh` 가 종료코드 0을 반환한 후에만 `/release-workflow:release-impl` 을 호출한다"
+      ],
+      "status": "fail",
+      "files": [
+        "docs/skills/fix-plan-impl/v*/state.json"
+      ]
+    },
+    {
+      "id": "eval-004",
+      "prompt": "어제 만들어둔 fix 릴리즈를 이어서 돌려줘. 노션은 'ServiceDesk Releases'. 현재 dev 브랜치야.",
+      "acceptance_criteria": [
+        "Phase 0 dev 확인 통과",
+        "Phase 0.5에서 기존 `docs/skills/fix-plan-impl/v*/state.json` 존재 여부를 확인한다",
+        "state.json이 존재하면 재개/새로 시작 선택지를 사용자에게 제시한다",
+        "Phase 1~2를 수행한 뒤 `compute_next_patch.py` 출력과 일치하는 `new_version` 결정",
+        "Phase 3 Step 1에서 `git rev-parse --verify fix/v{new_version}` 가 이미 존재함을 감지한다",
+        "자동으로 `git branch -D` 또는 `git checkout -B` 로 덮어쓰지 않는다",
+        "출력 메시지에 `fix/v{new_version} 브랜치가 이미 존재합니다` 와 `git checkout fix/v{new_version}` 후 `/release-workflow:release-impl v{new_version}` 을 직접 호출하라는 안내가 포함된다",
+        "이 시점에서 `/release-workflow:release-plan` 과 `/release-workflow:release-impl` 을 자동으로 호출하지 않고 스킬을 종료한다"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-005",
+      "prompt": "장바구니에서 수량 변경 시 총액이 갱신 안 되는 버그 fix 릴리즈로 묶어서 구현해줘. 노션은 'ShopHub Releases'. 현재 dev 브랜치야. — (시나리오: 사용자가 Phase 2 확인 메시지에 '아니오' 로 응답)",
+      "acceptance_criteria": [
+        "Phase 2에서 사용자가 부정 응답('아니오'/'no'/'취소')을 하면 즉시 종료한다",
+        "`git checkout -b` 를 호출하지 않는다",
+        "`/release-workflow:release-plan`, `/release-workflow:release-impl` 중 어느 것도 호출하지 않는다",
+        "`docs/skills/fix-plan-impl/` 아래 어떤 파일도 생성하지 않는다",
+        "Notion에 새 레코드를 생성하지 않는다",
+        "종료 메시지에 '중단되었습니다' 또는 '취소되었습니다' 취지의 안내를 출력한다"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-006",
+      "prompt": "회원 탈퇴 요청이 500으로 떨어지는 버그 fix 릴리즈 돌려줘. 노션은 'CoreApp Releases'. dev 브랜치야. — (시나리오: /release-workflow:release-plan 이 Notion 등록은 성공했지만 task_list.json 을 생성하지 못함)",
+      "acceptance_criteria": [
+        "Phase 4 검증에서 `bash ${CLAUDE_PLUGIN_ROOT}/skills/fix-plan-impl/scripts/verify_plan.sh {new_version}` 를 실행한다",
+        "스크립트가 종료코드 1 (FAIL) 을 반환함을 감지한다 (`task_list.json 없음` 로그 포함)",
+        "Phase 5 (`/release-workflow:release-impl` 호출) 로 진입하지 않는다",
+        "재시도 의사를 사용자에게 1회 묻는다",
+        "2회째 실패 시 자동 중단하고 수동 진단을 요청한다 (기계적 제약 #13)",
+        "state.json 의 `plan_verified_at` 필드는 기록하지 않는다"
+      ],
+      "status": "fail",
+      "files": [
+        "docs/skills/fix-plan-impl/v*/state.json"
+      ]
+    },
+    {
+      "id": "eval-007",
+      "prompt": "검색 결과 페이지네이션 깨지는 버그 fix 릴리즈. 노션은 'SearchApp Releases'. dev 브랜치. — (시나리오: Release Plan DB 에 최신 레코드가 '2.0.0-rc1' pre-release 하나뿐이고, 직전 shipped 는 '1.8.3')",
+      "acceptance_criteria": [
+        "`compute_next_patch.py` 호출 시 stdin JSON 에 '2.0.0-rc1' 과 '1.8.3' 모두 포함된다",
+        "스크립트 출력 `warnings` 에 `pre-release 태그 무시: 2.0.0-rc1` 문구가 있다",
+        "`latest_version` 이 `1.8.3`, `new_version` 이 `1.8.4` 로 결정된다 (2.0.0-rc1 은 base 로 사용하지 않는다)",
+        "Phase 2 확인 메시지에 'pre-release 1개는 집계에서 제외했습니다' 취지의 경고가 포함된다",
+        "이후 정상 플로우 (Phase 3 → 4 → 5 → 6) 진행"
+      ],
+      "status": "fail",
+      "files": []
+    },
+    {
+      "id": "eval-008",
+      "prompt": "리뷰 작성 시 이미지 첨부 실패하는 버그 fix 릴리즈. 노션은 'ReviewApp Releases'. dev 브랜치. — (시나리오: /release-workflow:release-impl 실행 중 한 task 가 blocked 로 에스컬레이션)",
+      "acceptance_criteria": [
+        "Phase 5 에서 `/release-workflow:release-impl` 호출 후 blocked 에스컬레이션 신호를 감지하면 오케스트레이터가 재시도 루프를 돌지 않는다 (기계적 제약 #9)",
+        "사용자에게 제어권을 반환하고 스킬을 중단한다",
+        "현재 브랜치를 `fix/v{new_version}` 그대로 유지한다 (다른 브랜치로 자동 전환 금지)",
+        "Phase 6 완료 보고 대신 blocked 상태 요약을 출력한다 (`blocked 작업: N개` 명시)",
+        "state.json 의 `phase` 필드가 `5` 로 남아있어 재개 가능한 상태를 보존한다"
+      ],
+      "status": "fail",
+      "files": [
+        "docs/skills/fix-plan-impl/v*/state.json"
+      ]
+    },
+    {
+      "id": "eval-009",
+      "prompt": "알림 토글이 저장 안 되는 버그 fix 릴리즈 돌려줘. 노션은 'NotifyHub'. 현재 dev 브랜치. — (시나리오: CLAUDE.md 에 Notion 관련 정보가 전혀 없음)",
+      "acceptance_criteria": [
+        "Read 로 `CLAUDE.md` 를 읽는다",
+        "CLAUDE.md 에 Notion 정보가 없어도 스킬이 즉시 실패하지 않는다",
+        "사용자가 이미 제공한 'NotifyHub' 페이지 이름을 우선 사용해 `notion-search` 를 수행한다",
+        "이후 정상 플로우 (Phase 1~6) 진행",
+        "Notion 설정을 임의로 추정해서 주입하지 않는다 (사용자 입력이 유일한 권위 있는 출처)"
+      ],
+      "status": "fail",
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# eval fixture log for TASK-001 criterion 0
+# acceptance_criteria[0]: src/hooks/usePaymentForm.ts에서 validate 함수 분리
+# assertion: matched
+# exit=0
