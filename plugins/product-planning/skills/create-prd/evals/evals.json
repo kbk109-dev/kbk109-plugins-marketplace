@@ -1,0 +1,170 @@
+{
+  "skill_name": "create-prd",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "Journey-Forge 기획 노트를 PRD로 만들어줘. Product Management 페이지 아래에 넣어줘.",
+      "expected_output": "docs/plan/PRD-{slug}.md 생성 (10개 섹션 전부) + 리뷰어 3개 병렬 기동 + 미리보기 승인 후 Notion 발행. 원본에 없는 성공 지표는 [제안] + 근거 표기",
+      "files": [],
+      "assertions": [
+        {
+          "id": "has_all_10_sections",
+          "text": "문서 정보/개요/유저스토리/기능 요구사항/비기능 요구사항/유저 플로우/수용기준/의존성/위험·가정/성공 지표 10개 섹션 전부 존재"
+        },
+        {
+          "id": "user_story_format",
+          "text": "모든 유저스토리가 US-n 및 As a ... I want ... so that ... 형식"
+        },
+        {
+          "id": "every_fr_has_ac",
+          "text": "모든 FR-n 이 최소 1개 AC-n 에서 참조됨"
+        },
+        {
+          "id": "ac_given_when_then",
+          "text": "모든 AC-n 에 Given/When/Then 세 키워드 존재"
+        },
+        {
+          "id": "three_reviewers_parallel",
+          "text": "design/engineering/qa 리뷰어 3개가 한 메시지에서 동시 Task 호출됨 (순차 아님)"
+        },
+        {
+          "id": "review_evidence_logs",
+          "text": "docs/plan/logs/review/ 에 design·engineering·qa 로그 3개가 비공백으로 존재"
+        },
+        {
+          "id": "proposal_marker_with_basis",
+          "text": "원본에 없는 성공 지표에 [제안] 표기 + 근거 컬럼 채워짐"
+        },
+        {
+          "id": "sourced_metric_unmarked",
+          "text": "원본 문서에 있던 수치에는 [제안] 이 붙지 않음"
+        },
+        {
+          "id": "no_technical_spec",
+          "text": "테이블 스키마·라이브러리 선정·파일 경로 등 구현 방법 서술 없음"
+        },
+        {
+          "id": "preview_before_notion",
+          "text": "사용자 승인 전에 notion-create-pages 를 호출하지 않음"
+        },
+        {
+          "id": "proposal_in_final_report",
+          "text": "완료 보고에 [제안] 건수와 목록이 재노출됨"
+        },
+        { "id": "written_in_korean", "text": "문서 전체 한글 작성" }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "PRD 만들어줘",
+      "expected_output": "필수 입력 2개(원본 문서, Notion 부모 페이지)를 묶어서 한 번 질의하고, 응답이 없으면 즉시 종료. PRD 파일을 만들지 않음",
+      "files": [],
+      "assertions": [
+        {
+          "id": "bundled_input_request",
+          "text": "원본 문서와 부모 페이지를 개별 질문 반복 없이 한 번에 묶어 질의"
+        },
+        {
+          "id": "terminates_without_input",
+          "text": "입력 없이 종료하며 PRD 파일·Notion 페이지를 생성하지 않음"
+        },
+        {
+          "id": "no_guessed_source",
+          "text": "원본 문서를 임의로 추측해 고르지 않음"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "한글 기능명 '여행자 로그인'으로 PRD 만들어줘. 원본은 Journey-Forge 기획 노트, 부모는 Product Management.",
+      "expected_output": "prd_slug.py --explain 이 lossy: true 를 반환하므로 사용자에게 영문 slug 를 한 번 확인하고, 그 값을 frontmatter slug: 에 기록",
+      "files": [],
+      "assertions": [
+        {
+          "id": "slug_from_script",
+          "text": "slug 를 prd_slug.py 실행으로 결정 (모델이 직접 kebab-case 생성 금지)"
+        },
+        {
+          "id": "asks_slug_once_on_lossy",
+          "text": "lossy: true 일 때 영문 slug 를 사용자에게 한 번만 확인"
+        },
+        {
+          "id": "slug_persisted_in_frontmatter",
+          "text": "확인받은 slug 가 frontmatter slug: 에 기록되어 재질의가 불필요해짐"
+        },
+        {
+          "id": "no_untitled_filename",
+          "text": "파일명이 PRD-untitled.md 로 붕괴하지 않음"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "회의록에 성공 지표가 아예 없는데 PRD 만들어줘",
+      "expected_output": "업계 관행으로 지표 초안을 제안하되 전부 [제안] 표기 + 근거 컬럼에 구체적 근거. QA 리뷰어가 근거를 심문하고 '업계 표준' 류 문구는 반려",
+      "files": [],
+      "assertions": [
+        {
+          "id": "drafts_metrics",
+          "text": "지표를 비워두지 않고 초안을 제안"
+        },
+        {
+          "id": "all_drafted_marked",
+          "text": "제안한 모든 수치에 [제안] 표기"
+        },
+        {
+          "id": "basis_is_substantive",
+          "text": "근거가 '업계 표준'·'일반적' 같은 출처 없는 권위 주장이 아님"
+        },
+        {
+          "id": "proposal_inside_table",
+          "text": "[제안] 이 근거 컬럼이 있는 표 안에만 등장 (산문 사용 금지)"
+        },
+        {
+          "id": "qa_reviewer_interrogates",
+          "text": "qa 리뷰어가 [제안] 근거를 검토 대상으로 다룸"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "이미 있는 PRD-traveler-login.md 를 다시 PRD로 만들어줘",
+      "expected_output": "기존 파일을 덮어쓰지 않고 update/new/abort 를 사용자에게 선택받음. 기본값 abort. update 선택 시 확정 수치와 [제안] 표기를 보존하고 revision_count 유지",
+      "files": ["docs/plan/PRD-traveler-login.md"],
+      "assertions": [
+        {
+          "id": "no_silent_overwrite",
+          "text": "기존 PRD를 사용자 선택 없이 덮어쓰지 않음"
+        },
+        {
+          "id": "offers_three_choices",
+          "text": "update/new/abort 세 선택지를 제시하며 기본값은 abort"
+        },
+        {
+          "id": "preserves_confirmed_metrics",
+          "text": "update 시 팀이 확정한 수치를 [제안] 으로 되돌리지 않음"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "PRD에 DB 스키마랑 사용할 라이브러리까지 적어줘",
+      "expected_output": "구현 상세를 PRD에 넣지 않고, 만족해야 할 성질(FR/NFR)로 다시 쓴다는 원문 원칙을 설명. engineering 리뷰어가 blocking 으로 잡음",
+      "files": [],
+      "assertions": [
+        {
+          "id": "refuses_technical_spec",
+          "text": "테이블 스키마·라이브러리 선정을 PRD 본문에 넣지 않음"
+        },
+        {
+          "id": "explains_principle",
+          "text": "'PRD는 기술 명세서가 아니다' 원칙과 그 이유를 설명"
+        },
+        {
+          "id": "rewrites_as_property",
+          "text": "요구사항을 만족해야 할 성질로 재서술해 제시"
+        }
+      ]
+    }
+  ]
+}

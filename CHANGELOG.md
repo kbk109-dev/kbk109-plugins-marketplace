@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.1.0
+
+제품 기획 계열 플러그인을 추가했다. 노션 페이지
+[Mastering PRDs in Product Management](https://app.notion.com/p/3ac09f96fe5281979f9dca1cba4a589a)
+(원문: Medium / khutumadesewa) 이 정의하는 10개 섹션·6단계 작성법·4가지 흔한 실수를 계약으로 삼는다.
+
+### 추가
+
+- **`product-planning`** (1 스킬) — `create-prd`.
+  노션 문서·회의록을 PRD 10개 섹션으로 정규화하고, 모든 기능 요구사항에 Given-When-Then
+  수용기준을 도출한다. 원문 Step 6("PRD는 혼자 작성하는 것이 아니다")을
+  **디자인·엔지니어링·QA 리뷰어 서브에이전트 3개 병렬 기동**으로 구현했다 — 생성자와 검증자를
+  분리해야 자기평가 편향이 걸리지 않으므로, 원문의 요구와 저장소 규약이 같은 장치로 수렴한다.
+- `scripts/prd_slug.py` — 기능명 → 결정적 경로 slug.
+  `release-plan` 의 `slugify.py` 는 비-ASCII 를 전부 버려 순수 한글 입력이 `untitled` 이 된다.
+  PRD 기능명은 한글이 기본이라 그대로 쓰면 모든 PRD가 `docs/plan/PRD-untitled.md` 하나로
+  충돌한다(`결제 API 연동` 과 `인증 API 개편` 처럼 부분 ASCII 도 둘 다 `api` 로 붕괴).
+  알파뉴메릭이 유실된 경우에만 원본 이름의 결정적 해시를 덧붙여 구분한다. 두 스크립트는
+  용도가 달라 통합하지 않는다.
+- `scripts/validate_prd.py` — 10개 섹션 실재, 유저스토리 형식, 모든 `FR-n` 의 수용기준 참조,
+  Given-When-Then 키워드, `[제안]` 수치의 근거 실재, 스텁 표현 부재를 검사하는 차단 게이트.
+
+### 변경
+
+- **`scripts/validate-marketplace.sh` 가 플러그인 목록을 `marketplace.json` 에서 읽는다.**
+  검사 4·5 가 플러그인 이름 4개를 하드코딩하고 있어, 신규 플러그인은 네임스페이스 검사와
+  스크립트 경로 검사를 *실패하지 않고 아예 건너뛰었다* — 미수행이 통과처럼 보였다.
+- **검사 4 의 dangling 참조 검출을 수정했다.** 이전 구현은 "찾은 참조"만 출력한 뒤 그것의 존재를
+  다시 확인해 항상 통과했다. 어느 플러그인에도 없는 스크립트 참조가 검출되지 않았다.
+  스킬 디렉토리 패턴도 `[a-z-]+` → `[a-z0-9-]+` 로 넓혔다.
+
 ## 1.0.0
 
 첫 릴리즈. [`kbk109-dev/ClaudeCodeSkills`](https://github.com/kbk109-dev/ClaudeCodeSkills)

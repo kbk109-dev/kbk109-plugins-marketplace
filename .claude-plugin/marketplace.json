@@ -1,13 +1,13 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "kbk109-plugins-marketplace",
-  "description": "Harness Engineering 기반 Claude Code 플러그인 모음 — Expo/React Native 앱 수익화, Firebase 관측성, Notion 연동 릴리즈 워크플로, 스킬 개발 도구",
+  "description": "Harness Engineering 기반 Claude Code 플러그인 모음 — Expo/React Native 앱 수익화, Firebase 관측성, Notion 연동 릴리즈 워크플로, 제품 기획(PRD), 스킬 개발 도구",
   "owner": {
     "name": "kbk109",
     "url": "https://github.com/kbk109-dev"
   },
   "metadata": {
-    "version": "1.0.0"
+    "version": "1.1.0"
   },
   "plugins": [
     {
@@ -92,6 +92,27 @@
         "evals"
       ],
       "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/harness-devkit"
+    },
+    {
+      "name": "product-planning",
+      "displayName": "Product Planning",
+      "description": "노션 문서·회의록을 PRD 10개 섹션(문서 정보·개요·유저스토리·기능/비기능 요구사항·유저 플로우·수용기준·의존성·위험·성공 지표)으로 정규화한다. 모든 기능 요구사항에 Given-When-Then 수용기준을 도출하고, 디자인·엔지니어링·QA 리뷰어 3개를 병렬 기동해 초안을 교차 검토한 뒤 Notion 에 발행한다.",
+      "source": "./plugins/product-planning",
+      "category": "productivity",
+      "version": "1.0.0",
+      "author": {
+        "name": "kbk109",
+        "url": "https://github.com/kbk109-dev"
+      },
+      "keywords": [
+        "prd",
+        "product-management",
+        "user-stories",
+        "acceptance-criteria",
+        "notion",
+        "harness-engineering"
+      ],
+      "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/product-planning"
     }
   ]
 }

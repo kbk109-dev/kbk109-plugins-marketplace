@@ -1,0 +1,20 @@
+{
+  "name": "product-planning",
+  "version": "1.0.0",
+  "description": "노션 문서·회의록을 PRD 10개 섹션으로 정규화하고 디자인·엔지니어링·QA 리뷰어 3개를 병렬 기동해 교차 검토하는 제품 기획 도구",
+  "author": {
+    "name": "kbk109",
+    "url": "https://github.com/kbk109-dev"
+  },
+  "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/product-planning",
+  "repository": "https://github.com/kbk109-dev/kbk109-plugins-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "prd",
+    "product-management",
+    "user-stories",
+    "acceptance-criteria",
+    "notion",
+    "harness-engineering"
+  ]
+}
