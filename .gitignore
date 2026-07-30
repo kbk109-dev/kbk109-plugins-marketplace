@@ -1,0 +1,12 @@
+.DS_Store
+__pycache__/
+
+# 패키징 산출물 — 플러그인은 loose 파일을 로드하므로 .skill 번들은 중복이고
+# 원본과 어긋나기 쉽다 (이관 시 stale 번들 1건 제거함)
+*.skill
+
+*.py[cod]
+*.egg-info/
+.venv/
+node_modules/
+.claude/settings.local.json

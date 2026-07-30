@@ -1,0 +1,97 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "kbk109-plugins-marketplace",
+  "description": "Harness Engineering 기반 Claude Code 플러그인 모음 — Expo/React Native 앱 수익화, Firebase 관측성, Notion 연동 릴리즈 워크플로, 스킬 개발 도구",
+  "owner": {
+    "name": "kbk109",
+    "url": "https://github.com/kbk109-dev"
+  },
+  "metadata": {
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "expo-app-kit",
+      "displayName": "Expo App Kit",
+      "description": "Expo/React Native 앱의 AdMob 광고 배치 계획·구현과 EAS Update(OTA) 핫픽스를 자동화한다. context7 MCP로 react-native-google-mobile-ads 최신 API를 확인한 뒤 코드를 생성하고, fingerprint 불일치로 OTA가 반영되지 않는 문제를 진단·재배포한다.",
+      "source": "./plugins/expo-app-kit",
+      "category": "development",
+      "version": "1.0.0",
+      "author": {
+        "name": "kbk109",
+        "url": "https://github.com/kbk109-dev"
+      },
+      "keywords": [
+        "expo",
+        "react-native",
+        "admob",
+        "monetization",
+        "eas-update",
+        "ota"
+      ],
+      "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/expo-app-kit"
+    },
+    {
+      "name": "firebase-observability",
+      "displayName": "Firebase Observability",
+      "description": "React Native Expo 프로젝트에 Firebase Analytics(GA4 이벤트·screen_view)와 Crashlytics(Error Boundary·recordError)를 계획부터 구현까지 도입한다. 가상 전문가 팀이 계획을 교차 검토하고, Harness 3-에이전트 검증 루프로 구현 완료를 증명한다.",
+      "source": "./plugins/firebase-observability",
+      "category": "monitoring",
+      "version": "1.0.0",
+      "author": {
+        "name": "kbk109",
+        "url": "https://github.com/kbk109-dev"
+      },
+      "keywords": [
+        "firebase",
+        "analytics",
+        "ga4",
+        "crashlytics",
+        "react-native",
+        "expo"
+      ],
+      "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/firebase-observability"
+    },
+    {
+      "name": "release-workflow",
+      "displayName": "Release Workflow",
+      "description": "Notion 데이터베이스를 상태 저장소로 쓰는 릴리즈 파이프라인. 버전별 작업 분해·기술 토큰 팩트체크(계획), Task State Machine과 Generator/Evaluator 분리 검증(구현), 패치 릴리즈 자동화, dev→main 머지와 릴리즈 노트 생성까지 다룬다.",
+      "source": "./plugins/release-workflow",
+      "category": "deployment",
+      "version": "1.0.0",
+      "author": {
+        "name": "kbk109",
+        "url": "https://github.com/kbk109-dev"
+      },
+      "keywords": [
+        "release",
+        "notion",
+        "harness-engineering",
+        "changelog",
+        "semver",
+        "git-workflow"
+      ],
+      "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/release-workflow"
+    },
+    {
+      "name": "harness-devkit",
+      "displayName": "Harness Devkit",
+      "description": "Harness Engineering 원칙(상태 외부화·Task State Machine·독립 검증 루프)으로 스킬을 설계·집필하는 도구와, CLAUDE.md에서 서버 실행 명령을 추출해 기동 후 로그를 감시하며 오류를 한국어로 분석 보고하는 dev 서버 모니터를 제공한다.",
+      "source": "./plugins/harness-devkit",
+      "category": "development",
+      "version": "1.0.0",
+      "author": {
+        "name": "kbk109",
+        "url": "https://github.com/kbk109-dev"
+      },
+      "keywords": [
+        "skill-development",
+        "harness-engineering",
+        "dev-server",
+        "log-monitoring",
+        "evals"
+      ],
+      "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/harness-devkit"
+    }
+  ]
+}

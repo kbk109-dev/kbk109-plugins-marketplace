@@ -1,0 +1,99 @@
+# kbk109 plugins marketplace
+
+Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 14개를 도메인별 4개
+플러그인으로 묶어 배포한다.
+
+> **Harness Engineering** — 에이전트 = 모델 + 하네스. 모델이 성능의 상한선이라면, 하네스는
+> 그 상한선에 얼마나 근접하는지를 결정한다. 여기 실린 스킬들은 LLM의 4가지 구조적 실패 모드
+> (세션 간 상태 소실 · 일회성 탐욕적 완료 · 조기 완료 선언 · 자기평가 편향)를 상태 외부화,
+> Task State Machine, 독립 검증 루프로 막는 구조를 공유한다.
+> 배경 문서: [`docs/harness-engineering/`](./docs/harness-engineering/)
+
+## 설치
+
+```
+/plugin marketplace add kbk109-dev/kbk109-plugins-marketplace
+/plugin install expo-app-kit@kbk109-plugins-marketplace
+```
+
+플러그인은 필요한 것만 골라 설치한다. 플러그인 간 의존은 없다.
+
+## 플러그인
+
+| 플러그인 | 스킬 | 용도 |
+|---|---|---|
+| [`expo-app-kit`](./plugins/expo-app-kit) | 4 | Expo/RN 앱의 AdMob 광고 계획·구현, EAS Update(OTA) 핫픽스 |
+| [`firebase-observability`](./plugins/firebase-observability) | 4 | Firebase Analytics(GA4)·Crashlytics 도입 계획·구현 |
+| [`release-workflow`](./plugins/release-workflow) | 4 | Notion 기반 릴리즈 계획·구현·패치·main 머지 |
+| [`harness-devkit`](./plugins/harness-devkit) | 2 | 스킬 집필 도구, dev 서버 로그 감시 |
+
+## 스킬 전체 목록
+
+플러그인 스킬은 `/<플러그인>:<스킬>` 로 호출한다. 대부분은 트리거 문구만으로 자동 호출된다.
+
+### expo-app-kit
+| 스킬 | 트리거 예 |
+|---|---|
+| `admob-plan` | "광고 배치 계획", "어디에 광고 넣을지", "admob 설계" |
+| `admob-impl` | "ADMOB-PLAN 기반으로 구현해줘", "배너 광고 코드 넣어줘" |
+| `admob-impl-harness` | "하네스로 광고 구현", "AdMob harness" |
+| `ota-hotfix` | "OTA 반영 안 됨", "fingerprint 불일치", "eas update 했는데 적용 안 돼" |
+
+### firebase-observability
+| 스킬 | 트리거 예 |
+|---|---|
+| `firebase-analytics-plan` | "GA4 이벤트 설계", "이벤트 트래킹 계획" |
+| `firebase-analytics-impl` | "GA_PLAN 기반으로 구현해줘", "screen_view 트래킹 구현해줘" |
+| `firebase-crashlytics-plan` | "크래시 리포팅 계획 세워줘", "Error Boundary 어디에 넣어야 해?" |
+| `firebase-crashlytics-impl` | "CRASHLYTICS_PLAN 기반으로 구현해줘", "글로벌 에러 핸들러 설정해줘" |
+
+### release-workflow
+| 스킬 | 트리거 예 |
+|---|---|
+| `release-plan` | "릴리즈 계획", "작업 분해해서 노션에 등록" |
+| `release-impl` | "v1.2.0 구현", "릴리즈 작업 시작" |
+| `fix-plan-impl` | "버그 수정 릴리즈", "패치 릴리즈", "핫픽스 계획+구현" |
+| `main-branch-merge` | "main 머지", "릴리스 노트", "태그 찍어줘" |
+
+### harness-devkit
+| 스킬 | 트리거 예 |
+|---|---|
+| `harness-dev` | 스킬 설계·집필 (Harness 프레임워크 적용) |
+| `dev-monitor` | `/harness-devkit:dev-monitor <port>` — 서버 기동 + 로그 감시 |
+
+## 선행 요건
+
+스킬마다 다르다. 플러그인별 README 에 정리해 두었다.
+
+| 요건 | 필요한 플러그인 |
+|---|---|
+| [context7 MCP](https://github.com/upstash/context7) | expo-app-kit, firebase-observability, release-workflow, harness-devkit |
+| Notion MCP | release-workflow |
+| WebSearch | release-workflow, harness-devkit |
+| `python3` | release-workflow |
+| EAS CLI (`eas`) | expo-app-kit (ota-hotfix) |
+
+## 개발
+
+```bash
+bash scripts/validate-marketplace.sh   # 매니페스트·경로·네임스페이스 정합성 검사
+```
+
+스킬을 수정할 때 지켜야 할 두 규칙:
+
+1. **스크립트 경로는 `${CLAUDE_PLUGIN_ROOT}` 기준으로 쓴다.**
+   `${CLAUDE_PLUGIN_ROOT}/skills/<스킬>/scripts/x.py` — 상대 경로는 사용자 프로젝트의 cwd 에서
+   깨진다.
+2. **다른 스킬을 호출할 때는 네임스페이스를 붙인다.**
+   `/release-workflow:release-plan` — 플러그인 스킬은 bare 이름으로 호출되지 않는다.
+
+두 규칙은 `validate-marketplace.sh` 가 검사한다.
+
+## 계보
+
+이 저장소의 스킬은 [`kbk109-dev/ClaudeCodeSkills`](https://github.com/kbk109-dev/ClaudeCodeSkills)
+v1.9.1 에서 분리해 플러그인으로 재구성한 것이다. 이후 유지보수는 이 저장소에서 한다.
+
+## 라이선스
+
+MIT — [LICENSE](./LICENSE)
