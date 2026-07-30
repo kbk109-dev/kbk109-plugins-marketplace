@@ -13,6 +13,15 @@ fail=0
 ok()   { printf '  \033[32m✓\033[0m %s\n' "$1"; }
 bad()  { printf '  \033[31m✗\033[0m %s\n' "$1"; fail=$((fail + 1)); }
 
+# 플러그인 목록은 marketplace.json 에서 읽는다. 하드코딩하면 신규 플러그인이 검사 4·5 를
+# 조용히 빠져나간다 — 실패가 아니라 미수행이므로 통과처럼 보인다.
+PLUGINS=$(python3 -c "
+import json
+d = json.load(open('.claude-plugin/marketplace.json'))
+print(' '.join(p['name'] for p in d['plugins']))
+")
+[ -n "$PLUGINS" ] || { printf '  \033[31m✗\033[0m marketplace.json 에서 플러그인 목록을 읽지 못했습니다.\n'; exit 1; }
+
 echo "== 1. JSON 파싱 =="
 while IFS= read -r f; do
   if python3 -c "import json,sys;json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
@@ -55,19 +64,29 @@ bare=$(grep -rnE '(^|[^}A-Za-z0-9_-])(\{skill_root\}/|skills/[a-z0-9-]+/|\./)?sc
 dup=$(grep -rF 'CLAUDE_PLUGIN_ROOT}/${CLAUDE_PLUGIN_ROOT' plugins 2>/dev/null | wc -l | tr -d ' ')
 [ "$dup" = "0" ] && ok "접두사 중복 0건" || bad "\${CLAUDE_PLUGIN_ROOT} 중복 $dup 건"
 
-while IFS= read -r ref; do
-  [ -f "plugins/$ref" ] || bad "참조된 스크립트 없음: $ref"
-done < <(grep -rhoE '\$\{CLAUDE_PLUGIN_ROOT\}/skills/[a-z-]+/scripts/[a-zA-Z0-9_./-]+' plugins \
-         | sed 's|\${CLAUDE_PLUGIN_ROOT}/||' | sort -u \
+# 참조된 스크립트가 어느 플러그인에도 없으면 보고한다. 이전 구현은 "찾은 것"만 출력하고
+# 그것의 존재를 다시 확인해 항상 통과했다 — dangling 참조가 검출되지 않았다.
+dangling=0
+while IFS='|' read -r found ref; do
+  if [ "$found" != "1" ]; then
+    bad "참조된 스크립트를 어느 플러그인에서도 찾을 수 없음: $ref"
+    dangling=$((dangling + 1))
+  fi
+# 문자 클래스에 '.' 을 남겨두는 이유: scripts/schemas/*.schema.json 같은 참조도 검사 대상이다.
+# 대신 문장 끝 마침표가 경로에 붙어 오므로(`...install_hooks.sh.`) 후행 구두점을 떼어낸다.
+done < <(grep -rhoE '\$\{CLAUDE_PLUGIN_ROOT\}/skills/[a-z0-9-]+/scripts/[a-zA-Z0-9_./-]+' plugins \
+         | sed 's|\${CLAUDE_PLUGIN_ROOT}/||; s|[.,;:]*$||' | sort -u \
          | while read -r r; do
-             for p in release-workflow harness-devkit expo-app-kit firebase-observability; do
-               [ -f "plugins/$p/$r" ] && echo "$p/$r" && break
+             hit=0
+             for p in $PLUGINS; do
+               if [ -f "plugins/$p/$r" ]; then hit=1; break; fi
              done
+             echo "$hit|$r"
            done)
-ok "참조 스크립트 실체 확인 완료"
+[ "$dangling" = "0" ] && ok "참조 스크립트 실체 확인 완료 (dangling 0건)"
 
 echo "== 5. 스킬 호출 네임스페이스 =="
-for p in expo-app-kit firebase-observability release-workflow harness-devkit; do
+for p in $PLUGINS; do
   skills=$(find "plugins/$p/skills" -maxdepth 1 -mindepth 1 -type d -exec basename {} \; | paste -sd'|' -)
   n=$(grep -rhoE "(^|[[:space:]\`(\"'])/($skills)([^A-Za-z0-9_:-]|$)" "plugins/$p" 2>/dev/null | wc -l | tr -d ' ')
   [ "$n" = "0" ] && ok "$p — 네임스페이스 없는 호출 0건" \
