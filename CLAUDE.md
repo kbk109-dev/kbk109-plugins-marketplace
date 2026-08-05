@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## 커뮤니케이션
+
+사용자와는 **한글로** 소통한다. 커밋 메시지·코드 주석·기술 고유명사는 기존 관례를 따르되,
+설명·질문·요약·확인 요청은 한국어로 한다.
+
 ## 이 저장소의 성격
 
 Claude Code **플러그인 마켓플레이스**다. 스킬을 담는 저장소가 아니라, 스킬을 플러그인으로 묶어
@@ -150,3 +155,5 @@ skills/release-plan/scripts/slugify.py                           # 깨짐
 변경 내역은 `CHANGELOG.md` 에 기록한다 (README 가 아니다). 플러그인을 고치면 해당
 `plugin.json` 의 `version` 과 `marketplace.json` 의 같은 플러그인 `version` 을 함께 올린다 —
 두 곳에 있으므로 한쪽만 올리면 어긋난다.
+
+Git 브랜치·커밋·머지 워크플로: `.claude/rules/git-branch-workflow.md`
