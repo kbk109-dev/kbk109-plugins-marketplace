@@ -1,0 +1,20 @@
+{
+  "name": "project-conventions",
+  "version": "1.0.0",
+  "description": "CLAUDE.md 본문을 AGENTS.md 로 이관해 Claude·Cursor 공용 SSoT 로 만들고, git 브랜치 워크플로 규칙을 양쪽 규칙 디렉토리에 설치한 뒤 갈라짐을 검사한다",
+  "author": {
+    "name": "kbk109",
+    "url": "https://github.com/kbk109-dev"
+  },
+  "homepage": "https://github.com/kbk109-dev/kbk109-plugins-marketplace/tree/main/plugins/project-conventions",
+  "repository": "https://github.com/kbk109-dev/kbk109-plugins-marketplace",
+  "license": "MIT",
+  "keywords": [
+    "agents-md",
+    "claude-md",
+    "cursor",
+    "git-workflow",
+    "project-setup",
+    "conventions"
+  ]
+}

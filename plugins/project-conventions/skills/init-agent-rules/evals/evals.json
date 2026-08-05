@@ -1,0 +1,101 @@
+{
+  "skill_name": "init-agent-rules",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "CLAUDE.md 를 AGENTS.md 로 옮기고 커서랑 클로드가 같은 git 규칙 쓰게 해줘",
+      "expected_output": "CLAUDE.md 본문이 AGENTS.md 로 이관되고, CLAUDE.md 는 @AGENTS.md 포인터로 교체되며, .claude/rules/git-branch-workflow.md 와 .cursor/rules/git-branch-workflow.mdc 가 동일 본문으로 생성되고, AGENTS.md 에 마커 블록이 추가된다",
+      "files": ["CLAUDE.md"],
+      "assertions": [
+        {
+          "id": "uses_installer_script",
+          "text": "파일을 직접 쓰지 않고 install_agent_rules 스크립트를 호출한다"
+        },
+        {
+          "id": "dry_run_first",
+          "text": "--dry-run 으로 변경 내용을 먼저 보여주고 승인을 받은 뒤 실제 설치한다"
+        },
+        {
+          "id": "mdc_matches_md",
+          "text": ".cursor/rules/*.mdc 의 프론트매터를 제외한 본문이 .claude/rules/*.md 와 동일하다"
+        },
+        {
+          "id": "no_auto_commit",
+          "text": "설치 후 자동 커밋하지 않고 변경 요약만 보고한다"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "프로젝트 초기 설정 해줘. 에이전트 규칙 세팅.",
+      "expected_output": "CLAUDE.md 가 없으므로 게이트에서 중단하고 /init 을 먼저 실행하라고 안내한다. 어떤 파일도 생성하지 않는다",
+      "files": [],
+      "assertions": [
+        {
+          "id": "gate_stops",
+          "text": "CLAUDE.md 부재를 이유로 중단한다"
+        },
+        {
+          "id": "no_scaffolding",
+          "text": "AGENTS.md 나 규칙 파일을 지어내서 만들지 않는다"
+        },
+        {
+          "id": "suggests_init",
+          "text": "/init 으로 CLAUDE.md 를 먼저 만들라고 안내한다"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "AGENTS.md 로 이관해줘",
+      "expected_output": "AGENTS.md 가 이미 존재하고 내용이 CLAUDE.md 와 다르므로 중단한다. 두 파일의 섹션 차이를 보여주고 append-claude / keep-agents / abort 를 선택받는다. 기본값은 abort",
+      "files": ["CLAUDE.md", "AGENTS.md"],
+      "assertions": [
+        {
+          "id": "stops_on_conflict",
+          "text": "기존 AGENTS.md 를 자동으로 덮어쓰거나 병합하지 않고 중단한다"
+        },
+        {
+          "id": "shows_diff",
+          "text": "두 파일의 섹션 차이를 사용자에게 제시한다"
+        },
+        {
+          "id": "offers_choices",
+          "text": "append-claude / keep-agents / abort 세 선택지를 제시하고 기본값이 abort 임을 밝힌다"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "브랜치 워크플로 규칙 다시 설치해줘",
+      "expected_output": "이미 설치된 상태(CLAUDE.md 가 포인터)를 감지해 충돌 처리로 가지 않고, 규칙 파일 재생성과 마커 블록 교체만 수행한다. 마커 블록이 중복되지 않는다",
+      "files": ["AGENTS.md", "CLAUDE.md", ".claude/rules/git-branch-workflow.md", ".cursor/rules/git-branch-workflow.mdc"],
+      "assertions": [
+        {
+          "id": "idempotent",
+          "text": "AGENTS.md 의 마커 블록이 정확히 한 쌍만 남는다"
+        },
+        {
+          "id": "preserves_body",
+          "text": "AGENTS.md 의 기존 본문을 훼손하지 않는다"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "git 브랜치 규칙 넣어줘. 테스트 명령은 따로 없어.",
+      "expected_output": "--pre-commit-check 를 빈 값으로 두어 규칙 3절의 '커밋 전 반드시' 줄이 통째로 빠진 규칙 파일이 생성된다",
+      "files": ["CLAUDE.md"],
+      "assertions": [
+        {
+          "id": "omits_check_line",
+          "text": "생성된 규칙에 '커밋 전 반드시' 줄이 없다"
+        },
+        {
+          "id": "no_placeholder_leak",
+          "text": "생성된 파일에 {{PRE_COMMIT_CHECK}} 같은 미치환 플레이스홀더가 남지 않는다"
+        }
+      ]
+    }
+  ]
+}

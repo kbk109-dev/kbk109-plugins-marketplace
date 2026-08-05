@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.2.0
+
+Claude 와 Cursor 를 번갈아 쓸 때 같은 규칙을 두 벌 관리하게 되는 문제를 플러그인으로 옮겼다.
+이 저장소 자신이 그 문제의 표본이었다 — `.claude/rules/git-branch-workflow.md` 와
+`.cursor/rules/git-branch-workflow.mdc` 를 손으로 미러링하고 있었고, 갈라져도 에러가 나지 않아
+검출할 방법이 없었다. 프로젝트를 새로 열 때마다 이 세트를 다시 만드는 것도 반복 작업이었다.
+
+해법은 **`AGENTS.md` 를 단일 소스로 삼는 것**이다. `CLAUDE.md` 가 `AGENTS.md` 를 가리키기만
+하면 두 파일이 갈라질 여지 자체가 없어진다. 갈라질 수 있는 건 생성물인 `.mdc` 사본 하나로
+좁혀지고, 그 하나는 바이트 비교로 확실히 잡을 수 있다 — 검출 불가능한 문제를 검출 가능한
+문제로 바꾸는 교환이다.
+
+### 추가
+
+- **`project-conventions`** (2 스킬) — `init-agent-rules`, `check-agent-rules`.
+  `init-agent-rules` 는 `CLAUDE.md` 본문을 `AGENTS.md` 로 이관하고(`git mv` 로 rename 히스토리
+  보존), `CLAUDE.md` 를 `@AGENTS.md` 포인터로 재작성한 뒤, git 브랜치 워크플로 규칙을
+  `.claude/rules/` 와 `.cursor/rules/` 양쪽에 동일 본문으로 설치한다.
+  `check-agent-rules` 는 그 구조가 유지되는지 6개 항목으로 검사한다.
+- `scripts/install_agent_rules.py` — 이관·렌더·마커 블록 삽입을 결정적으로 수행한다.
+  모델이 파일을 직접 쓰지 않는 이유는 `.mdc` 사본이 `.md` 원본과 **바이트 단위로** 같아야
+  하기 때문이다. 손으로 옮겨 쓰면 공백 하나로 어긋나는데, 그게 이 플러그인이 막으려는 실패다.
+  재실행 시 마커 블록 구간만 교체하므로 멱등하다.
+- `scripts/check_agent_rules.py` — 6개 검사. 핵심은 5번(`.mdc` 본문 == `.md` 본문)이고,
+  나머지는 5번이 의미를 갖는 구조를 지킨다. exit 1 이므로 pre-commit 훅에 걸 수 있다.
+
+### 설계상 거부한 것
+
+- **자동 병합.** `AGENTS.md` 가 이미 있으면 중단하고 사용자에게 선택을 넘긴다. 어느 쪽이
+  최신인지는 파일 내용만으로 판정할 수 없고, 잘못 합친 규칙은 없는 규칙보다 나쁘다.
+- **`CLAUDE.md` 뼈대 생성.** `CLAUDE.md` 가 없으면 실행을 거부하고 `/init` 을 안내한다.
+  프로젝트 지시를 추측으로 채우면 그 추측이 이후 모든 세션의 전제가 된다.
+- **규칙 카탈로그.** 지금 필요한 건 git 워크플로 하나다. 선택지가 1개인 메뉴를 만들지 않는다.
+
+### 변경
+
+- `README.md` 플러그인 표에 `product-planning` 을 추가했다. 1.1.0 에서 누락됐던 것으로,
+  `validate-marketplace.sh` 가 README 를 보지 않아 검출되지 않았다.
+
 ## 1.1.0
 
 제품 기획 계열 플러그인을 추가했다. 노션 페이지
