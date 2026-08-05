@@ -16,6 +16,11 @@ Usage:
                            [--pre-commit-check CMD]
                            [--on-existing-agents {abort,append-claude,keep-agents}]
                            [--force] [--dry-run]
+    install_agent_rules.py --sync-mdc [--project-root PATH]
+
+--sync-mdc re-mirrors the .mdc from the CURRENT .md instead of the template,
+so a project-specific edit to the rule survives. Use it after editing
+.claude/rules/<rule>.md; a full install would overwrite that edit.
 
 Exit codes:
     0  installed (or --dry-run plan printed)
@@ -25,6 +30,7 @@ Exit codes:
          * CLAUDE.md missing or blank
          * AGENTS.md already exists and --on-existing-agents=abort (default)
          * keep-agents would discard uncommitted CLAUDE.md content
+         * --sync-mdc with no .claude/rules/<rule>.md to mirror
 
 Invariants established:
     - CLAUDE.md contains the pointer and no project body
@@ -151,6 +157,52 @@ def render(template: str, main_branch: str, pre_commit_check: str) -> str:
     return "\n".join(out_lines).rstrip("\n") + "\n"
 
 
+def existing_mdc_frontmatter(path: Path) -> str | None:
+    """Return the leading '---...---' block of an .mdc file, if it has one."""
+    if not path.is_file():
+        return None
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---"):
+        return None
+    lines = text.splitlines(keepends=True)
+    for i in range(1, len(lines)):
+        if lines[i].rstrip("\n") == "---":
+            return "".join(lines[: i + 1])
+    return None
+
+
+def sync_mdc(root: Path, main_branch: str, dry_run: bool) -> int:
+    """Re-mirror .cursor/rules/<rule>.mdc from the CURRENT .claude/rules/<rule>.md.
+
+    A full install renders the rule from the plugin's template, so any
+    project-specific edit to the .md would be overwritten. This mode exists so
+    the .md can be edited and the mirror brought back in line without losing
+    that edit — which is what the checker actually asserts (it compares .mdc to
+    .md, not to the template).
+    """
+    md = root / CLAUDE_RULE_REL
+    if not md.is_file():
+        print(f"{CLAUDE_RULE_REL} not found — nothing to mirror.", file=sys.stderr)
+        return 3
+    body = md.read_text(encoding="utf-8")
+    frontmatter = existing_mdc_frontmatter(root / CURSOR_RULE_REL)
+    if frontmatter is None:
+        frontmatter = MDC_FRONTMATTER.format(main=main_branch)
+
+    print(f"  - {CURSOR_RULE_REL} ← {CLAUDE_RULE_REL} 본문으로 재생성")
+    if dry_run:
+        return 0
+    try:
+        out = root / CURSOR_RULE_REL
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(frontmatter + "\n" + body, encoding="utf-8")
+    except OSError as exc:
+        print(f"write failed: {exc}", file=sys.stderr)
+        return 1
+    print("OK")
+    return 0
+
+
 def retitle(text: str) -> str:
     """Rewrite a literal `# CLAUDE.md` H1 to `# AGENTS.md` after migration.
 
@@ -198,12 +250,23 @@ def main(argv: list[str]) -> int:
     )
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument(
+        "--sync-mdc",
+        action="store_true",
+        help="only re-mirror the .mdc from the current .md; touch nothing else",
+    )
     args = ap.parse_args(argv[1:])
 
     root = Path(args.project_root).resolve()
     if not root.is_dir():
         print(f"--project-root is not a directory: {root}", file=sys.stderr)
         return 2
+
+    if args.sync_mdc:
+        branch = args.main_branch or (
+            detect_main_branch(root) if in_git_repo(root) else "main"
+        )
+        return sync_mdc(root, branch, args.dry_run)
 
     template_path = Path(__file__).resolve().parent.parent / "templates" / f"{RULE_NAME}.md"
     if not template_path.is_file():

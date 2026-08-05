@@ -96,6 +96,25 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/init-agent-rules/scripts/install_agent_rule
 | `--main-branch` | 기본 브랜치명. 생략하면 `origin/HEAD` → `main` → `master` 순으로 탐지 |
 | `--on-existing-agents` | `abort`(기본) / `append-claude` / `keep-agents` |
 | `--force` | `keep-agents` 가 미커밋 `CLAUDE.md` 를 폐기하는 것을 허용 |
+| `--sync-mdc` | `.mdc` 만 현재 `.md` 본문으로 재생성. 아래 참조 |
+
+### 규칙을 프로젝트에 맞게 고칠 때 (`--sync-mdc`)
+
+설치는 규칙을 **템플릿에서** 렌더한다. 따라서 `.claude/rules/git-branch-workflow.md` 를 손으로
+고친 뒤 전체 설치를 다시 돌리면 그 수정이 템플릿 내용으로 덮어써진다.
+
+프로젝트 고유 규칙을 추가하려면 이 순서를 지킨다:
+
+1. `.claude/rules/git-branch-workflow.md` 를 고친다 — 이쪽이 규칙의 원본이다
+2. 사본을 다시 맞춘다:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/init-agent-rules/scripts/install_agent_rules.py \
+  --project-root . --sync-mdc
+```
+
+`--sync-mdc` 는 `.mdc` 만 건드린다. `CLAUDE.md` · `AGENTS.md` · `.md` 원본은 그대로 둔다.
+검사 스킬이 비교하는 대상도 템플릿이 아니라 이 `.md` 원본이므로, 고친 규칙도 정상 통과한다.
 
 종료 코드 `3` 은 게이트 실패다. **재시도하지 말고** stderr 메시지를 사용자에게 그대로 전달한 뒤
 지시를 받는다.
