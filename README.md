@@ -1,6 +1,6 @@
 # kbk109 plugins marketplace
 
-Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 14개를 도메인별 4개
+Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 17개를 도메인별 6개
 플러그인으로 묶어 배포한다.
 
 > **Harness Engineering** — 에이전트 = 모델 + 하네스. 모델이 성능의 상한선이라면, 하네스는
@@ -26,6 +26,8 @@ Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 
 | [`firebase-observability`](./plugins/firebase-observability) | 4 | Firebase Analytics(GA4)·Crashlytics 도입 계획·구현 |
 | [`release-workflow`](./plugins/release-workflow) | 4 | Notion 기반 릴리즈 계획·구현·패치·main 머지 |
 | [`harness-devkit`](./plugins/harness-devkit) | 2 | 스킬 집필 도구, dev 서버 로그 감시 |
+| [`product-planning`](./plugins/product-planning) | 1 | 노션 문서·회의록 → PRD 10개 섹션 정규화 |
+| [`project-conventions`](./plugins/project-conventions) | 2 | AGENTS.md 단일 소스화, Claude·Cursor 규칙 동기화 |
 
 ## 스킬 전체 목록
 
@@ -61,6 +63,17 @@ Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 
 | `harness-dev` | 스킬 설계·집필 (Harness 프레임워크 적용) |
 | `dev-monitor` | `/harness-devkit:dev-monitor <port>` — 서버 기동 + 로그 감시 |
 
+### product-planning
+| 스킬 | 트리거 예 |
+|---|---|
+| `create-prd` | "PRD 만들어줘", "기획서를 PRD로 정리해줘", "수용기준 뽑아줘" |
+
+### project-conventions
+| 스킬 | 트리거 예 |
+|---|---|
+| `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘" |
+| `check-agent-rules` | "규칙 갈라졌는지 확인", "cursor rules 랑 claude rules 같은지 봐줘" |
+
 ## 선행 요건
 
 스킬마다 다르다. 플러그인별 README 에 정리해 두었다.
@@ -68,10 +81,11 @@ Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 
 | 요건 | 필요한 플러그인 |
 |---|---|
 | [context7 MCP](https://github.com/upstash/context7) | expo-app-kit, firebase-observability, release-workflow, harness-devkit |
-| Notion MCP | release-workflow |
+| Notion MCP | release-workflow, product-planning |
 | WebSearch | release-workflow, harness-devkit |
-| `python3` | release-workflow |
+| `python3` | release-workflow, product-planning, project-conventions |
 | EAS CLI (`eas`) | expo-app-kit (ota-hotfix) |
+| 프로젝트 `CLAUDE.md` | project-conventions (init-agent-rules), harness-devkit (dev-monitor) |
 
 ## 개발
 

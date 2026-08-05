@@ -1,0 +1,79 @@
+# project-conventions
+
+Claude 와 Cursor 를 번갈아 쓰는 프로젝트에서, 에이전트 지시 문서를 한 곳으로 모으고 git 워크플로
+규칙을 양쪽에 설치한다. 스킬 2개.
+
+## 설치
+
+```
+/plugin install project-conventions@kbk109-plugins-marketplace
+```
+
+## 왜 필요한가
+
+Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 와 `.cursor/rules/` 를 읽는다. 같은 내용을 두 벌
+관리하면 반드시 갈라진다 — 한쪽만 고치고 다른 쪽을 잊기 때문이고, 갈라져도 에러가 나지 않아
+알아채지 못한다.
+
+이 플러그인은 **`AGENTS.md` 를 단일 소스(SSoT)로** 만든다. `CLAUDE.md` 는 그것을 가리키기만
+하므로 두 파일이 갈라질 여지 자체가 없어진다. 규칙 본문은 `.claude/rules/` 에 두고
+`.cursor/rules/` 는 그 사본으로 생성하며, 사본이 갈라졌는지는 검사 스킬이 잡는다.
+
+## 선행 요건
+
+| 요건 | 비고 |
+|---|---|
+| `python3` | 두 스킬 모두 |
+| 프로젝트 `CLAUDE.md` | `init-agent-rules` 의 실행 전제. 없으면 중단한다 |
+| git 저장소 | 이관 시 `git mv` 로 히스토리를 보존한다. git 저장소가 아니면 일반 이동으로 대체 |
+
+## 스킬
+
+### `init-agent-rules`
+
+`CLAUDE.md` 본문을 `AGENTS.md` 로 옮기고 `CLAUDE.md` 는 `@AGENTS.md` 한 줄로 바꾼다. 이어서 git
+브랜치 워크플로 규칙을 `.claude/rules/` 와 `.cursor/rules/` 양쪽에 설치하고, `AGENTS.md` 말미에
+그것을 가리키는 마커 블록을 넣는다.
+
+```
+/project-conventions:init-agent-rules
+```
+
+설치 후 상태:
+
+```
+AGENTS.md                              ← 이전된 본문 + 마커 블록 (SSoT)
+CLAUDE.md                              ← 안내문 + @AGENTS.md
+.claude/rules/git-branch-workflow.md   ← 규칙 본문
+.cursor/rules/git-branch-workflow.mdc  ← 프론트매터 + 동일 본문 (생성물)
+```
+
+**`CLAUDE.md` 가 없으면 중단한다.** 뼈대를 지어내지 않는다 — 프로젝트 지시를 추측으로 채우는
+것보다 멈추는 게 낫고, 초안 작성은 `/init` 의 몫이다.
+
+**`AGENTS.md` 가 이미 있으면 중단한다.** 두 파일의 차이를 보여주고 어떻게 할지 물은 뒤 진행한다.
+자동 병합하지 않는다 — 규칙 문서는 조용한 유실이 치명적이다.
+
+재실행해도 안전하다. 마커 블록 구간만 교체하고 `.mdc` 를 다시 생성한다.
+
+### `check-agent-rules`
+
+설치된 구조가 갈라졌는지 검사한다. 검사 항목 6가지:
+
+| # | 검사 |
+|---|---|
+| 1 | `AGENTS.md` 존재·비어있지 않음 |
+| 2 | `CLAUDE.md` 가 `@AGENTS.md` 를 가리킴 |
+| 3 | `CLAUDE.md` 에 본문이 다시 유입되지 않음 |
+| 4 | `.claude/rules/git-branch-workflow.md` 존재 |
+| 5 | `.cursor/rules/*.mdc` 본문이 4번과 **바이트 동일** |
+| 6 | `AGENTS.md` 마커 블록이 온전함 |
+
+```
+/project-conventions:check-agent-rules
+```
+
+5번이 이 플러그인의 존재 이유다. `.mdc` 는 생성물이라 손으로 고치면 조용히 갈라지고, 그 뒤로
+Cursor 와 Claude 는 서로 다른 규칙을 따르게 된다.
+
+스크립트는 단독 호출할 수 있으므로 pre-commit 훅에 걸어도 된다 — 실패 시 exit 1 이다.
