@@ -68,6 +68,22 @@
           "text": "/project-conventions:init-agent-rules 실행을 안내한다"
         }
       ]
+    },
+    {
+      "id": 4,
+      "prompt": "규칙 동기화 확인해줘",
+      "expected_output": "git-branch-workflow 규칙만 설치돼 있고 codegraph-search 는 없다. 선택 규칙이므로 실패가 아니며, 검사는 exit 0 으로 통과한다",
+      "files": ["AGENTS.md", "CLAUDE.md", ".claude/rules/git-branch-workflow.md", ".cursor/rules/git-branch-workflow.mdc"],
+      "assertions": [
+        {
+          "id": "optional_rule_not_a_failure",
+          "text": "codegraph-search 규칙이 없다는 이유로 실패를 보고하지 않는다"
+        },
+        {
+          "id": "reports_pass",
+          "text": "통과했다고 보고한다"
+        }
+      ]
     }
   ]
 }

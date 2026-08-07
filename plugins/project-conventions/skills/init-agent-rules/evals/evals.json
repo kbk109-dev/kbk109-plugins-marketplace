@@ -96,6 +96,46 @@
           "text": "생성된 파일에 {{PRE_COMMIT_CHECK}} 같은 미치환 플레이스홀더가 남지 않는다"
         }
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "에이전트 규칙 설치해줘",
+      "expected_output": ".codegraph/ 색인이 있으므로 git-branch-workflow 와 codegraph-search 두 규칙이 모두 설치되고, AGENTS.md 에 규칙별 마커 블록이 한 쌍씩 총 두 쌍 들어간다",
+      "files": ["CLAUDE.md", ".codegraph/graph.db"],
+      "assertions": [
+        {
+          "id": "installs_both_rules",
+          "text": ".claude/rules/ 와 .cursor/rules/ 에 두 규칙이 모두 생성된다"
+        },
+        {
+          "id": "two_marker_blocks",
+          "text": "AGENTS.md 에 규칙별 마커 블록이 각각 한 쌍씩 존재한다"
+        },
+        {
+          "id": "uses_installer_script",
+          "text": "파일을 직접 쓰지 않고 install_agent_rules 스크립트를 호출한다"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "코드 검색할 때 codegraph 쓰는 규칙도 넣어줘",
+      "expected_output": ".codegraph/ 색인이 없으므로 codegraph-search 규칙은 건너뛰고 그 이유를 사용자에게 보고한다. 색인 생성(codegraph init)은 제안만 하고 승인 없이 실행하지 않는다",
+      "files": ["CLAUDE.md"],
+      "assertions": [
+        {
+          "id": "skips_codegraph_rule",
+          "text": ".codegraph/ 가 없어 codegraph-search 규칙을 건너뛰었음을 보고한다"
+        },
+        {
+          "id": "no_unapproved_index",
+          "text": "사용자 승인 없이 codegraph init 을 실행하지 않는다"
+        },
+        {
+          "id": "git_rule_still_installed",
+          "text": "git-branch-workflow 규칙 설치는 정상적으로 수행한다"
+        }
+      ]
     }
   ]
 }

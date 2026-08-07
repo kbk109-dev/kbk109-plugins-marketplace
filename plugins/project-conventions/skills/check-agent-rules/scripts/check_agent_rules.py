@@ -21,7 +21,12 @@ Checks:
     3  CLAUDE.md carries no project body of its own
     4  .claude/rules/<rule>.md exists and is non-blank
     5  .cursor/rules/<rule>.mdc body == check 4's content, byte-for-byte
-    6  AGENTS.md carries exactly one intact marker block
+    6  AGENTS.md carries exactly one intact marker block per rule
+
+Checks 4–6 run once per rule. A rule counts as installed when ANY of its three
+artefacts is present (.md, .mdc, marker block) — that way half an install is a
+failure rather than an invisible no-op. An optional rule with no artefacts at
+all is skipped: not having it is a valid state, not drift.
 """
 from __future__ import annotations
 
@@ -29,14 +34,31 @@ import argparse
 import sys
 from pathlib import Path
 
-RULE_NAME = "git-branch-workflow"
-CLAUDE_RULE_REL = f".claude/rules/{RULE_NAME}.md"
-CURSOR_RULE_REL = f".cursor/rules/{RULE_NAME}.mdc"
+# Duplicated from init-agent-rules/scripts/install_agent_rules.py — the installer
+# owns the rule bodies, this script only needs each rule's identity and whether
+# it is mandatory. Add a rule there and it must be added here too, or the new
+# rule silently escapes checking. Kept as a copy rather than an import: the two
+# skills are installed as independent directories.
+RULES = (
+    {"name": "git-branch-workflow", "required": True},
+    {"name": "codegraph-search", "required": False},  # only where .codegraph/ exists
+)
 
-# Duplicated from init-agent-rules/scripts/install_agent_rules.py — the block is
-# located by exact string match, so the two must stay identical.
-MARK_BEGIN = f"<!-- >>> agent-rules: {RULE_NAME} >>> -->"
-MARK_END = f"<!-- <<< agent-rules: {RULE_NAME} <<< -->"
+
+def claude_rel(name: str) -> str:
+    return f".claude/rules/{name}.md"
+
+
+def cursor_rel(name: str) -> str:
+    return f".cursor/rules/{name}.mdc"
+
+
+def mark_begin(name: str) -> str:
+    return f"<!-- >>> agent-rules: {name} >>> -->"
+
+
+def mark_end(name: str) -> str:
+    return f"<!-- <<< agent-rules: {name} <<< -->"
 
 # A pointer CLAUDE.md is a heading plus a short note. Any h2 section, or more
 # prose than this, means a project body has crept back in.
@@ -54,12 +76,71 @@ def strip_mdc_frontmatter(text: str) -> str:
     return text  # unterminated frontmatter — compare as-is and let check 5 fail
 
 
+def check_rule(root: Path, agents_text: str, rule: dict) -> list[str]:
+    """Checks 4, 5 and 6 for one rule. Empty list when the rule is absent-by-design."""
+    name = rule["name"]
+    errors: list[str] = []
+    rule_md = root / claude_rel(name)
+    rule_mdc = root / cursor_rel(name)
+    has_marker = mark_begin(name) in agents_text or mark_end(name) in agents_text
+
+    if not (rule_md.is_file() or rule_mdc.is_file() or has_marker):
+        if rule["required"]:
+            errors.append(
+                f"4. {claude_rel(name)}: not found — "
+                "run /project-conventions:init-agent-rules"
+            )
+        # Optional rule, nothing installed: the intended state. Say nothing.
+        return errors
+
+    # 4 --------------------------------------------------------------------
+    md_body = None
+    if not rule_md.is_file():
+        errors.append(f"4. {claude_rel(name)}: not found")
+    else:
+        md_body = rule_md.read_text(encoding="utf-8")
+        if not md_body.strip():
+            errors.append(f"4. {claude_rel(name)}: file is blank")
+            md_body = None
+
+    # 5 --------------------------------------------------------------------
+    if not rule_mdc.is_file():
+        errors.append(f"5. {cursor_rel(name)}: not found — Cursor gets no rule")
+    elif md_body is not None:
+        mdc_text = rule_mdc.read_text(encoding="utf-8")
+        if not mdc_text.startswith("---"):
+            errors.append(f"5. {cursor_rel(name)}: missing .mdc frontmatter")
+        mdc_body = strip_mdc_frontmatter(mdc_text)
+        if mdc_body.strip("\n") != md_body.strip("\n"):
+            errors.append(
+                f"5. {cursor_rel(name)}: body differs from {claude_rel(name)} — "
+                "the mirror drifted. Re-run /project-conventions:init-agent-rules "
+                "after moving any intended edit into the .md file."
+            )
+
+    # 6 --------------------------------------------------------------------
+    if agents_text:
+        n_begin = agents_text.count(mark_begin(name))
+        n_end = agents_text.count(mark_end(name))
+        if n_begin == 0 and n_end == 0:
+            errors.append(
+                f"6. AGENTS.md: {name} 마커 블록 없음 — 규칙 파일은 있는데 포인터가 없다"
+            )
+        elif n_begin != 1 or n_end != 1:
+            errors.append(
+                f"6. AGENTS.md: {name} 마커 블록 malformed (open={n_begin}, close={n_end}; "
+                "expected 1 each)"
+            )
+        elif agents_text.find(mark_end(name)) < agents_text.find(mark_begin(name)):
+            errors.append(f"6. AGENTS.md: {name} 마커 블록이 열리기 전에 닫힌다")
+
+    return errors
+
+
 def check(root: Path) -> list[str]:
     errors: list[str] = []
     agents = root / "AGENTS.md"
     claude = root / "CLAUDE.md"
-    rule_md = root / CLAUDE_RULE_REL
-    rule_mdc = root / CURSOR_RULE_REL
 
     # 1 --------------------------------------------------------------------
     agents_text = ""
@@ -91,44 +172,9 @@ def check(root: Path) -> list[str]:
                 f"of {MAX_POINTER_LINES} — content belongs in AGENTS.md"
             )
 
-    # 4 --------------------------------------------------------------------
-    md_body = None
-    if not rule_md.is_file():
-        errors.append(f"4. {CLAUDE_RULE_REL}: not found")
-    else:
-        md_body = rule_md.read_text(encoding="utf-8")
-        if not md_body.strip():
-            errors.append(f"4. {CLAUDE_RULE_REL}: file is blank")
-            md_body = None
-
-    # 5 --------------------------------------------------------------------
-    if not rule_mdc.is_file():
-        errors.append(f"5. {CURSOR_RULE_REL}: not found — Cursor gets no rule")
-    elif md_body is not None:
-        mdc_text = rule_mdc.read_text(encoding="utf-8")
-        if not mdc_text.startswith("---"):
-            errors.append(f"5. {CURSOR_RULE_REL}: missing .mdc frontmatter")
-        mdc_body = strip_mdc_frontmatter(mdc_text)
-        if mdc_body.strip("\n") != md_body.strip("\n"):
-            errors.append(
-                f"5. {CURSOR_RULE_REL}: body differs from {CLAUDE_RULE_REL} — "
-                "the mirror drifted. Re-run /project-conventions:init-agent-rules "
-                "after moving any intended edit into the .md file."
-            )
-
-    # 6 --------------------------------------------------------------------
-    if agents_text:
-        n_begin = agents_text.count(MARK_BEGIN)
-        n_end = agents_text.count(MARK_END)
-        if n_begin == 0 and n_end == 0:
-            errors.append("6. AGENTS.md: marker block missing — no pointer to the git rule")
-        elif n_begin != 1 or n_end != 1:
-            errors.append(
-                f"6. AGENTS.md: marker block malformed (open={n_begin}, close={n_end}; "
-                "expected 1 each)"
-            )
-        elif agents_text.find(MARK_END) < agents_text.find(MARK_BEGIN):
-            errors.append("6. AGENTS.md: marker block closes before it opens")
+    # 4, 5, 6 — once per rule ----------------------------------------------
+    for rule in RULES:
+        errors.extend(check_rule(root, agents_text, rule))
 
     return errors
 

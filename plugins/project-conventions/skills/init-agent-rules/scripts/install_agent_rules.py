@@ -2,8 +2,8 @@
 """Deterministic installer for the AGENTS.md-as-SSoT layout.
 
 Moves the project's CLAUDE.md body into AGENTS.md, rewrites CLAUDE.md as a
-pointer, renders the git branch workflow rule into BOTH .claude/rules/ and
-.cursor/rules/, and inserts a managed marker block into AGENTS.md.
+pointer, renders each selected rule into BOTH .claude/rules/ and
+.cursor/rules/, and inserts one managed marker block per rule into AGENTS.md.
 
 Why a script instead of letting the model write these files: the .mdc mirror
 must stay byte-identical to the .md rule, and the marker block must be
@@ -14,6 +14,7 @@ Usage:
     install_agent_rules.py [--project-root PATH]
                            [--main-branch NAME]
                            [--pre-commit-check CMD]
+                           [--codegraph-rule {auto,on,off}]
                            [--on-existing-agents {abort,append-claude,keep-agents}]
                            [--force] [--dry-run]
     install_agent_rules.py --sync-mdc [--project-root PATH]
@@ -34,10 +35,12 @@ Exit codes:
 
 Invariants established:
     - CLAUDE.md contains the pointer and no project body
-    - AGENTS.md exists, non-blank, and carries exactly one marker block
+    - AGENTS.md exists, non-blank, and carries exactly one marker block per
+      installed rule
     - .cursor/rules/<rule>.mdc body == .claude/rules/<rule>.md byte-for-byte
       (modulo the .mdc frontmatter and surrounding blank lines)
-    - Re-running replaces the marker block instead of appending a second one
+    - Re-running replaces each marker block instead of appending a second one
+    - A rule that is not selected is left ALONE, not deleted
 """
 from __future__ import annotations
 
@@ -47,26 +50,62 @@ import subprocess
 import sys
 from pathlib import Path
 
-RULE_NAME = "git-branch-workflow"
-CLAUDE_RULE_REL = f".claude/rules/{RULE_NAME}.md"
-CURSOR_RULE_REL = f".cursor/rules/{RULE_NAME}.mdc"
+# The rule table. `required` rules install everywhere; optional ones install only
+# when their condition holds (see select_rules), because a rule for a tool the
+# project does not have is noise the agent would follow anyway.
+#
+# The names and `required` flags are duplicated in
+# check-agent-rules/scripts/check_agent_rules.py — the checker locates each block
+# by exact string match, so a rule added here must be added there too. The two
+# skills stay separate scripts on purpose: importing across skill directories
+# would couple them to each other's layout.
+RULES = (
+    {
+        "name": "git-branch-workflow",
+        "required": True,
+        "heading": "Git 브랜치 워크플로",
+        "pointer": "브랜치·커밋·머지 절차는",
+        "mdc_description": "{main} 직접 작업 금지, 브랜치 네이밍, 커밋 승인, --no-ff 머지",
+    },
+    {
+        "name": "codegraph-search",
+        "required": False,  # only where a .codegraph/ index exists
+        "heading": "코드 검색",
+        "pointer": "코드 검색 절차는",
+        "mdc_description": "코드 검색은 codegraph 우선, 호출 불가 시 경고 후 grep 폴백",
+    },
+)
 
-# These two markers are duplicated in check-agent-rules/scripts/check_agent_rules.py.
-# If you change them here, change them there — the checker locates the block by
-# exact string match.
-MARK_BEGIN = f"<!-- >>> agent-rules: {RULE_NAME} >>> -->"
-MARK_END = f"<!-- <<< agent-rules: {RULE_NAME} <<< -->"
 
-MARKER_BLOCK = f"""{MARK_BEGIN}
-## Git 브랜치 워크플로
+def claude_rel(name: str) -> str:
+    return f".claude/rules/{name}.md"
 
-브랜치·커밋·머지 절차는 `{CLAUDE_RULE_REL}` 를 따른다.
-Cursor 는 `{CURSOR_RULE_REL}` 로 같은 내용을 받는다.
+
+def cursor_rel(name: str) -> str:
+    return f".cursor/rules/{name}.mdc"
+
+
+def mark_begin(name: str) -> str:
+    return f"<!-- >>> agent-rules: {name} >>> -->"
+
+
+def mark_end(name: str) -> str:
+    return f"<!-- <<< agent-rules: {name} <<< -->"
+
+
+def marker_block(rule: dict) -> str:
+    name = rule["name"]
+    return f"""{mark_begin(name)}
+## {rule["heading"]}
+
+{rule["pointer"]} `{claude_rel(name)}` 를 따른다.
+Cursor 는 `{cursor_rel(name)}` 로 같은 내용을 받는다.
 
 이 블록은 `/project-conventions:init-agent-rules` 가 관리한다. 직접 고치지 말 것 —
-재실행하면 덮어쓴다. 규칙 본문을 바꾸려면 `{CLAUDE_RULE_REL}` 를 고치고
+재실행하면 덮어쓴다. 규칙 본문을 바꾸려면 `{claude_rel(name)}` 를 고치고
 `/project-conventions:check-agent-rules` 로 사본과의 일치를 확인한다.
-{MARK_END}"""
+{mark_end(name)}"""
+
 
 CLAUDE_POINTER = """# CLAUDE.md
 
@@ -79,7 +118,7 @@ CLAUDE_POINTER = """# CLAUDE.md
 """
 
 MDC_FRONTMATTER = """---
-description: {main} 직접 작업 금지, 브랜치 네이밍, 커밋 승인, --no-ff 머지
+description: {description}
 alwaysApply: true
 ---
 """
@@ -157,6 +196,44 @@ def render(template: str, main_branch: str, pre_commit_check: str) -> str:
     return "\n".join(out_lines).rstrip("\n") + "\n"
 
 
+def mdc_frontmatter(rule: dict, main_branch: str) -> str:
+    """Frontmatter for a rule's .mdc mirror.
+
+    `.format(main=…)` is harmless for descriptions that carry no {main} slot.
+    """
+    return MDC_FRONTMATTER.format(
+        description=rule["mdc_description"].format(main=main_branch)
+    )
+
+
+def select_rules(root: Path, codegraph_mode: str) -> tuple[list[dict], list[str]]:
+    """Return (rules to install, notes explaining anything skipped).
+
+    Optional rules are decided from the project, not from the user: a rule that
+    tells the agent to search with codegraph is only useful where an index
+    exists. Skipping NEVER deletes an already-installed rule — see main().
+    """
+    selected: list[dict] = []
+    notes: list[str] = []
+    for rule in RULES:
+        if rule["required"]:
+            selected.append(rule)
+            continue
+        if rule["name"] == "codegraph-search":
+            if codegraph_mode == "on":
+                selected.append(rule)
+            elif codegraph_mode == "off":
+                notes.append("--codegraph-rule off — codegraph-search 규칙 건너뜀")
+            elif (root / ".codegraph").is_dir():
+                selected.append(rule)
+            else:
+                notes.append(
+                    ".codegraph/ 없음 — codegraph-search 규칙 건너뜀 "
+                    "(색인을 만든 뒤 재실행하거나 --codegraph-rule on)"
+                )
+    return selected, notes
+
+
 def existing_mdc_frontmatter(path: Path) -> str | None:
     """Return the leading '---...---' block of an .mdc file, if it has one."""
     if not path.is_file():
@@ -172,34 +249,47 @@ def existing_mdc_frontmatter(path: Path) -> str | None:
 
 
 def sync_mdc(root: Path, main_branch: str, dry_run: bool) -> int:
-    """Re-mirror .cursor/rules/<rule>.mdc from the CURRENT .claude/rules/<rule>.md.
+    """Re-mirror every .cursor/rules/<rule>.mdc from its CURRENT .claude/rules/<rule>.md.
 
-    A full install renders the rule from the plugin's template, so any
-    project-specific edit to the .md would be overwritten. This mode exists so
+    A full install renders each rule from the plugin's template, so any
+    project-specific edit to a .md would be overwritten. This mode exists so
     the .md can be edited and the mirror brought back in line without losing
     that edit — which is what the checker actually asserts (it compares .mdc to
     .md, not to the template).
-    """
-    md = root / CLAUDE_RULE_REL
-    if not md.is_file():
-        print(f"{CLAUDE_RULE_REL} not found — nothing to mirror.", file=sys.stderr)
-        return 3
-    body = md.read_text(encoding="utf-8")
-    frontmatter = existing_mdc_frontmatter(root / CURSOR_RULE_REL)
-    if frontmatter is None:
-        frontmatter = MDC_FRONTMATTER.format(main=main_branch)
 
-    print(f"  - {CURSOR_RULE_REL} ← {CLAUDE_RULE_REL} 본문으로 재생성")
-    if dry_run:
-        return 0
-    try:
-        out = root / CURSOR_RULE_REL
-        out.parent.mkdir(parents=True, exist_ok=True)
-        out.write_text(frontmatter + "\n" + body, encoding="utf-8")
-    except OSError as exc:
-        print(f"write failed: {exc}", file=sys.stderr)
-        return 1
-    print("OK")
+    Only rules that are actually installed are mirrored; a project that never
+    took the optional rule is not a failure.
+    """
+    pending: list[tuple[dict, str]] = []
+    for rule in RULES:
+        md = root / claude_rel(rule["name"])
+        if md.is_file():
+            pending.append((rule, md.read_text(encoding="utf-8")))
+
+    if not pending:
+        print(
+            "no .claude/rules/*.md found — nothing to mirror.",
+            file=sys.stderr,
+        )
+        return 3
+
+    for rule, body in pending:
+        name = rule["name"]
+        frontmatter = existing_mdc_frontmatter(root / cursor_rel(name))
+        if frontmatter is None:
+            frontmatter = mdc_frontmatter(rule, main_branch)
+        print(f"  - {cursor_rel(name)} ← {claude_rel(name)} 본문으로 재생성")
+        if dry_run:
+            continue
+        try:
+            out = root / cursor_rel(name)
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(frontmatter + "\n" + body, encoding="utf-8")
+        except OSError as exc:
+            print(f"write failed: {exc}", file=sys.stderr)
+            return 1
+    if not dry_run:
+        print("OK")
     return 0
 
 
@@ -219,19 +309,23 @@ def retitle(text: str) -> str:
     return "".join(lines)
 
 
-def upsert_marker_block(text: str) -> str:
-    """Insert MARKER_BLOCK, or replace it in place if already present."""
-    start = text.find(MARK_BEGIN)
+def upsert_marker_block(text: str, rule: dict) -> str:
+    """Insert this rule's marker block, or replace it in place if already present."""
+    name = rule["name"]
+    begin, end_mark = mark_begin(name), mark_end(name)
+    block = marker_block(rule)
+
+    start = text.find(begin)
     if start == -1:
         body = text.rstrip("\n")
-        return f"{body}\n\n{MARKER_BLOCK}\n"
-    end = text.find(MARK_END, start)
+        return f"{body}\n\n{block}\n"
+    end = text.find(end_mark, start)
     if end == -1:
         # Opening marker without a closing one — truncate from the opener and
         # re-append. Leaving a half block would make the checker fail forever.
-        return text[:start].rstrip("\n") + f"\n\n{MARKER_BLOCK}\n"
-    end += len(MARK_END)
-    return text[:start] + MARKER_BLOCK + text[end:]
+        return text[:start].rstrip("\n") + f"\n\n{block}\n"
+    end += len(end_mark)
+    return text[:start] + block + text[end:]
 
 
 # --------------------------------------------------------------------------
@@ -243,6 +337,12 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--project-root", default=".")
     ap.add_argument("--main-branch", default=None)
     ap.add_argument("--pre-commit-check", default="")
+    ap.add_argument(
+        "--codegraph-rule",
+        choices=["auto", "on", "off"],
+        default="auto",
+        help="auto: install only when .codegraph/ exists (default); on/off: force",
+    )
     ap.add_argument(
         "--on-existing-agents",
         choices=["abort", "append-claude", "keep-agents"],
@@ -268,10 +368,15 @@ def main(argv: list[str]) -> int:
         )
         return sync_mdc(root, branch, args.dry_run)
 
-    template_path = Path(__file__).resolve().parent.parent / "templates" / f"{RULE_NAME}.md"
-    if not template_path.is_file():
-        print(f"template missing: {template_path}", file=sys.stderr)
-        return 2
+    templates_dir = Path(__file__).resolve().parent.parent / "templates"
+    selected, notes = select_rules(root, args.codegraph_rule)
+    for rule in selected:
+        if not (templates_dir / f"{rule['name']}.md").is_file():
+            print(
+                f"template missing: {templates_dir / (rule['name'] + '.md')}",
+                file=sys.stderr,
+            )
+            return 2
 
     claude_md = root / "CLAUDE.md"
     agents_md = root / "AGENTS.md"
@@ -334,16 +439,29 @@ def main(argv: list[str]) -> int:
         agents_text = agents_md.read_text(encoding="utf-8")
         steps.append("기존 AGENTS.md 유지, CLAUDE.md 본문 폐기")
 
-    agents_text = upsert_marker_block(agents_text)
-    steps.append("AGENTS.md 마커 블록 삽입/교체")
+    # ---- render every selected rule ---------------------------------------
+    # Rules that are NOT selected are left untouched: an existing rule file and
+    # its marker block survive a re-run made from a machine where the condition
+    # no longer holds. Removing a rule is a manual, deliberate act.
+    writes: list[tuple[str, str]] = []
+    for rule in selected:
+        name = rule["name"]
+        template = (templates_dir / f"{name}.md").read_text(encoding="utf-8")
+        rule_body = render(template, main_branch, args.pre_commit_check)
+        writes.append((claude_rel(name), rule_body))
+        writes.append((cursor_rel(name), mdc_frontmatter(rule, main_branch) + "\n" + rule_body))
 
-    rule_body = render(
-        template_path.read_text(encoding="utf-8"), main_branch, args.pre_commit_check
-    )
-    mdc_text = MDC_FRONTMATTER.format(main=main_branch) + "\n" + rule_body
-    steps.append(f"{CLAUDE_RULE_REL} 생성 (main branch: {main_branch})")
-    steps.append(f"{CURSOR_RULE_REL} 생성 (동일 본문 + 프론트매터)")
+        agents_text = upsert_marker_block(agents_text, rule)
+        steps.append(f"AGENTS.md 마커 블록 삽입/교체 ({name})")
+        # Only rules that actually carry the token get the branch name reported —
+        # the skill asks the user to confirm this value, so printing it for a
+        # rule it does not affect would invite a pointless confirmation.
+        detail = f" (main branch: {main_branch})" if "{{MAIN_BRANCH}}" in template else ""
+        steps.append(f"{claude_rel(name)} 생성{detail}")
+        steps.append(f"{cursor_rel(name)} 생성 (동일 본문 + 프론트매터)")
+
     steps.append("CLAUDE.md → 포인터로 재작성")
+    steps.extend(notes)
 
     if args.dry_run:
         for s in steps:
@@ -359,10 +477,7 @@ def main(argv: list[str]) -> int:
                 shutil.copyfile(claude_md, agents_md)
         agents_md.write_text(agents_text, encoding="utf-8")
 
-        for rel, content in (
-            (CLAUDE_RULE_REL, rule_body),
-            (CURSOR_RULE_REL, mdc_text),
-        ):
+        for rel, content in writes:
             path = root / rel
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content, encoding="utf-8")
