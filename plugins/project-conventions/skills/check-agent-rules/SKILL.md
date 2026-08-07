@@ -17,12 +17,18 @@ Claude 가 서로 다른 규칙을 따른다. 검사 5 가 이 스킬의 존재 
 | 1 | `AGENTS.md` 존재·비어있지 않음 | 설치를 안 했거나 파일을 지움 |
 | 2 | `CLAUDE.md` 가 `@AGENTS.md` 를 포함 | 포인터를 지워 Claude 가 지시를 못 읽음 |
 | 3 | `CLAUDE.md` 에 자체 본문 없음 | 지시를 CLAUDE.md 에 다시 씀 → Cursor 가 못 봄 |
-| 4 | `.claude/rules/git-branch-workflow.md` 존재 | 규칙 본문 유실 |
-| 5 | `.cursor/rules/*.mdc` 본문 == 4번과 바이트 동일 | **사본을 손으로 고침 → 두 도구가 갈라짐** |
-| 6 | `AGENTS.md` 마커 블록 온전 | 블록을 지우거나 반쪽만 남김 |
+| 4 | `.claude/rules/<규칙>.md` 존재 | 규칙 본문 유실 |
+| 5 | `.cursor/rules/<규칙>.mdc` 본문 == 4번과 바이트 동일 | **사본을 손으로 고침 → 두 도구가 갈라짐** |
+| 6 | `AGENTS.md` 에 규칙별 마커 블록 온전 | 블록을 지우거나 반쪽만 남김 |
 
 검사 3 은 `##` 섹션 헤딩 유무와 줄 수로 판정한다. 포인터 `CLAUDE.md` 는 헤딩 1개와 짧은
 안내문뿐이므로, H2 가 나타났다는 건 본문이 다시 들어왔다는 뜻이다.
+
+**검사 4·5·6 은 규칙마다 반복된다.** 대상 규칙은 `git-branch-workflow`(항상)와
+`codegraph-search`(`.codegraph/` 색인이 있는 프로젝트에만 설치)다. 어떤 규칙이 "설치돼 있다"는
+판정은 `.md`·`.mdc`·마커 블록 **셋 중 하나라도 있으면** 참이고, 그때부터 셋 다 정합해야 한다 —
+반쪽 설치가 조용한 통과가 되지 않게 하려는 것이다. 셋 다 없으면 선택 규칙은 건너뛴다. 색인이 없어
+codegraph 규칙을 안 쓰는 프로젝트는 정상 상태이지 갈라짐이 아니다.
 
 ## 실행
 
@@ -53,11 +59,13 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/check-agent-rules/scripts/check_agent_rules
 
 ### 검사 5 실패 — `.mdc` 가 갈라졌을 때
 
-`.mdc` 쪽 수정이 의도된 것일 수도 있다. 먼저 차이를 보여준다:
+`.mdc` 쪽 수정이 의도된 것일 수도 있다. 먼저 차이를 보여준다 — `RULE` 에 stderr 가 지목한 규칙
+이름(`git-branch-workflow`, `codegraph-search` 등)을 넣는다:
 
 ```bash
-diff <(sed '1{/^---$/!q;};1,/^---$/d' .cursor/rules/git-branch-workflow.mdc) \
-     .claude/rules/git-branch-workflow.md
+RULE=git-branch-workflow
+diff <(sed '1{/^---$/!q;};1,/^---$/d' ".cursor/rules/$RULE.mdc") \
+     ".claude/rules/$RULE.md"
 ```
 
 그리고 묻는다:

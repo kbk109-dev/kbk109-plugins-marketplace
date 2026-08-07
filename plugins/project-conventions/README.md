@@ -1,7 +1,7 @@
 # project-conventions
 
-Claude 와 Cursor 를 번갈아 쓰는 프로젝트에서, 에이전트 지시 문서를 한 곳으로 모으고 git 워크플로
-규칙을 양쪽에 설치한다. 스킬 2개.
+Claude 와 Cursor 를 번갈아 쓰는 프로젝트에서, 에이전트 지시 문서를 한 곳으로 모으고 작업 규칙을
+양쪽에 설치한다. 스킬 2개.
 
 ## 설치
 
@@ -31,21 +31,34 @@ Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 와 `.cursor/rules/` 를 읽�
 
 ### `init-agent-rules`
 
-`CLAUDE.md` 본문을 `AGENTS.md` 로 옮기고 `CLAUDE.md` 는 `@AGENTS.md` 한 줄로 바꾼다. 이어서 git
-브랜치 워크플로 규칙을 `.claude/rules/` 와 `.cursor/rules/` 양쪽에 설치하고, `AGENTS.md` 말미에
-그것을 가리키는 마커 블록을 넣는다.
+`CLAUDE.md` 본문을 `AGENTS.md` 로 옮기고 `CLAUDE.md` 는 `@AGENTS.md` 한 줄로 바꾼다. 이어서 규칙을
+`.claude/rules/` 와 `.cursor/rules/` 양쪽에 설치하고, `AGENTS.md` 말미에 규칙마다 그것을 가리키는
+마커 블록을 넣는다.
 
 ```
 /project-conventions:init-agent-rules
 ```
 
+설치되는 규칙:
+
+| 규칙 | 내용 | 설치 조건 |
+|---|---|---|
+| `git-branch-workflow` | 브랜치 분리·네이밍, 커밋 승인 게이트, `--no-ff` 머지 | 항상 |
+| `codegraph-search` | 코드 검색은 codegraph 우선, 호출 불가 시 경고 후 grep 폴백 | `.codegraph/` 색인이 있을 때만 |
+
+codegraph 규칙이 조건부인 이유는 색인 없는 프로젝트에서 이 규칙이 소음이 되기 때문이다 — 매 검색마다
+쓸 수 없는 도구를 시도하고 경고를 띄운다. 판정은 `.codegraph/` 존재 여부로 자동이며,
+`--codegraph-rule on|off` 로 뒤집을 수 있다. 선택되지 않은 규칙은 건너뛸 뿐 **지우지 않는다.**
+
 설치 후 상태:
 
 ```
-AGENTS.md                              ← 이전된 본문 + 마커 블록 (SSoT)
+AGENTS.md                              ← 이전된 본문 + 규칙마다 마커 블록 (SSoT)
 CLAUDE.md                              ← 안내문 + @AGENTS.md
 .claude/rules/git-branch-workflow.md   ← 규칙 본문
 .cursor/rules/git-branch-workflow.mdc  ← 프론트매터 + 동일 본문 (생성물)
+.claude/rules/codegraph-search.md      ← 조건부
+.cursor/rules/codegraph-search.mdc     ← 조건부
 ```
 
 **`CLAUDE.md` 가 없으면 중단한다.** 뼈대를 지어내지 않는다 — 프로젝트 지시를 추측으로 채우는
@@ -68,9 +81,12 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 | 1 | `AGENTS.md` 존재·비어있지 않음 |
 | 2 | `CLAUDE.md` 가 `@AGENTS.md` 를 가리킴 |
 | 3 | `CLAUDE.md` 에 본문이 다시 유입되지 않음 |
-| 4 | `.claude/rules/git-branch-workflow.md` 존재 |
-| 5 | `.cursor/rules/*.mdc` 본문이 4번과 **바이트 동일** |
-| 6 | `AGENTS.md` 마커 블록이 온전함 |
+| 4 | `.claude/rules/<규칙>.md` 존재 |
+| 5 | `.cursor/rules/<규칙>.mdc` 본문이 4번과 **바이트 동일** |
+| 6 | `AGENTS.md` 의 규칙별 마커 블록이 온전함 |
+
+4·5·6 은 규칙마다 반복한다. `.md`·`.mdc`·마커 블록 셋 중 하나라도 있으면 그 규칙은 설치된 것으로
+보고 나머지 둘도 요구한다 — 반쪽 설치를 잡기 위해서다. 셋 다 없는 선택 규칙은 건너뛴다.
 
 ```
 /project-conventions:check-agent-rules
