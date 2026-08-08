@@ -18,6 +18,16 @@ Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 
 
 플러그인은 필요한 것만 골라 설치한다. 플러그인 간 의존은 없다.
 
+## 업데이트
+
+마켓플레이스와 설치한 플러그인을 최신으로 맞출 때:
+
+```
+/plugin marketplace update kbk109-plugins-marketplace
+```
+
+반영이 안 되면 `/reload-plugins` 를 실행하거나 Claude Code 세션을 다시 시작한다.
+
 ## 플러그인
 
 | 플러그인 | 스킬 | 용도 |
