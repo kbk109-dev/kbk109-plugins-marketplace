@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 마켓플레이스 정합성 검사.
-#   - marketplace.json / plugin.json JSON 파싱
+#   - marketplace.json / plugin.json / hooks.json JSON 파싱
 #   - plugins[].source 경로 존재 + plugin.json name·version 일치
 #   - 모든 SKILL.md frontmatter name 이 디렉토리명과 일치
 #   - 스크립트 경로가 ${CLAUDE_PLUGIN_ROOT} 로 하드닝되어 있고 접두사 중복이 없음
@@ -23,13 +23,16 @@ print(' '.join(p['name'] for p in d['plugins']))
 [ -n "$PLUGINS" ] || { printf '  \033[31m✗\033[0m marketplace.json 에서 플러그인 목록을 읽지 못했습니다.\n'; exit 1; }
 
 echo "== 1. JSON 파싱 =="
+# 매니페스트뿐 아니라 plugins/*/hooks/*.json 도 대상이다. 훅 설정은 파싱에 실패해도 에러를
+# 띄우지 않고 그냥 등록되지 않으므로, 검사 밖에 두면 훅이 조용히 죽은 채 배포된다.
 while IFS= read -r f; do
   if python3 -c "import json,sys;json.load(open(sys.argv[1]))" "$f" 2>/dev/null; then
     ok "$f"
   else
     bad "$f — JSON 파싱 실패"
   fi
-done < <(find .claude-plugin plugins -name '*.json' -path '*.claude-plugin*' | sort)
+done < <({ find .claude-plugin plugins -name '*.json' -path '*.claude-plugin*';
+           find plugins -name '*.json' -path '*/hooks/*'; } | sort -u)
 
 echo "== 2. marketplace.json ↔ plugin.json 정합 =="
 while IFS='|' read -r name src; do
@@ -74,7 +77,8 @@ while IFS='|' read -r found ref; do
   fi
 # 문자 클래스에 '.' 을 남겨두는 이유: scripts/schemas/*.schema.json 같은 참조도 검사 대상이다.
 # 대신 문장 끝 마침표가 경로에 붙어 오므로(`...install_hooks.sh.`) 후행 구두점을 떼어낸다.
-done < <(grep -rhoE '\$\{CLAUDE_PLUGIN_ROOT\}/skills/[a-z0-9-]+/scripts/[a-zA-Z0-9_./-]+' plugins \
+# hooks/ 를 함께 보는 이유: 훅 명령이 없는 파일을 가리켜도 하네스가 조용히 실패할 뿐이다.
+done < <(grep -rhoE '\$\{CLAUDE_PLUGIN_ROOT\}/(skills/[a-z0-9-]+/scripts|hooks)/[a-zA-Z0-9_./-]+' plugins \
          | sed 's|\${CLAUDE_PLUGIN_ROOT}/||; s|[.,;:]*$||' | sort -u \
          | while read -r r; do
              hit=0
