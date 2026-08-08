@@ -1,7 +1,7 @@
 # project-conventions
 
 Claude 와 Cursor 를 번갈아 쓰는 프로젝트에서, 에이전트 지시 문서를 한 곳으로 모으고 작업 규칙을
-양쪽에 설치한다. 스킬 2개.
+양쪽에 설치한다. 스킬 2개 + 서브에이전트 훅 1개.
 
 ## 설치
 
@@ -44,7 +44,7 @@ Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 와 `.cursor/rules/` 를 읽�
 | 규칙 | 내용 | 설치 조건 |
 |---|---|---|
 | `git-branch-workflow` | 브랜치 분리·네이밍, 커밋 승인 게이트, `--no-ff` 머지 | 항상 |
-| `codegraph-search` | 코드 검색은 codegraph 우선, 호출 불가 시 경고 후 grep 폴백 | `.codegraph/` 색인이 있을 때만 |
+| `codegraph-search` | 코드 검색은 codegraph 우선, 호출 불가 시 경고 후 grep 폴백. **서브에이전트에도 적용** | `.codegraph/` 색인이 있을 때만 |
 
 codegraph 규칙이 조건부인 이유는 색인 없는 프로젝트에서 이 규칙이 소음이 되기 때문이다 — 매 검색마다
 쓸 수 없는 도구를 시도하고 경고를 띄운다. 판정은 `.codegraph/` 존재 여부로 자동이며,
@@ -96,3 +96,35 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 Cursor 와 Claude 는 서로 다른 규칙을 따르게 된다.
 
 스크립트는 단독 호출할 수 있으므로 pre-commit 훅에 걸어도 된다 — 실패 시 exit 1 이다.
+
+## codegraph 규칙을 서브에이전트까지 강제하는 훅
+
+`hooks/codegraph_subagent_guard.py` (`PreToolUse`, matcher `Agent|Task`)
+
+**왜 필요한가.** codegraph 규칙이 메인 세션에 닿는 경로는 두 가지 — 프로젝트 지시로 로드되는
+`.claude/rules/codegraph-search.md`, 그리고 codegraph 가 제공하는 `UserPromptSubmit` 훅이다.
+둘 다 서브에이전트에는 닿지 않는다. 서브에이전트는 **사용자 프롬프트로 시작하지 않으므로**
+`UserPromptSubmit` 이 구조적으로 발화할 수 없고, 프로젝트 지시 상속도 보장되지 않는다.
+그 결과 메인 세션은 codegraph 를 쓰는데 서브에이전트만 grep 부터 잡는다.
+
+이 훅은 유일하게 반드시 실행되는 지점 — 부모 프로세스의 `Agent`/`Task` 도구 호출 — 을 잡아
+`updatedInput` 으로 서브에이전트 프롬프트에 규칙을 물리적으로 심는다. **모델의 협조가 필요 없다.**
+
+동작 조건 (하나라도 어긋나면 아무것도 출력하지 않고 통과):
+
+| 조건 | 통과(no-op) 하는 경우 |
+|---|---|
+| 도구 | `Agent`·`Task` 가 아님 |
+| 색인 | git 저장소 루트까지 올라가도 `.codegraph/` 없음 |
+| 프롬프트 | 문자열이 아니거나 비어 있음 |
+| 멱등 | 프롬프트에 이미 `codegraph` 가 들어 있음 (호출자의 명시적 탈출구이기도 하다) |
+
+**전 구간 fail-open.** 플러그인 훅은 켜진 모든 프로젝트에서 발화하므로, 서브에이전트 디스패치를
+막을 수 있는 가드는 가드가 없는 것보다 나쁘다. 예외는 통째로 삼키고 언제나 exit 0 한다.
+
+상향 탐색은 **git 저장소 루트와 `$HOME` 에서 멈춘다.** `codegraph init` 을 홈에서 한 번 잘못
+실행해 생긴 `~/.codegraph` 하나가 홈 아래 모든 프로젝트를 "색인됨"으로 만들어, 무관한 프로젝트의
+모든 서브에이전트에 주입되는 전역 오탐이 되기 때문이다.
+
+훅이 없는 환경(Cursor 등)은 규칙 문서 5절이 대신 덮는다 — 서브에이전트 프롬프트에 손으로 붙일
+짧은 인용문이 거기 있다.

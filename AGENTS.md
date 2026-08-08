@@ -33,6 +33,11 @@ bash scripts/validate-marketplace.sh
 python3 plugins/release-workflow/skills/release-plan/scripts/slugify.py "v2.1 Tasks"   # → v2-1-tasks
 echo '["v1.9.0","v1.9.1"]' | python3 plugins/release-workflow/skills/fix-plan-impl/scripts/compute_next_patch.py
 bash -n plugins/release-workflow/skills/release-impl/scripts/install_hooks.sh          # 셸 문법
+
+# PreToolUse 훅 — 색인 없는 프로젝트에서는 출력이 없어야 정상(no-op).
+# 출력이 나오면 경계 판정이 깨진 것이다.
+echo "{\"cwd\":\"$PWD\",\"tool_name\":\"Agent\",\"tool_input\":{\"prompt\":\"auth 찾아줘\"}}" \
+  | python3 plugins/project-conventions/hooks/codegraph_subagent_guard.py
 ```
 
 `evals/evals.json` 은 CLI 러너가 없다. `skill-creator:skill-creator` 플러그인이 소비하며,
@@ -146,8 +151,17 @@ skills/release-plan/scripts/slugify.py                           # 깨짐
   MIT 재배포 대상이 아니다.
 - **`.skill` 번들** — 플러그인은 loose 파일을 로드하므로 zip 사본은 중복이고 원본과 어긋난다.
   `.gitignore` 에 등록돼 있다.
-- **`hooks/`, `.mcp.json`** — 스킬이 쓰는 MCP(Notion, context7)는 사용자 환경에 이미 연결돼 있다.
+- **`.mcp.json`** — 스킬이 쓰는 MCP(Notion, context7)는 사용자 환경에 이미 연결돼 있다.
   플러그인이 재정의하면 충돌한다.
+- **조건 없는 `hooks/`** — 플러그인 훅은 플러그인이 켜진 **모든 프로젝트**에서 발화한다.
+  그래서 기본은 넣지 않되, 다음 둘을 **모두** 만족하는 훅만 허용한다.
+  1. 대상 프로젝트 조건을 스스로 판정해 조건 미충족이면 아무것도 출력하지 않는다
+  2. 전 구간 fail-open — 예외·타임아웃·깨진 입력에도 도구 호출을 막지 않는다
+
+  `project-conventions` 의 `hooks/codegraph_subagent_guard.py` 가 첫 사례다.
+  `.codegraph/` 색인이 없으면 조용히 통과하고(1), 예외는 통째로 삼킨다(2).
+  경계 탐색은 git 저장소 루트와 `$HOME` 에서 멈춘다 — `~/.codegraph` 하나가
+  홈 아래 모든 프로젝트를 "색인됨"으로 만들어 전역 오탐이 되기 때문이다.
 - **`commands/`** — 14개 전부 스킬이고 스킬은 이미 `/plugin:skill` 로 호출된다. 래퍼는 중복이다.
 
 ## 버전 관리

@@ -37,7 +37,7 @@ Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 
 | [`release-workflow`](./plugins/release-workflow) | 4 | Notion 기반 릴리즈 계획·구현·패치·main 머지 |
 | [`harness-devkit`](./plugins/harness-devkit) | 2 | 스킬 집필 도구, dev 서버 로그 감시 |
 | [`product-planning`](./plugins/product-planning) | 1 | 노션 문서·회의록 → PRD 10개 섹션 정규화 |
-| [`project-conventions`](./plugins/project-conventions) | 2 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로·codegraph 검색) 동기화 |
+| [`project-conventions`](./plugins/project-conventions) | 2 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로·codegraph 검색) 동기화. codegraph 검색은 훅으로 서브에이전트까지 강제 |
 
 ## 스킬 전체 목록
 
