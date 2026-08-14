@@ -43,7 +43,7 @@ Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 와 `.cursor/rules/` 를 읽�
 
 | 규칙 | 내용 | 설치 조건 |
 |---|---|---|
-| `git-branch-workflow` | 브랜치 분리·네이밍, 커밋 승인 게이트, `--no-ff` 머지 | 항상 |
+| `git-branch-workflow` | `dev` 에서 분기·네이밍, 커밋 승인 게이트, `dev` 로만 `--no-ff` 머지 (main 은 사람이) | 항상 |
 | `codegraph-search` | 코드 검색은 codegraph 우선, 호출 불가 시 경고 후 grep 폴백. **서브에이전트에도 적용** | `.codegraph/` 색인이 있을 때만 |
 
 codegraph 규칙이 조건부인 이유는 색인 없는 프로젝트에서 이 규칙이 소음이 되기 때문이다 — 매 검색마다

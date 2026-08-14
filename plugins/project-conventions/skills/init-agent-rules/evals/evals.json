@@ -84,7 +84,7 @@
     {
       "id": 4,
       "prompt": "git 브랜치 규칙 넣어줘. 테스트 명령은 따로 없어.",
-      "expected_output": "--pre-commit-check 를 빈 값으로 두어 규칙 3절의 '커밋 전 반드시' 줄이 통째로 빠진 규칙 파일이 생성된다",
+      "expected_output": "--pre-commit-check 를 빈 값으로 두어 규칙 4절의 '커밋 전 반드시' 줄이 통째로 빠진 규칙 파일이 생성된다",
       "files": ["CLAUDE.md"],
       "assertions": [
         {

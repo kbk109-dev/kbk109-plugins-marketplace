@@ -65,7 +65,7 @@ RULES = (
         "required": True,
         "heading": "Git 브랜치 워크플로",
         "pointer": "브랜치·커밋·머지 절차는",
-        "mdc_description": "{main} 직접 작업 금지, 브랜치 네이밍, 커밋 승인, --no-ff 머지",
+        "mdc_description": "{main} 직접 작업 금지, dev 에서 분기, 커밋 승인, dev 로만 머지",
     },
     {
         "name": "codegraph-search",
