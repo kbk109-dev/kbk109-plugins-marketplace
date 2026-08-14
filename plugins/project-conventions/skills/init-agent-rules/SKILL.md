@@ -28,7 +28,7 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 
 | 규칙 | 내용 | 설치 조건 |
 |---|---|---|
-| `git-branch-workflow` | 브랜치 분리·네이밍·커밋 승인 게이트·`--no-ff` 머지 | 항상 |
+| `git-branch-workflow` | `dev` 에서 분기·네이밍·커밋 승인 게이트·`dev` 로만 `--no-ff` 머지 (main 은 사람이) | 항상 |
 | `codegraph-search` | 코드 검색은 codegraph 우선, 호출 불가 시 경고 후 grep 폴백 | 프로젝트 루트에 `.codegraph/` 가 있을 때만 |
 
 **codegraph 규칙이 조건부인 이유.** 색인이 없는 프로젝트에 이 규칙을 넣으면 에이전트가 매 검색마다
@@ -75,7 +75,7 @@ git status --short
 
 ### Step 1. 커밋 전 검증 명령 결정
 
-`git-branch-workflow` 규칙 3절의 "커밋 전 반드시 실행" 줄에 넣을 명령을 정한다. 이 값은 git 규칙에만
+`git-branch-workflow` 규칙 4절의 "커밋 전 반드시 실행" 줄에 넣을 명령을 정한다. 이 값은 git 규칙에만
 들어간다 — `codegraph-search` 는 플레이스홀더가 없어 프로젝트마다 같은 본문으로 설치된다.
 순서대로 시도한다:
 
@@ -116,7 +116,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/init-agent-rules/scripts/install_agent_rule
 
 | 인자 | 용도 |
 |---|---|
-| `--pre-commit-check` | git 규칙 3절에 들어갈 검증 명령. 생략하면 해당 줄 삭제 |
+| `--pre-commit-check` | git 규칙 4절에 들어갈 검증 명령. 생략하면 해당 줄 삭제 |
 | `--main-branch` | 기본 브랜치명. 생략하면 `origin/HEAD` → `main` → `master` 순으로 탐지 |
 | `--codegraph-rule` | `auto`(기본, `.codegraph/` 존재로 판정) / `on` / `off` |
 | `--on-existing-agents` | `abort`(기본) / `append-claude` / `keep-agents` |
