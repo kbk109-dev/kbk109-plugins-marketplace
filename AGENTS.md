@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+이 문서는 Claude Code 와 Cursor 가 이 저장소에서 작업할 때 따르는 지시다.
 
 ## 커뮤니케이션
 
@@ -9,8 +9,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## 이 저장소의 성격
 
-Claude Code **플러그인 마켓플레이스**다. 스킬을 담는 저장소가 아니라, 스킬을 플러그인으로 묶어
-**배포**하는 저장소다. 이 구분이 중요한 이유는 아래 "두 가지 불변식" 때문이다.
+**Claude Code 커스텀 플러그인(custom plugin)을 제작하는 프로젝트다.** 여기서 하는 일은 스킬과
+훅을 직접 집필해 플러그인으로 묶는 것이고, 그 플러그인을 배포하는 마켓플레이스이기도 하다.
+
+남의 스킬을 담아 두는 저장소가 아니라 **제작·배포**하는 저장소다. 이 구분이 중요한 이유는 아래
+"두 가지 불변식" 때문이다 — 스킬이 플러그인 안으로 들어가면서 스크립트 경로 해석과 스킬 호출
+이름이 달라진다.
+
+제작 절차는 아래 "새 플러그인·스킬 만들기"에 있다.
 
 [`kbk109-dev/ClaudeCodeSkills`](https://github.com/kbk109-dev/ClaudeCodeSkills) v1.9.1 을 계승했다.
 그 저장소는 은퇴 예정이며, 스킬의 SSoT 는 이제 여기다. 스킬을 `~/.claude/skills/` 에서 고치고
@@ -87,9 +93,57 @@ skills/release-plan/scripts/slugify.py                           # 깨짐
 (grep 의 C 로케일 `\b` 는 매칭된다 — 그래서 두 도구의 집계가 어긋난다.)
 스킬명 뒤 경계는 `\b` 대신 `(?![A-Za-z0-9_-])` 로 쓴다.
 
+## 새 플러그인·스킬 만들기
+
+이 저장소의 주된 작업이다. 절차를 A/B 로 나누는 이유는 **`marketplace.json` 등록 여부와 버전
+규칙이 다르기 때문**이다 — 하나로 묶으면 B 케이스에서 틀린 단계를 따라간다.
+
+### A. 새 플러그인 만들기
+
+1. **`plugins/<plugin>/.claude-plugin/plugin.json`** — `name` 은 디렉토리명과 동일, `version` 은
+   `1.0.0` 시작. 필드 구성은 기존 매니페스트를 따른다
+   (`description`/`author`/`homepage`/`repository`/`license`/`keywords`)
+2. **`plugins/<plugin>/skills/<skill>/SKILL.md`** — 프론트매터 `name` 은 스킬 디렉토리명과 일치.
+   본문 집필은 `harness-devkit:harness-dev` 로 한다. 작성 규칙은 아래 "SKILL.md 작성 규칙" 참조
+3. **`plugins/<plugin>/README.md`** — 그 플러그인의 스킬 목록과 선행 요건. 루트 `README.md` 의
+   "선행 요건" 절이 *"플러그인별 README 에 정리해 두었다"* 로 이 파일을 가리킨다
+4. **`.claude-plugin/marketplace.json` 의 `plugins[]` 에 항목 추가** — `name`(= plugin.json 의
+   `name`) · `source`(`./plugins/<plugin>`) · `version` · `displayName` · `description` ·
+   `category` · `keywords` · `homepage`
+5. **루트 `README.md`** 의 플러그인 표와 스킬 전체 목록, 두 표 모두에 추가
+6. **`bash scripts/validate-marketplace.sh`** — 전 항목 통과
+7. **로컬 설치 테스트** (푸시 전에 반드시)
+   ```
+   /plugin marketplace add <이 저장소 절대경로>
+   /plugin install <plugin>@kbk109-plugins-marketplace
+   ```
+8. **버전** — 플러그인은 `1.0.0`, 마켓플레이스 `metadata.version` 은 minor bump.
+   올려야 할 위치 전체는 아래 "버전 관리" 참조
+9. **`CHANGELOG.md`** 에 기록
+
+### B. 기존 플러그인에 스킬 추가
+
+1. **`plugins/<plugin>/skills/<skill>/SKILL.md`** — 프론트매터 `name` 은 디렉토리명과 일치
+2. **`marketplace.json` 의 `plugins[]` 는 건드리지 않는다** — 등록 단위는 플러그인이지 스킬이 아니다
+3. **`plugins/<plugin>/README.md`** 와 **루트 `README.md`** 의 스킬 표에 추가
+4. **`validate-marketplace.sh` → 로컬 설치 테스트** (A-6, A-7 과 동일)
+5. **버전** — 해당 플러그인을 minor bump 하되 `plugin.json` 의 `version` 과 `marketplace.json` 의
+   `plugins[].version` **둘 다** 올린다. 마켓플레이스 `metadata.version` 도 함께 올린다
+6. **`CHANGELOG.md`** 에 기록
+
+### 만들면서 지킬 것
+
+- **스킬 자산 디렉토리는 실제로 쓰는 5종만 둔다** — `scripts/` `references/` `agents/` `evals/`
+  `templates/`. `agents/` 는 스킬 내부 서브에이전트 전용이며 플러그인 최상위에 두지 않는다
+- **`SKILL.md` 안에서 스크립트를 부를 때는 `${CLAUDE_PLUGIN_ROOT}` 기준, 다른 스킬을 부를 때는
+  `<plugin>:<skill>`** — 위 두 불변식이 적용되는 지점이 정확히 여기다
+- **문서만 고치는 변경은 버전을 올리지 않는다** (`README.md`·`AGENTS.md` 등). 선례: `cdbba02`
+- 플러그인에 넣지 **않는** 것(`commands/`, `.mcp.json`, `.skill` 번들, 조건 없는 `hooks/`)은 아래
+  "이 저장소에 넣지 않는 것"에 근거와 함께 있다. 빠진 것 같아서 추가하지 말 것
+
 ## 스킬 아키텍처 — plan/impl 짝
 
-스킬 14개 중 다수가 **계획 스킬 + 구현 스킬** 짝으로 동작한다. 계획 스킬이 문서를 쓰고,
+스킬 17개 중 다수가 **계획 스킬 + 구현 스킬** 짝으로 동작한다. 계획 스킬이 문서를 쓰고,
 구현 스킬이 그 문서를 상태 저장소로 읽는다. 계획 문서 없이 구현 스킬을 부르면 거부한다.
 
 | 계획 | 산출 문서 | 구현 |
@@ -162,13 +216,23 @@ skills/release-plan/scripts/slugify.py                           # 깨짐
   `.codegraph/` 색인이 없으면 조용히 통과하고(1), 예외는 통째로 삼킨다(2).
   경계 탐색은 git 저장소 루트와 `$HOME` 에서 멈춘다 — `~/.codegraph` 하나가
   홈 아래 모든 프로젝트를 "색인됨"으로 만들어 전역 오탐이 되기 때문이다.
-- **`commands/`** — 14개 전부 스킬이고 스킬은 이미 `/plugin:skill` 로 호출된다. 래퍼는 중복이다.
+- **`commands/`** — 17개 전부 스킬이고 스킬은 이미 `/plugin:skill` 로 호출된다. 래퍼는 중복이다.
 
 ## 버전 관리
 
-변경 내역은 `CHANGELOG.md` 에 기록한다 (README 가 아니다). 플러그인을 고치면 해당
-`plugin.json` 의 `version` 과 `marketplace.json` 의 같은 플러그인 `version` 을 함께 올린다 —
-두 곳에 있으므로 한쪽만 올리면 어긋난다.
+변경 내역은 `CHANGELOG.md` 에 기록한다 (README 가 아니다).
+
+버전은 **세 곳**에 있다.
+
+| 위치 | 의미 |
+|---|---|
+| `plugins/<plugin>/.claude-plugin/plugin.json` 의 `version` | 그 플러그인의 버전 |
+| `.claude-plugin/marketplace.json` 의 `plugins[].version` | 같은 플러그인의 버전 (사본) |
+| `.claude-plugin/marketplace.json` 의 `metadata.version` | 마켓플레이스 자체의 버전 |
+
+플러그인을 고치면 앞의 두 곳을 **함께** 올리고, 마켓플레이스 버전도 올린다.
+**`validate-marketplace.sh` 검사 2 는 `name` 만 비교하고 `version` 은 비교하지 않는다** — 두 곳이
+어긋나도 검사는 통과하므로 손으로 맞춰야 한다.
 
 ## 문서 구조
 

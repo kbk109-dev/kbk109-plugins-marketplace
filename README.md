@@ -1,7 +1,7 @@
 # kbk109 plugins marketplace
 
-Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 17개를 도메인별 6개
-플러그인으로 묶어 배포한다.
+직접 제작한 Claude Code 커스텀 플러그인 모음. Harness Engineering 원칙으로 집필한 스킬 17개를
+도메인별 6개 플러그인으로 묶어 배포한다.
 
 > **Harness Engineering** — 에이전트 = 모델 + 하네스. 모델이 성능의 상한선이라면, 하네스는
 > 그 상한선에 얼마나 근접하는지를 결정한다. 여기 실린 스킬들은 LLM의 4가지 구조적 실패 모드
@@ -102,6 +102,8 @@ Harness Engineering 원칙으로 만든 Claude Code 플러그인 모음. 스킬 
 ```bash
 bash scripts/validate-marketplace.sh   # 매니페스트·경로·네임스페이스 정합성 검사
 ```
+
+새 플러그인·스킬을 만드는 절차는 [AGENTS.md](./AGENTS.md) 에 있다.
 
 스킬을 수정할 때 지켜야 할 두 규칙:
 
