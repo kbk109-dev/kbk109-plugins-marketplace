@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.8.2
+
+500줄 목표를 넘던 `SKILL.md` 두 개를 `references/` 로 분리했다. **500줄 초과 스킬이 0개가 됐다**
+(최대 `firebase-analytics-impl` 479줄). 길이 자체가 문제가 아니라, 본문은 스킬이 불릴 때마다
+통째로 로드되므로 **특정 Phase 에서만 필요한 분량이 상시 비용**이 된다는 것이 문제다.
+
+### 변경 — `expo-app-kit` 1.0.0 → 1.0.1, `firebase-observability` 1.0.1 → 1.0.2
+
+두 파일 모두 덜어낸 것은 **산출 문서 템플릿**이다. 가장 크고, 문서를 실제로 쓰는 Phase 3
+에서만 필요하다.
+
+- **`admob-plan` 535 → 348줄.** `ADMOB-PLAN.md` 템플릿 189줄을
+  `references/plan_document_template.md` 로 분리. 0~8절과 Changelog 로 이뤄진 전체 골격이다.
+- **`firebase-crashlytics-impl` 549 → 445줄.** 구현 리포트 템플릿 107줄을
+  `references/report_template.md` 로 분리. 기존 `references/` 3종과 같은 snake_case 명명을 따랐고,
+  "참고 자료" 절 목록에도 추가했다.
+
+포인터는 각 스킬 본문의 언어에 맞췄다 — `admob-plan` 은 영어, `firebase-crashlytics-impl` 은
+한국어 본문이다. 기존 포인터 형태(`**xxx:** references/yyy.md 참조`)도 그대로 따랐다.
+
+**유실 검증**: 원본과 (분리 후 본문 + references) 를 줄 단위로 대조해 누락 0건을 확인했다.
+분리는 되돌리기 어려운 편집이라 옮겼다는 주장만으로는 부족하다.
+
+### 문서
+
+- `AGENTS.md` 의 500줄 초과 목록을 갱신했다. "초과하는 스킬은 없다"로 바꾸고, 다음에 넘칠 때
+  **가장 먼저 덜어낼 것이 산출 문서 템플릿**이라는 판단 근거를 남겼다.
+
 ## 1.8.1
 
 v1.5.0 부터 네 번의 릴리스 노트에 **알려진 이슈로만 적혀 있던** GA 계획 문서 파일명 불일치를

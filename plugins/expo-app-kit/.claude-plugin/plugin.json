@@ -1,6 +1,6 @@
 {
   "name": "expo-app-kit",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Expo/React Native 앱의 AdMob 광고 배치 계획·구현과 EAS Update(OTA) 핫픽스 자동화",
   "author": {
     "name": "kbk109",

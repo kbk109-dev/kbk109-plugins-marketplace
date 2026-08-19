@@ -1,6 +1,6 @@
 {
   "name": "firebase-observability",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "React Native Expo 프로젝트의 Firebase Analytics(GA4)·Crashlytics 도입 계획 수립과 Harness 검증 기반 구현",
   "author": {
     "name": "kbk109",
