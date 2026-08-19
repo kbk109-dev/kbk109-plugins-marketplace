@@ -102,12 +102,9 @@ scripts/slugify.py · skills/release-plan/scripts/slugify.py      # 깨짐
 | 계획 | 산출 문서 | 구현 |
 |---|---|---|
 | `admob-plan` | `docs/plan/ADMOB-PLAN.md` | `admob-impl`, `admob-impl-harness` |
-| `firebase-analytics-plan` | `docs/plan/GA_PLAN.md` ⚠️ | `firebase-analytics-impl` |
+| `firebase-analytics-plan` | `docs/plan/GA_PLAN.md` | `firebase-analytics-impl` |
 | `firebase-crashlytics-plan` | `docs/plan/CRASHLYTICS_PLAN.md` | `firebase-crashlytics-impl` |
 | `release-plan` | Notion DB + `docs/skills/release-plan/{DB slug}/v{ver}/` | `release-impl` |
-
-⚠️ **알려진 불일치** — GA 계획 문서 파일명이 `GA_PLAN.md` 와 `GA_Plan.md` 로 갈려 있다.
-대소문자 구분 파일시스템에서 계획→구현 연결이 끊긴다. 이쪽을 건드릴 일이 있으면 함께 정리할 것.
 
 `release-workflow` 는 Notion 을 상태 저장소로 쓰고, 로컬 경로의 `{DB slug}` 를 반드시
 `slugify.py` 출력으로 정한다 — 모델이 kebab-case 를 직접 만들면 경로가 호출마다 달라진다.
