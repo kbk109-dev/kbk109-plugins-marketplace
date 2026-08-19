@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.7.0
+
+`init-agent-rules` 는 한 번 동작하고 끝난다. 그 뒤로 프로젝트는 계속 변하는데 `AGENTS.md` 는
+그대로 남아 **조용히 틀린 지시**가 된다. `check-agent-rules` 로는 못 잡는다 — 그 스킬이 보는 것은
+구조(포인터·마커·`.mdc` 바이트 동일)이지 내용의 사실 여부가 아니다.
+
+### 추가 — `project-conventions` 1.4.0 → 1.5.0
+
+- **`refresh-agent-rules` 스킬 신설.** 프로젝트를 다시 분석해 `AGENTS.md` 를 현황에 맞게 갱신한다.
+  - **사실은 스크립트가 모은다** (`scan_project_facts.py`). 명령(`package.json` scripts ·
+    Makefile · `scripts/` 디렉터리 · pyproject · Cargo · go.mod 등 **언어 무관 best-effort**),
+    패키지 매니저(lockfile 판정), 툴체인, 디렉터리 트리, `.codegraph/` 존재를 JSON 한 덩어리로 낸다.
+    모델은 대조와 판단만 한다 — 매번 다른 방식으로 grep 하면 같은 저장소에서 다른 결론이 나온다.
+  - **마지막 갱신 이후 git 변경분**으로 어디부터 볼지 정한다. 기준점이 rebase 로 사라지면
+    `baseline_valid: false` 로 알리고 **전체 대조로 되돌아간다** — 빈 diff 를 "변경 없음" 으로
+    읽으면 놓친 갱신을 영원히 못 잡는다.
+  - **바꿀 게 없으면 파일을 열지 않는다.** 승인도 묻지 않고 확인 범위만 보고한다.
+  - **삭제만 항목별로 승인받는다.** 추가·수정은 diff 하나로 일괄 승인해도, 사람이 손으로 쓴
+    설계 근거를 모델이 "낡았다"고 지우는 것은 되돌리기 어렵다. 삭제 근거에는 `facts`/`git` 의
+    어느 키에서 나온 판정인지를 반드시 붙인다.
+  - **고치는 대상은 `AGENTS.md` 본문 하나뿐.** 마커 블록 줄 범위를 스크립트가 내보내
+    대조에서 빼게 한다 — 문장으로 금지하는 대신 범위를 준다.
+- **상태 파일 `.claude/agent-rules.state.json`** (커밋 대상). 팀원이 각자 다른 기준점을 들면
+  같은 변경을 몇 번이고 다시 제안하게 된다. **변경이 없었어도 기록한다.**
+- 카파시 4원칙·What/How 분리·200줄 예산은 `init-agent-rules` 의
+  `references/claude_md_rewrite.md` **하나를 정본으로 재사용**한다. 복제하지 않는다 —
+  정본이 둘이면 반드시 갈라지고, 그게 이 플러그인이 막으려는 실패다.
+
+공식 `claude-md-management:claude-md-improver` 로 대신할 수 없다. 그 스킬은 `CLAUDE.md` 에
+내용을 써 넣으므로, 이관된 저장소에서 돌리면 포인터에 본문이 다시 들어가 검사 3 이 깨진다.
+
+`docs/guide/project-conventions.md` 6절에 세 스킬 역할 구분 도식을 추가했다.
+
 ## 1.6.0
 
 `init-agent-rules` 가 `CLAUDE.md` 본문을 **그대로** 옮기고 있었다. `/init` 초안은 이관되는 순간

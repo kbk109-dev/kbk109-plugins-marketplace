@@ -1,0 +1,141 @@
+{
+  "skill_name": "refresh-agent-rules",
+  "evals": [
+    {
+      "id": 0,
+      "prompt": "테스트 명령 바뀌었는데 AGENTS.md 도 고쳐줘",
+      "expected_output": "스캔 결과의 facts.command_sources 와 AGENTS.md 의 주장이 어긋난 것을 찾아 수정 diff 를 제시하고, 승인받은 뒤 AGENTS.md 본문만 고친다. 마지막에 --record 로 기준점을 옮긴다",
+      "files": ["AGENTS.md", "CLAUDE.md", "package.json", ".claude/rules/git-branch-workflow.md", ".cursor/rules/git-branch-workflow.mdc"],
+      "assertions": [
+        {
+          "id": "uses_scan_script",
+          "text": "직접 grep 하지 않고 scan_project_facts 스크립트를 호출해 사실을 얻는다"
+        },
+        {
+          "id": "cites_source",
+          "text": "수정 근거로 command_sources 의 출처(package.json scripts 등)를 지목한다"
+        },
+        {
+          "id": "records_state",
+          "text": "적용 후 --record --result updated 로 상태 파일을 갱신한다"
+        },
+        {
+          "id": "no_auto_commit",
+          "text": "자동 커밋하지 않고 변경 요약만 보고한다"
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "prompt": "AGENTS.md 최신인지 확인하고 필요하면 갱신해줘",
+      "expected_output": "프로젝트가 지난 갱신 이후 바뀌지 않아 수정·추가·삭제 후보가 0건이다. AGENTS.md 를 열지 않고 '변경 없음' 을 확인 범위와 함께 보고한 뒤 상태 파일만 기록한다",
+      "files": ["AGENTS.md", "CLAUDE.md", ".claude/agent-rules.state.json"],
+      "assertions": [
+        {
+          "id": "no_file_change",
+          "text": "AGENTS.md 를 수정하지 않는다"
+        },
+        {
+          "id": "no_approval_prompt",
+          "text": "바꿀 게 없으므로 승인을 묻지 않는다"
+        },
+        {
+          "id": "reports_scope",
+          "text": "무엇을 확인했는지(기준점 이후 커밋·변경 파일 수)를 함께 밝힌다"
+        },
+        {
+          "id": "records_no_change",
+          "text": "--record --result no-change 로 기준점을 옮겨 다음 실행이 같은 diff 를 다시 훑지 않게 한다"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "프로젝트 구조 바뀐 거 AGENTS.md 에 반영해줘",
+      "expected_output": "AGENTS.md 가 가리키는 디렉터리가 git.deleted_files 에서 사라진 것을 확인하고 삭제 후보로 분류한다. 삭제는 일괄 diff 가 아니라 항목별 표로 근거와 함께 개별 승인받으며, 거절된 항목은 원문 그대로 남긴다",
+      "files": ["AGENTS.md", "CLAUDE.md", ".claude/agent-rules.state.json"],
+      "assertions": [
+        {
+          "id": "per_item_delete_approval",
+          "text": "삭제 후보를 항목별로 제시하고 각각 승인을 받는다. 추가·수정 diff 에 섞어 일괄 승인받지 않는다"
+        },
+        {
+          "id": "evidence_from_facts",
+          "text": "삭제 근거로 git.deleted_files 나 facts.tree 의 구체적 항목을 지목한다"
+        },
+        {
+          "id": "rejected_stays",
+          "text": "승인받지 못한 삭제 후보는 원문 그대로 남긴다"
+        },
+        {
+          "id": "prose_untouched",
+          "text": "설계 근거·함정 설명 같은 산문은 사실로 반증되지 않는 한 삭제 후보로 올리지 않는다"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "AGENTS.md 업데이트해줘",
+      "expected_output": "CLAUDE.md 에 본문이 그대로 있고 AGENTS.md 가 없다. 스캔 스크립트가 exit 3 으로 멈추므로 이관을 시도하지 않고 init-agent-rules 를 먼저 실행하라고 안내한 뒤 종료한다",
+      "files": ["CLAUDE.md"],
+      "assertions": [
+        {
+          "id": "gate_stops",
+          "text": "포인터 구조가 아님을 이유로 중단한다"
+        },
+        {
+          "id": "no_migration",
+          "text": "CLAUDE.md 본문을 AGENTS.md 로 옮기지 않는다. 이관은 이 스킬의 일이 아니다"
+        },
+        {
+          "id": "suggests_init",
+          "text": "/project-conventions:init-agent-rules 를 먼저 실행하라고 안내한다"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "AGENTS.md 가 지금 코드랑 맞는지 봐줘",
+      "expected_output": "AGENTS.md 끝의 규칙 마커 블록은 init-agent-rules 가 관리하는 구역이므로 대조·수정 대상에서 제외한다. 마커 블록 안의 문구가 낡아 보여도 고치지 않는다",
+      "files": ["AGENTS.md", "CLAUDE.md", ".claude/rules/git-branch-workflow.md", ".cursor/rules/git-branch-workflow.mdc"],
+      "assertions": [
+        {
+          "id": "marker_excluded",
+          "text": "agents_md.marker_ranges 가 가리키는 줄을 대조 대상에서 뺀다"
+        },
+        {
+          "id": "marker_untouched",
+          "text": "마커 블록 구간을 수정하지 않는다"
+        },
+        {
+          "id": "rules_untouched",
+          "text": ".claude/rules/*.md 와 .cursor/rules/*.mdc 를 고치지 않는다"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "AGENTS.md 현행화해줘",
+      "expected_output": "갱신 후 AGENTS.md 가 200줄 목표를 넘는다. init-agent-rules 와 같은 규칙으로 How 절차 분리 후보를 제안하고 승인을 받는다. 승인 전에는 skills/ 나 .claude/rules/ 에 파일을 만들지 않으며, 200줄을 맞추려고 본문을 잘라내지 않는다",
+      "files": ["AGENTS.md", "CLAUDE.md", ".claude/agent-rules.state.json"],
+      "assertions": [
+        {
+          "id": "reports_budget",
+          "text": "agents_md.over_by 를 근거로 초과분을 보고한다. 줄 수를 직접 세지 않는다"
+        },
+        {
+          "id": "no_files_before_approval",
+          "text": "승인 전 skills/ 와 .claude/rules/ 에 새로 만든 파일이 0건이다"
+        },
+        {
+          "id": "no_truncation",
+          "text": "200줄을 맞추려고 본문 뒷부분을 잘라내지 않는다"
+        },
+        {
+          "id": "single_canon",
+          "text": "카파시·What/How 규칙을 자체 정의하지 않고 init-agent-rules 의 claude_md_rewrite.md 를 따른다"
+        }
+      ]
+    }
+  ]
+}
