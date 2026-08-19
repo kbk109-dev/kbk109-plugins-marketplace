@@ -1,6 +1,6 @@
 ---
 name: firebase-analytics-plan
-description: Plans Firebase Analytics (@react-native-firebase/analytics) integration for React Native Expo projects — decides where to initialize, which GA4 events to log, and exactly where to insert tracking code. Uses a virtual expert agent team (GA4 Strategist, Expo/RN Architect, Privacy Advisor, Growth Analyst) that cross-reviews recommendations before producing a structured plan saved to docs/plan/GA_Plan.md. Use this skill whenever the user mentions Firebase Analytics, GA4 event design, screen_view tracking, event tracking plans, analytics instrumentation for Expo/RN, @react-native-firebase/analytics, analytics best practices, or wants to update an existing GA_Plan.md. Also triggers on Korean phrases like "이벤트 트래킹 계획", "Firebase Analytics 어디에 넣을지", "GA4 이벤트 설계", "GA 계획 업데이트", "분석 삽입 위치".
+description: Plans Firebase Analytics (@react-native-firebase/analytics) integration for React Native Expo projects — decides where to initialize, which GA4 events to log, and exactly where to insert tracking code. Uses a virtual expert agent team (GA4 Strategist, Expo/RN Architect, Privacy Advisor, Growth Analyst) that cross-reviews recommendations before producing a structured plan saved to docs/plan/GA_PLAN.md. Use this skill whenever the user mentions Firebase Analytics, GA4 event design, screen_view tracking, event tracking plans, analytics instrumentation for Expo/RN, @react-native-firebase/analytics, analytics best practices, or wants to update an existing GA_PLAN.md. Also triggers on Korean phrases like "이벤트 트래킹 계획", "Firebase Analytics 어디에 넣을지", "GA4 이벤트 설계", "GA 계획 업데이트", "분석 삽입 위치".
 ---
 
 # Firebase GA Plan
@@ -155,7 +155,7 @@ Ensure every funnel stage has at least one event.
 
 ### File Management
 
-1. Check if `docs/plan/GA_Plan.md` exists
+1. Check if `docs/plan/GA_PLAN.md` exists
 2. **If not**: create `docs/plan/` directory and write the full plan
 3. **If yes**: read existing file, update only changed sections, preserve unchanged content
 4. Always update the `Last Updated` timestamp
@@ -288,9 +288,9 @@ Ensure every funnel stage has at least one event.
 
 ## Incremental Update Logic
 
-When `GA_Plan.md` already exists and the user requests changes (e.g., "이벤트 추가해줘", "GA_Plan 수정해줘"):
+When `GA_PLAN.md` already exists and the user requests changes (e.g., "이벤트 추가해줘", "GA_PLAN 수정해줘"):
 
-1. Read the existing `docs/plan/GA_Plan.md`
+1. Read the existing `docs/plan/GA_PLAN.md`
 2. Re-run Phase 1 to detect any project structure changes (new screens, new files)
 3. Identify the specific change requested
 4. Update only the affected sections:

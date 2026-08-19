@@ -22,7 +22,7 @@ React Native Expo 프로젝트에 Firebase Analytics(GA4)와 Crashlytics 를 도
 ### `firebase-analytics-plan`
 어디서 초기화할지, 어떤 GA4 이벤트를 남길지, 트래킹 코드를 정확히 어느 위치에 삽입할지 결정한다.
 가상 전문가 팀(GA4 Strategist, Expo/RN Architect, Privacy Advisor, Growth Analyst)이 교차 검토한 뒤
-`docs/plan/GA_Plan.md` 에 저장한다.
+`docs/plan/GA_PLAN.md` 에 저장한다.
 
 트리거 — "GA4 이벤트 설계", "이벤트 트래킹 계획", "Firebase Analytics 어디에 넣을지",
 "분석 삽입 위치"
