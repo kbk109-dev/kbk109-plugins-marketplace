@@ -7,7 +7,7 @@
     "url": "https://github.com/kbk109-dev"
   },
   "metadata": {
-    "version": "1.8.0"
+    "version": "1.8.1"
   },
   "plugins": [
     {
@@ -37,7 +37,7 @@
       "description": "React Native Expo 프로젝트에 Firebase Analytics(GA4 이벤트·screen_view)와 Crashlytics(Error Boundary·recordError)를 계획부터 구현까지 도입한다. 가상 전문가 팀이 계획을 교차 검토하고, Harness 3-에이전트 검증 루프로 구현 완료를 증명한다.",
       "source": "./plugins/firebase-observability",
       "category": "monitoring",
-      "version": "1.0.0",
+      "version": "1.0.1",
       "author": {
         "name": "kbk109",
         "url": "https://github.com/kbk109-dev"

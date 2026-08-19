@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.8.1
+
+v1.5.0 부터 네 번의 릴리스 노트에 **알려진 이슈로만 적혀 있던** GA 계획 문서 파일명 불일치를
+해소했다. 계획 스킬이 `docs/plan/GA_Plan.md` 를 만드는데 구현 스킬은 `GA_PLAN.md` 를 읽고
+있었다 — **대소문자 구분 파일시스템에서 계획→구현 연결이 끊긴다.** macOS 기본 APFS 는
+대소문자를 무시하므로 개발 중에는 드러나지 않고 Linux/CI 에서만 깨진다.
+
+### 수정 — `firebase-observability` 1.0.0 → 1.0.1
+
+- **정본을 `GA_PLAN.md` 로 확정하고 생성 측 7건을 고쳤다.** 틀린 쪽은 생성 측이다. 근거 셋:
+  `AGENTS.md` 의 plan/impl 표가 `docs/plan/GA_PLAN.md` 로 명시하고, 형제 계획 문서가 전부
+  대문자(`ADMOB-PLAN.md` · `CRASHLYTICS_PLAN.md`)이며, 무엇보다 **실제로 그 파일을 읽는
+  `firebase-analytics-impl` 43건이 전부 `GA_PLAN.md`** 다. 읽는 이름이 사실상의 계약이다.
+  - `firebase-analytics-plan/SKILL.md` 6건 — `description` 의 생성 경로와 "update an existing",
+    존재 확인, 갱신 절차 2곳. `description` 은 트리거 계약이라 파일명이 여기 박혀 있다
+  - `plugins/firebase-observability/README.md` 1건 — 저장 경로
+- **`AGENTS.md` 의 ⚠️ 알려진 불일치 경고를 제거했다** (199 → 196줄). 해소됐는데 경고가 남으면
+  다음 사람이 없는 문제를 찾는다.
+
+과거 릴리스 노트(v1.5.0 · v1.6.0 · v1.7.0 · v1.8.0)의 `GA_Plan.md` 언급 4건은 **고치지 않았다.**
+그 시점의 사실 기록이므로 고치면 역사가 왜곡된다.
+
+### 기존 사용자 영향
+
+이미 `docs/plan/GA_Plan.md` 를 가진 프로젝트는 대소문자 구분 파일시스템에서 계획 스킬이 기존
+파일을 못 찾아 새로 만든다. `git mv docs/plan/GA_Plan.md docs/plan/GA_PLAN.md` 로 옮기면 된다.
+
 ## 1.8.0
 
 배포되는 플러그인은 하나도 바뀌지 않았다. 저장소 자신의 정비다 — v1.7.0 이 만든
