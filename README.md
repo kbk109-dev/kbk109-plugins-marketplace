@@ -1,10 +1,10 @@
 # kbk109 plugins marketplace
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
-[![Marketplace](https://img.shields.io/badge/marketplace-1.6.0-blue)](./docs/release/v1.6.0.md)
+[![Marketplace](https://img.shields.io/badge/marketplace-1.7.0-blue)](./docs/release/v1.7.0.md)
 [![Plugins](https://img.shields.io/badge/plugins-6-informational)](./plugins)
 
-직접 제작한 Claude Code 커스텀 플러그인 모음. Harness Engineering 원칙으로 집필한 스킬 17개를
+직접 제작한 Claude Code 커스텀 플러그인 모음. Harness Engineering 원칙으로 집필한 스킬 18개를
 도메인별 6개 플러그인으로 묶어 배포한다.
 
 > **Harness Engineering** — 에이전트 = 모델 + 하네스. 모델이 성능의 상한선이라면, 하네스는
@@ -34,8 +34,8 @@
 
 ## 릴리스
 
-현재 마켓플레이스 버전은 **1.6.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
-이번 태그 노트는 [docs/release/v1.6.0.md](./docs/release/v1.6.0.md) 를 본다.
+현재 마켓플레이스 버전은 **1.7.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
+이번 태그 노트는 [docs/release/v1.7.0.md](./docs/release/v1.7.0.md) 를 본다.
 
 ## 플러그인
 
@@ -46,7 +46,7 @@
 | [`release-workflow`](./plugins/release-workflow) | 4 | Notion 기반 릴리즈 계획·구현·패치·main 머지 |
 | [`harness-devkit`](./plugins/harness-devkit) | 2 | 스킬 집필 도구, dev 서버 로그 감시 |
 | [`product-planning`](./plugins/product-planning) | 1 | 노션 문서·회의록 → PRD 10개 섹션 정규화 |
-| [`project-conventions`](./plugins/project-conventions) | 2 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로·codegraph 검색) 동기화. 이관 전 본문을 200줄 목표로 다듬는다. codegraph 검색은 훅으로 서브에이전트까지 강제 |
+| [`project-conventions`](./plugins/project-conventions) | 3 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로·codegraph 검색) 동기화. 이관 전 본문을 200줄 목표로 다듬는다. codegraph 검색은 훅으로 서브에이전트까지 강제 |
 
 ## 스킬 전체 목록
 
@@ -92,6 +92,7 @@
 |---|---|
 | `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘", "codegraph 규칙 넣어줘" |
 | `check-agent-rules` | "규칙 갈라졌는지 확인", "cursor rules 랑 claude rules 같은지 봐줘" |
+| `refresh-agent-rules` | "AGENTS.md 업데이트", "AGENTS.md 가 지금 코드랑 맞는지 봐줘", "프로젝트 바뀌었으니 문서 반영해줘" |
 
 > 사용 가이드: [docs/guide/project-conventions.md](./docs/guide/project-conventions.md) — 왜 쓰는지, 쓰면 저장소가 어떻게 바뀌는지
 
