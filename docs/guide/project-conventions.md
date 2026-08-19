@@ -1,7 +1,8 @@
 # project-conventions 사용 가이드
 
 > **대상** — Claude Code 와 Cursor 를 함께 쓰는(또는 쓸 예정인) 프로젝트의 개발자
-> **범위** — 스킬 2개(`init-agent-rules`, `check-agent-rules`) + `PreToolUse` 훅 1개
+> **범위** — 스킬 3개(`init-agent-rules`, `check-agent-rules`, `refresh-agent-rules`)
+> + `PreToolUse` 훅 1개
 > **읽는 순서** — 1~2절이 *왜*, 3~5절이 *쓰면 어떻게 되는지*, 6~8절이 *그 다음*
 
 ## 선행 요건과 설치
@@ -286,6 +287,43 @@ pre-commit 훅에 걸어도 된다.
 python3 ~/.claude/plugins/.../check-agent-rules/scripts/check_agent_rules.py --project-root .
 ```
 
+### 시간이 지나 내용이 낡았을 때 — `refresh-agent-rules`
+
+위 두 스킬로는 **내용이 틀린 것**을 못 잡는다. `check-agent-rules` 는 `.mdc` 가 `.md` 와 같은지를
+볼 뿐, `.md` 에 적힌 `npm test` 가 아직 존재하는 명령인지는 보지 않는다. 세 스킬은 서로 다른
+문제를 본다.
+
+```mermaid
+flowchart LR
+  I["init-agent-rules"] -->|구조를 만든다 · 1회| S[AGENTS.md 단일 소스 구조]
+  S --> C["check-agent-rules"]
+  S --> R["refresh-agent-rules"]
+  C -->|구조가 깨졌는지<br/>사본 갈라짐| CD[".mdc 가 .md 와 다른가"]
+  R -->|내용이 사실과 어긋났는지| RD[문서의 명령·경로가<br/>아직 존재하는가]
+```
+
+```
+/project-conventions:refresh-agent-rules
+```
+
+프로젝트를 스캔해 명령·패키지 매니저·툴체인·디렉터리 구조 같은 **사실**을 모으고, 마지막 갱신
+이후 git 변경분으로 어디부터 볼지 정한 뒤 `AGENTS.md` 의 주장과 대조한다.
+
+**바꿀 게 없으면 파일을 열지도 않는다.** 무엇을 확인했는지만 보고하고 끝낸다 — 갱신 스킬이
+매번 뭔가를 고쳐야 한다는 압박으로 멀쩡한 문서를 흔드는 것이 가장 흔한 실패다.
+
+| 특징 | 이유 |
+|---|---|
+| `AGENTS.md` 본문만 고친다 | 마커 블록은 `init` 이 덮어쓰고, `.mdc` 는 생성물이며, `CLAUDE.md` 는 포인터다 |
+| **삭제만 항목별 승인** | 사람이 손으로 쓴 설계 근거를 모델이 "낡았다"고 지우는 것이 최대 손실이다. 긴 diff 안의 삭제 한 줄은 놓치기 쉽다 |
+| 삭제 근거에 출처를 붙인다 | 사라진 경로·바뀐 스크립트명 등 **어느 사실에서 나왔는지** 못 대면 판정 대상이 아니다 |
+| 200줄 규칙은 `init` 과 동일 | 규칙 정본이 둘이면 반드시 갈라진다. 이 플러그인이 막으려는 실패를 자기 자신에게 하지 않는다 |
+
+마지막 갱신 시점은 `.claude/agent-rules.state.json` 에 남고 **커밋 대상**이다. 팀원이 각자 다른
+기준점을 들면 같은 변경을 몇 번이고 다시 제안하게 된다. 기준점이 rebase 로 사라지면 스크립트가
+그 사실을 알리고 전체 대조로 되돌아간다 — 빈 diff 를 "변경 없음" 으로 읽으면 놓친 갱신을 영원히
+못 잡는다.
+
 ---
 
 ## 7. codegraph 훅 — 서브에이전트 사각지대
@@ -355,4 +393,6 @@ grep 부터 잡는다. 훅은 반드시 실행되는 지점 — 부모의 `Agent
 | [`references/claude_md_rewrite.md`](../../plugins/project-conventions/skills/init-agent-rules/references/claude_md_rewrite.md) | Step 0.5 재작성 규칙 정본 |
 | [`references/conflict_policy.md`](../../plugins/project-conventions/skills/init-agent-rules/references/conflict_policy.md) | `AGENTS.md` 충돌 처리 절차 |
 | [`check-agent-rules/SKILL.md`](../../plugins/project-conventions/skills/check-agent-rules/SKILL.md) | 검사 스킬 |
+| [`refresh-agent-rules/SKILL.md`](../../plugins/project-conventions/skills/refresh-agent-rules/SKILL.md) | 갱신 스킬 |
+| [`references/refresh_policy.md`](../../plugins/project-conventions/skills/refresh-agent-rules/references/refresh_policy.md) | 갱신 판정 규칙 정본 |
 | [`docs/harness-engineering/`](../harness-engineering/) | 이 저장소 스킬들이 따르는 설계 원칙 |

@@ -31,6 +31,8 @@
 공식 `claude-md-management:claude-md-improver` 로 대신할 수 없다. 그 스킬은 `CLAUDE.md` 에
 내용을 써 넣으므로, 이관된 저장소에서 돌리면 포인터에 본문이 다시 들어가 검사 3 이 깨진다.
 
+`docs/guide/project-conventions.md` 6절에 세 스킬 역할 구분 도식을 추가했다.
+
 ## 1.6.0
 
 `init-agent-rules` 가 `CLAUDE.md` 본문을 **그대로** 옮기고 있었다. `/init` 초안은 이관되는 순간
