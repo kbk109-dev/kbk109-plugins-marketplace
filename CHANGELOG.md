@@ -36,6 +36,10 @@ SSoT 가 되므로, 초안의 결함 — 200줄을 넘는 분량, `CLAUDE.md` �
 
 게이트·`--dry-run` 승인·`conflict_policy.md`·`.mdc` 생성·커밋 금지는 바뀌지 않았다.
 
+개발자용 사용 가이드 [`docs/guide/project-conventions.md`](./docs/guide/project-conventions.md) 를 신설했다 — 플러그인 전체(스킬 2 + 훅 1)를
+mermaid 도식 6개로 설명하고, 예시는 이 저장소에 실제로 설치된 파일을 인용한다.
+문서 추가이므로 버전은 올리지 않는다.
+
 ## 1.5.0
 
 `git-branch-workflow` 규칙이 **`main` 에서 바로 분기해 `main` 으로 되돌려 머지**하고 있었다.
