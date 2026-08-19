@@ -7,7 +7,7 @@
     "url": "https://github.com/kbk109-dev"
   },
   "metadata": {
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   "plugins": [
     {
@@ -120,7 +120,7 @@
       "description": "Claude 와 Cursor 를 번갈아 쓰는 프로젝트의 지시 문서를 한 곳으로 모은다. CLAUDE.md 본문을 AGENTS.md 로 이관해 단일 소스로 만들고 CLAUDE.md 는 포인터만 남긴 뒤, git 브랜치 워크플로 규칙과 codegraph 코드 검색 규칙(.codegraph/ 색인이 있는 프로젝트만)을 .claude/rules/ 와 .cursor/rules/ 양쪽에 동일 본문으로 설치한다. 생성물인 .mdc 사본이 원본과 갈라졌는지는 별도 검사 스킬이 바이트 단위로 잡는다. codegraph 검색 규칙은 PreToolUse 훅이 서브에이전트 프롬프트에 직접 심어 강제한다 — 서브에이전트는 UserPromptSubmit 훅이 닿지 않는 사각지대다.",
       "source": "./plugins/project-conventions",
       "category": "development",
-      "version": "1.3.0",
+      "version": "1.4.0",
       "author": {
         "name": "kbk109",
         "url": "https://github.com/kbk109-dev"

@@ -23,6 +23,11 @@ Usage:
 so a project-specific edit to the rule survives. Use it after editing
 .claude/rules/<rule>.md; a full install would overwrite that edit.
 
+Both --dry-run and a real install print one line reporting the resulting
+AGENTS.md against a 200-line goal, so the skill's tidy-up step can quote a real
+number instead of counting a file that does not exist yet. It is a goal, not a
+gate: over budget still exits 0.
+
 Exit codes:
     0  installed (or --dry-run plan printed)
     1  an operation failed
@@ -75,6 +80,14 @@ RULES = (
         "mdc_description": "코드 검색은 codegraph 우선, 호출 불가 시 경고 후 grep 폴백",
     },
 )
+
+
+# Anthropic's documented target for a project instruction file. A GOAL, not a
+# limit: CLAUDE.md/AGENTS.md are loaded in full however long they get — the
+# 200-line/25KB cutoff that actually truncates belongs to auto-memory's
+# MEMORY.md. Reporting beats enforcing here: refusing to migrate over a number
+# that costs tokens rather than correctness would be worse than a long file.
+AGENTS_LINE_BUDGET = 200
 
 
 def claude_rel(name: str) -> str:
@@ -194,6 +207,23 @@ def render(template: str, main_branch: str, pre_commit_check: str) -> str:
         if not drop:
             out_lines.append(line)
     return "\n".join(out_lines).rstrip("\n") + "\n"
+
+
+def line_budget_note(agents_text: str, projected: bool) -> str:
+    """One line placing the resulting AGENTS.md against AGENTS_LINE_BUDGET.
+
+    The script reports this rather than the model because the model would be
+    counting a file that does not exist yet — the marker blocks are appended
+    here, after its rewrite.
+    """
+    n = len(agents_text.splitlines())
+    label = "예상 AGENTS.md 줄 수" if projected else "AGENTS.md 줄 수"
+    if n < AGENTS_LINE_BUDGET:
+        return f"{label}: {n} (목표 {AGENTS_LINE_BUDGET} 미만 — 충족)"
+    return (
+        f"{label}: {n} (목표 {AGENTS_LINE_BUDGET} 미만 — "
+        f"{n - AGENTS_LINE_BUDGET + 1}줄 초과. 절차(How)를 스킬·규칙 파일로 분리하면 줄어든다)"
+    )
 
 
 def mdc_frontmatter(rule: dict, main_branch: str) -> str:
@@ -466,6 +496,7 @@ def main(argv: list[str]) -> int:
     if args.dry_run:
         for s in steps:
             print(f"  - {s}")
+        print(line_budget_note(agents_text, projected=True))
         return 0
 
     # ---- write ------------------------------------------------------------
@@ -489,6 +520,7 @@ def main(argv: list[str]) -> int:
 
     for s in steps:
         print(f"  - {s}")
+    print(line_budget_note(agents_text, projected=False))
     print("OK")
     return 0
 

@@ -93,6 +93,8 @@
 | `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘", "codegraph 규칙 넣어줘" |
 | `check-agent-rules` | "규칙 갈라졌는지 확인", "cursor rules 랑 claude rules 같은지 봐줘" |
 
+> 사용 가이드: [docs/guide/project-conventions.md](./docs/guide/project-conventions.md) — 왜 쓰는지, 쓰면 저장소가 어떻게 바뀌는지
+
 ## 선행 요건
 
 스킬마다 다르다. 플러그인별 README 에 정리해 두었다.

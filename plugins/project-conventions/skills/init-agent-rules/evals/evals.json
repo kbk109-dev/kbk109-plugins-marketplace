@@ -136,6 +136,94 @@
           "text": "git-branch-workflow 규칙 설치는 정상적으로 수행한다"
         }
       ]
+    },
+    {
+      "id": 7,
+      "prompt": "이 프로젝트 CLAUDE.md 를 AGENTS.md 로 옮겨줘",
+      "expected_output": "CLAUDE.md 본문에 카파시 4원칙 전용 섹션이 하나도 없다. Step 0.5 에서 10~20줄짜리 짧은 블록을 H1 바로 아래에 prepend 하고, 기존 /init 본문은 그 아래에 그대로 둔 채 이관한다",
+      "files": ["CLAUDE.md"],
+      "assertions": [
+        {
+          "id": "karpathy_prepended",
+          "text": "이관 본문 앞부분에 'Behavioral Guidelines (Karpathy)' 블록이 들어간다"
+        },
+        {
+          "id": "short_block_only",
+          "text": "카파시 원문 전체(약 65줄)를 붙여넣지 않고 10~20줄 짧은 블록만 넣는다"
+        },
+        {
+          "id": "below_h1",
+          "text": "H1 위가 아니라 H1 바로 아래에 넣어 제목이 # AGENTS.md 로 변환되게 한다"
+        },
+        {
+          "id": "body_preserved",
+          "text": "기존 /init 본문을 교체하지 않고 블록 아래에 그대로 남긴다"
+        }
+      ]
+    },
+    {
+      "id": 8,
+      "prompt": "커서랑 클로드 규칙 같이 쓰게 해줘",
+      "expected_output": "CLAUDE.md 에 Think Before Coding / Simplicity First / Surgical Changes / Goal-Driven Execution 네 원칙이 이미 전용 섹션으로 있다. Step 0.5 는 카파시 블록을 prepend 하지 않고 넘어간다",
+      "files": ["CLAUDE.md"],
+      "assertions": [
+        {
+          "id": "skips_prepend",
+          "text": "네 원칙이 이미 있으므로 카파시 블록을 추가하지 않는다"
+        },
+        {
+          "id": "no_duplicate_section",
+          "text": "이관된 본문에 같은 원칙 섹션이 두 벌 생기지 않는다"
+        },
+        {
+          "id": "keeps_existing_wording",
+          "text": "이미 있는 원칙 문장을 '중복'으로 판정해 합치거나 지우지 않는다"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "prompt": "AGENTS.md 로 이관",
+      "expected_output": "CLAUDE.md 가 250줄이고 릴리스·PR 다단계 절차 같은 How 가 섞여 있다. Step 0.5 가 분리 후보 표(후보 ID·원문 발췌·제안 목적지·남는 What 한 줄·200줄 영향)를 제시하고 승인을 기다린다. 승인 전에는 파일을 하나도 만들지 않는다",
+      "files": ["CLAUDE.md"],
+      "assertions": [
+        {
+          "id": "shows_candidate_table",
+          "text": "How 후보를 표로 제시하고 후보별로 승인/축약만/보류를 고르게 한다"
+        },
+        {
+          "id": "no_files_before_approval",
+          "text": "승인 전 skills/ 와 .claude/rules/ 에 새로 만든 파일이 0건이다"
+        },
+        {
+          "id": "reports_line_budget",
+          "text": "이관 후 예상 AGENTS.md 줄 수와 200줄 목표 대비를 보고한다"
+        },
+        {
+          "id": "no_truncation",
+          "text": "200줄을 맞추려고 본문 뒷부분을 잘라내지 않는다"
+        }
+      ]
+    },
+    {
+      "id": 10,
+      "prompt": "규칙 다시 설치하고 AGENTS.md 도 정리해줘",
+      "expected_output": "CLAUDE.md 가 이미 @AGENTS.md 포인터이므로 Step 0.5 의 대상은 AGENTS.md 본문이다. 카파시 블록과 다듬은 본문은 AGENTS.md 상단에만 들어가고 CLAUDE.md 는 포인터인 채로 남는다",
+      "files": ["AGENTS.md", "CLAUDE.md", ".claude/rules/git-branch-workflow.md", ".cursor/rules/git-branch-workflow.mdc"],
+      "assertions": [
+        {
+          "id": "targets_agents_md",
+          "text": "포인터인 CLAUDE.md 가 아니라 AGENTS.md 본문을 다듬는다"
+        },
+        {
+          "id": "pointer_stays_pointer",
+          "text": "CLAUDE.md 에 카파시 본문이나 프로젝트 지시를 다시 넣지 않는다"
+        },
+        {
+          "id": "checker_passes",
+          "text": "설치 후 check_agent_rules.py 가 exit 0 이다"
+        }
+      ]
     }
   ]
 }
