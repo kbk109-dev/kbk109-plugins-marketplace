@@ -52,48 +52,50 @@
 ## 스킬 전체 목록
 
 플러그인 스킬은 `/<플러그인>:<스킬>` 로 호출한다. 대부분은 트리거 문구만으로 자동 호출된다.
+`references` 는 스킬이 **필요할 때만 읽는** 딸림 자료다. 본문을 500줄 이하로 유지하기 위해
+특정 단계에서만 쓰는 템플릿·상세 가이드를 밖으로 뺀 것이다 (점진적 정보 공개).
 
 ### expo-app-kit
-| 스킬 | 트리거 예 |
-|---|---|
-| `admob-plan` | "광고 배치 계획", "어디에 광고 넣을지", "admob 설계" |
-| `admob-impl` | "ADMOB-PLAN 기반으로 구현해줘", "배너 광고 코드 넣어줘" |
-| `admob-impl-harness` | "하네스로 광고 구현", "AdMob harness" |
-| `ota-hotfix` | "OTA 반영 안 됨", "fingerprint 불일치", "eas update 했는데 적용 안 돼" |
+| 스킬 | 트리거 예 | references |
+|---|---|---|
+| `admob-plan` | "광고 배치 계획", "어디에 광고 넣을지", "admob 설계" | `plan_document_template.md` |
+| `admob-impl` | "ADMOB-PLAN 기반으로 구현해줘", "배너 광고 코드 넣어줘" | — |
+| `admob-impl-harness` | "하네스로 광고 구현", "AdMob harness" | `evaluator_guide.md` 외 2 |
+| `ota-hotfix` | "OTA 반영 안 됨", "fingerprint 불일치", "eas update 했는데 적용 안 돼" | — |
 
 ### firebase-observability
-| 스킬 | 트리거 예 |
-|---|---|
-| `firebase-analytics-plan` | "GA4 이벤트 설계", "이벤트 트래킹 계획" |
-| `firebase-analytics-impl` | "GA_PLAN 기반으로 구현해줘", "screen_view 트래킹 구현해줘" |
-| `firebase-crashlytics-plan` | "크래시 리포팅 계획 세워줘", "Error Boundary 어디에 넣어야 해?" |
-| `firebase-crashlytics-impl` | "CRASHLYTICS_PLAN 기반으로 구현해줘", "글로벌 에러 핸들러 설정해줘" |
+| 스킬 | 트리거 예 | references |
+|---|---|---|
+| `firebase-analytics-plan` | "GA4 이벤트 설계", "이벤트 트래킹 계획" | `ga4-events.md` |
+| `firebase-analytics-impl` | "GA_PLAN 기반으로 구현해줘", "screen_view 트래킹 구현해줘" | `evaluator_guide.md` 외 2 |
+| `firebase-crashlytics-plan` | "크래시 리포팅 계획 세워줘", "Error Boundary 어디에 넣어야 해?" | — |
+| `firebase-crashlytics-impl` | "CRASHLYTICS_PLAN 기반으로 구현해줘", "글로벌 에러 핸들러 설정해줘" | `report_template.md` 외 3 |
 
 ### release-workflow
-| 스킬 | 트리거 예 |
-|---|---|
-| `release-plan` | "릴리즈 계획", "작업 분해해서 노션에 등록" |
-| `release-impl` | "v1.2.0 구현", "릴리즈 작업 시작" |
-| `fix-plan-impl` | "버그 수정 릴리즈", "패치 릴리즈", "핫픽스 계획+구현" |
-| `main-branch-merge` | "main 머지", "릴리스 노트", "태그 찍어줘" |
+| 스킬 | 트리거 예 | references |
+|---|---|---|
+| `release-plan` | "릴리즈 계획", "작업 분해해서 노션에 등록" | `harness_docs_templates.md` 외 3 |
+| `release-impl` | "v1.2.0 구현", "릴리즈 작업 시작" | `contract_consumer.md` 외 6 |
+| `fix-plan-impl` | "버그 수정 릴리즈", "패치 릴리즈", "핫픽스 계획+구현" | `notion_version_rules.md` |
+| `main-branch-merge` | "main 머지", "릴리스 노트", "태그 찍어줘" | `readme-best-practices.md` 외 1 |
 
 ### harness-devkit
-| 스킬 | 트리거 예 |
-|---|---|
-| `harness-dev` | 스킬 설계·집필 (Harness 프레임워크 적용) |
-| `dev-monitor` | `/harness-devkit:dev-monitor <port>` — 서버 기동 + 로그 감시 |
+| 스킬 | 트리거 예 | references |
+|---|---|---|
+| `harness-dev` | 스킬 설계·집필 (Harness 프레임워크 적용) | `feature_list_template.json` 외 3 |
+| `dev-monitor` | `/harness-devkit:dev-monitor <port>` — 서버 기동 + 로그 감시 | — |
 
 ### product-planning
-| 스킬 | 트리거 예 |
-|---|---|
-| `create-prd` | "PRD 만들어줘", "기획서를 PRD로 정리해줘", "수용기준 뽑아줘" |
+| 스킬 | 트리거 예 | references |
+|---|---|---|
+| `create-prd` | "PRD 만들어줘", "기획서를 PRD로 정리해줘", "수용기준 뽑아줘" | `prd_template.md` 외 2 |
 
 ### project-conventions
-| 스킬 | 트리거 예 |
-|---|---|
-| `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘", "codegraph 규칙 넣어줘" |
-| `check-agent-rules` | "규칙 갈라졌는지 확인", "cursor rules 랑 claude rules 같은지 봐줘" |
-| `refresh-agent-rules` | "AGENTS.md 업데이트", "AGENTS.md 가 지금 코드랑 맞는지 봐줘", "프로젝트 바뀌었으니 문서 반영해줘" |
+| 스킬 | 트리거 예 | references |
+|---|---|---|
+| `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘", "codegraph 규칙 넣어줘" | `claude_md_rewrite.md` 외 1 |
+| `check-agent-rules` | "규칙 갈라졌는지 확인", "cursor rules 랑 claude rules 같은지 봐줘" | — |
+| `refresh-agent-rules` | "AGENTS.md 업데이트", "AGENTS.md 가 지금 코드랑 맞는지 봐줘", "프로젝트 바뀌었으니 문서 반영해줘" | `refresh_policy.md` |
 
 > 사용 가이드: [docs/guide/project-conventions.md](./docs/guide/project-conventions.md) — 왜 쓰는지, 쓰면 저장소가 어떻게 바뀌는지
 
