@@ -6,7 +6,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/codegraph_subagent_guard.py\"",
+            "command": "python3 -B \"${CLAUDE_PLUGIN_ROOT}/hooks/codegraph_subagent_guard.py\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Grep|Glob",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -B \"${CLAUDE_PLUGIN_ROOT}/hooks/codegraph_search_gate.py\"",
             "timeout": 5
           }
         ]
