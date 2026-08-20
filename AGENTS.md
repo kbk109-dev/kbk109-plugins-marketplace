@@ -63,6 +63,11 @@ B='{"cwd":"/tmp/cg-fixture","tool_name":"Bash","agent_id":"B","tool_input":{"com
 echo "$B" | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py   # → deny
 echo '{"cwd":"/tmp/cg-fixture","tool_name":"Bash","agent_id":"B","tool_input":{"command":"ps aux | grep getUserById"}}' \
   | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py           # → 무출력
+
+# 게이트가 실제로 무언가를 막았는지는 상태 파일이 증거다. 도구 이름이 접두어로 붙는다.
+# zsh 는 매칭 없는 글롭에 명령 전체를 중단시키므로 ls 로 존재를 먼저 본다 (2>/dev/null 로는 안 막힌다).
+D=$(python3 -c "import tempfile,os;print(os.path.join(tempfile.gettempdir(),'codegraph-search-gate'))")
+ls "$D" 2>/dev/null && cat "$D"/*.json
 ```
 
 `evals/evals.json` 은 CLI 러너가 없다. `skill-creator:skill-creator` 플러그인이 소비하며,
