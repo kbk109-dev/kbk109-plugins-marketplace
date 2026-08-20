@@ -1,7 +1,7 @@
 # kbk109 plugins marketplace
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
-[![Marketplace](https://img.shields.io/badge/marketplace-1.8.2-blue)](./docs/release/v1.8.2.md)
+[![Marketplace](https://img.shields.io/badge/marketplace-1.8.3-blue)](./docs/release/v1.8.3.md)
 [![Plugins](https://img.shields.io/badge/plugins-6-informational)](./plugins)
 
 직접 제작한 Claude Code 커스텀 플러그인 모음. Harness Engineering 원칙으로 집필한 스킬 18개를
@@ -35,8 +35,8 @@
 
 ## 릴리스
 
-현재 마켓플레이스 버전은 **1.8.2**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
-이번 태그 노트는 [docs/release/v1.8.2.md](./docs/release/v1.8.2.md) 를 본다.
+현재 마켓플레이스 버전은 **1.8.3**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
+이번 태그 노트는 [docs/release/v1.8.3.md](./docs/release/v1.8.3.md) 를 본다.
 
 ## 플러그인
 
