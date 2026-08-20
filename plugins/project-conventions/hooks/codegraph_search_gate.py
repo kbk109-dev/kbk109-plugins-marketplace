@@ -7,9 +7,16 @@ sometimes. The sibling hook (codegraph_subagent_guard.py) carries the same rule
 into subagent prompts, but that is still a *directive* — a subagent can ignore
 it exactly the way the main session ignores the rule file.
 
-This hook stops asking. A Grep/Glob call whose pattern looks like a symbol is
-denied, and the denial reason tells the model how to run codegraph instead. The
-model's cooperation is not required.
+This hook stops asking. A search whose pattern looks like a symbol is denied,
+and the denial reason tells the model how to run codegraph instead. The model's
+cooperation is not required.
+
+Bash counts as a search tool. Blocking only the Grep/Glob tools leaves the hole
+wide open — the harness itself tells the model to prefer `grep` through Bash in
+some modes, so there Bash is not an evasion but the DEFAULT path. The cost is
+real and deliberate: this hook now runs once per Bash call in every project the
+plugin is enabled for, which is why the Bash branch bails on the cheapest
+possible check before it parses anything.
 
 Reads the PreToolUse payload on stdin:
     {session_id, agent_id?, cwd, hook_event_name, tool_name, tool_input}
@@ -32,13 +39,41 @@ import hashlib
 import json
 import os
 import re
+import shlex
 import sys
 import tempfile
 from pathlib import Path
 
 from _codegraph_index import has_codegraph_index
 
-SEARCH_TOOLS = {"Grep", "Glob"}
+SEARCH_TOOLS = {"Grep", "Glob", "Bash"}
+
+# Bash commands that search source. `find` is absent on purpose: searching by
+# filename is what the rule document hands to Glob, not to codegraph.
+SEARCH_BINARIES = {"grep", "egrep", "fgrep", "rg", "ag", "ack", "ack-grep"}
+
+# The fast exit. This runs on EVERY Bash call, so it has to be the cheapest
+# thing that can rule the command out — anything heavier belongs after it.
+HAS_BINARY = re.compile(r"\b(?:grep|rg|ag|ack)\b")
+
+# `VAR=value` prefixes (`LC_ALL=C grep …`) sit in front of the real binary.
+ENV_ASSIGN = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+# Tokens that end one command and start another.
+SEPARATORS = {"|", "||", "&&", ";", "&", "|&"}
+
+# Flags whose value is a SEPARATE token that is not the pattern. Missing one
+# here means reading its value as the pattern — which the symbol heuristic then
+# almost always rejects, so the failure stays a silent no-op.
+VALUE_FLAGS = {
+    "-f", "--file", "-m", "--max-count", "-A", "--after-context",
+    "-B", "--before-context", "-C", "--context", "-d", "--directories",
+    "--include", "--exclude", "--exclude-dir", "-t", "--type",
+    "-g", "--glob", "--color", "--colour", "--max-columns",
+}
+
+# Flags whose value IS the pattern.
+PATTERN_FLAGS = {"-e", "--regexp"}
 
 # What counts as "a symbol search". Deliberately narrow, because the two failure
 # directions are not symmetric: missing a symbol search leaves today's behaviour
@@ -75,6 +110,109 @@ REASON = """이 프로젝트는 codegraph 색인(`.codegraph/`)을 갖고 있다
 
 def is_symbol_shaped(pattern: str) -> bool:
     return bool(IDENTIFIER.match(pattern) and COMPOUND.search(pattern))
+
+
+def _segments(tokens: list):
+    """Split a token list into (segment, downstream_of_pipe) pairs.
+
+    The pipe flag is the whole point. `ps aux | grep nodeServer` filters another
+    command's stdout — it never touches the source tree, and blocking it would
+    be pure noise. Segments after `&&`/`;` ARE independent commands, so a grep
+    there is a real file search and stays in scope.
+    """
+    segment: list = []
+    piped = False
+    for token in tokens:
+        if token in SEPARATORS:
+            if segment:
+                yield segment, piped
+            piped = token in ("|", "|&")
+            segment = []
+        else:
+            segment.append(token)
+    if segment:
+        yield segment, piped
+
+
+def _pattern_from_segment(tokens: list):
+    """The search pattern this segment looks for, or None if it is not a search.
+
+    Only the FIRST token is ever treated as the binary. That restraint is what
+    keeps `echo "run grep later"` and command substitutions from being read as
+    searches — their grep is never in leading position.
+    """
+    i = 0
+    while i < len(tokens) and ENV_ASSIGN.match(tokens[i]):
+        i += 1
+    if i >= len(tokens):
+        return None
+
+    binary = os.path.basename(tokens[i])
+    if binary == "git":
+        if i + 1 >= len(tokens) or tokens[i + 1] != "grep":
+            return None
+        i += 2
+    elif binary in SEARCH_BINARIES:
+        i += 1
+    else:
+        return None
+
+    while i < len(tokens):
+        token = tokens[i]
+        if token in PATTERN_FLAGS or token == "--":
+            return tokens[i + 1] if i + 1 < len(tokens) else None
+        if token.startswith("--regexp="):
+            return token.split("=", 1)[1]
+        if token in VALUE_FLAGS:
+            i += 2
+            continue
+        if token.startswith("-") and token != "-":
+            i += 1  # a flag, including bundled short forms like -rn and -A3
+            continue
+        return token
+    return None
+
+
+def pattern_from_command(command: str):
+    """The symbol a shell command searches for, or None.
+
+    Every branch that is not certain returns None. A missed search leaves
+    today's behaviour untouched; a wrong hit interrupts a shell command that had
+    nothing to do with searching, which is the strictly worse failure.
+    """
+    if not HAS_BINARY.search(command):
+        return None
+    # Heredocs are the one construct that reliably fools this: shlex sees the
+    # body's words as tokens, so `cat > f <<'EOF' … && grep foo … EOF` yields a
+    # segment that starts with grep even though nothing is being searched.
+    if "<<" in command:
+        return None
+    # Split on newlines first — shlex treats a newline as plain whitespace, so a
+    # multi-line script would otherwise collapse into one segment and hide every
+    # command after the first.
+    for line in command.splitlines():
+        try:
+            tokens = shlex.split(line)
+        except ValueError:
+            continue  # unbalanced quotes — cannot parse, so do not judge
+        for segment, piped in _segments(tokens):
+            if piped:
+                continue
+            pattern = _pattern_from_segment(segment)
+            if pattern:
+                return pattern
+    return None
+
+
+def extract_pattern(tool_name: str, tool_input: dict):
+    """Both tool shapes reduced to one thing: the pattern being searched for."""
+    if tool_name == "Bash":
+        command = tool_input.get("command")
+        if not isinstance(command, str) or not command.strip():
+            return None
+        return pattern_from_command(command)
+    pattern = tool_input.get("pattern")
+    return pattern if isinstance(pattern, str) else None
 
 
 def state_path(agent_key: str) -> Path:
@@ -129,7 +267,7 @@ def run() -> None:
     tool_input = payload.get("tool_input")
     if not isinstance(tool_input, dict):
         return
-    pattern = tool_input.get("pattern")
+    pattern = extract_pattern(tool_name, tool_input)
     if not isinstance(pattern, str) or not is_symbol_shaped(pattern):
         return
 
@@ -143,6 +281,10 @@ def run() -> None:
 
     path = state_path(agent_key)
     denied = load_denied(path)
+    # Keyed per TOOL on purpose. Sharing one key across tools would mean a model
+    # denied on Grep could run the same search through Bash and sail past — tool
+    # shopping is not "retrying the identical call". One symbol therefore costs
+    # at most one denial per surface, each independently recoverable.
     key = f"{tool_name} {pattern}"
     if key in denied:
         return  # the escape hatch: this exact search was already denied once
