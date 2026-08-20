@@ -46,7 +46,13 @@ from pathlib import Path
 
 from _codegraph_index import has_codegraph_index
 
-SEARCH_TOOLS = {"Grep", "Glob", "Bash"}
+# NOTE: there is deliberately no list of tool NAMES here. The names live in
+# hooks.json's matcher and nowhere else. Keeping a second copy meant both had to
+# be right for the hook to work, and a mismatch produced no error at all — the
+# matcher would fire and this file would silently wave the call through. One of
+# the two had to go, and the matcher is the one the harness actually consults.
+# What this file dispatches on instead is the SHAPE of tool_input: a `command`
+# string is a shell call, a `pattern` string is a search. See extract_pattern.
 
 # Bash commands that search source. `find` is absent on purpose: searching by
 # filename is what the rule document hands to Glob, not to codegraph.
@@ -205,7 +211,13 @@ def pattern_from_command(command: str):
 
 
 def extract_pattern(tool_name: str, tool_input: dict):
-    """Both tool shapes reduced to one thing: the pattern being searched for."""
+    """Both tool shapes reduced to one thing: the pattern being searched for.
+
+    Shape, not name. `Bash` is the one name that has to appear because a shell
+    command needs parsing before it yields a pattern; everything else is judged
+    by whether tool_input carries a `pattern` string. So a search tool this hook
+    has never heard of still gets gated the moment hooks.json routes it here.
+    """
     if tool_name == "Bash":
         command = tool_input.get("command")
         if not isinstance(command, str) or not command.strip():
@@ -257,8 +269,10 @@ def run() -> None:
     if not isinstance(payload, dict):
         return
 
+    # Only that it exists — it is the state key's prefix, not a gate. Which
+    # tools reach this hook is hooks.json's decision.
     tool_name = payload.get("tool_name")
-    if tool_name not in SEARCH_TOOLS:
+    if not isinstance(tool_name, str) or not tool_name:
         return
 
     if not has_codegraph_index(payload.get("cwd") or os.getcwd()):
