@@ -195,11 +195,27 @@ git 변경분으로 어디부터 볼지 정한 뒤 `AGENTS.md` 의 주장과 대
 | 탈출구 | 같은 `(도구, 패턴)` 을 이미 차단한 적 있음 |
 | 기록 | 상태 파일 기록 실패 |
 
-**패턴 휴리스틱은 일부러 좁다.** 정규식 메타문자·공백·따옴표·점·슬래시가 없는 순수 식별자이면서
-camelCase 경계나 밑줄을 가진 것만 잡는다 — `handleSubmit`·`UserService`·`get_user`·`MAX_RETRY` 는
-차단, `error`·`TODO`·`foo`·`use.*State`·`**/*.ts` 는 통과. 두 방향의 실패가 대칭이 아니기 때문이다.
-놓치면 오늘과 같을 뿐이지만, 헛발화하면 규칙 문서 2절이 **grep 의 영역이라고 직접 인정한** 검색
-(문자열 리터럴·설정값·파일명 패턴)을 깨뜨린다. 그래서 under-trigger 쪽으로 기운다.
+**판정은 "패턴 안에 이름처럼 생긴 토큰이 있는가"다.** camelCase 경계나 밑줄을 가진 3자 이상 토큰이
+하나라도 있으면 코드 검색으로 본다. 패턴 **전체**가 식별자일 필요는 없다 — `export const appUser`,
+`function collectPropertyNames`, `enrollRunner\|issueRunnerToken` 전부 걸린다.
+
+**이 규칙은 실측으로 정했다.** 색인이 있는 실제 프로젝트의 검색 패턴 74종을 코드검색 23 / 비코드검색
+51 로 분류하고 후보 규칙을 돌렸다.
+
+| 규칙 | 코드검색 23건 중 | 비코드검색 51건 중 오탐 |
+|---|---|---|
+| 패턴 전체가 식별자 | 12 | 0 |
+| + 심볼 alternation | 17 | 0 |
+| **+ 패턴 내 토큰 (채택)** | **23** | **11** |
+
+앞의 두 규칙은 코드 검색의 절반 가까이를 통과시킨다. `export const appUser` 처럼 구조와 이름이 섞인
+패턴, 그리고 모델이 심볼 여러 개를 한 번에 찾을 때 쓰는 alternation 을 놓치기 때문이다. **"코드 검색은
+codegraph 로"가 목적인 이상 절반을 통과시키는 규칙은 목적을 달성하지 못한다.**
+
+오탐 11건은 `CREATE TABLE app_user`·`DATABASE_URL\|skip` 처럼 이름 토큰이 섞인 DB·설정 검색이다.
+**받아들인 대가다** — 각 1회 재시도로 끝나고, 규칙 문서 2절에 그 경계를 명시했다. 반대로 단일 소문자
+단어까지 넓히는 안은 함께 재봤는데 오탐만 8건(`auth`·`origin`·`outcome`) 늘고 새로 잡는 것이 없어
+버렸다.
 
 **Bash 의 `grep` 도 본다.** `Grep`·`Glob` 도구만 막으면 구멍이 그대로다 — 하네스는 어떤 모드에서
 모델에게 *"검색은 Bash 의 `grep` 으로 하라"* 고 지시하고, 그런 세션에서 Bash grep 은 우회가 아니라
@@ -225,7 +241,11 @@ later"` 가 검색으로 읽히지 않는 이유), `|` 뒤 세그먼트는 건�
 심볼을 grep 으로 확인하는 길이 늘 열려 있고, 훅이 오판했을 때의 최대 대가는 **도구 호출 한 번
 재시도**다. 차단하는 훅을 플러그인으로 전역 배포할 수 있는 조건이 이것 하나다.
 
-상태는 `{tmpdir}/codegraph-search-gate/{에이전트 해시}.json` 에 둔다. **키가 `session_id` 가 아니라
+상태는 `{tmpdir}/codegraph-search-gate/{에이전트 해시}.json` 에 둔다. **OS 가 이 디렉터리를 주기적으로
+비운다**(macOS 는 `/var/folders/.../T/`). 그래서 정리가 차단과 재시도 **사이**에 끼면 같은 검색이 한 번
+더 막힌다 — 그다음은 통과하므로 루프는 아니지만, "재호출은 반드시 통과한다"가 그 경계에서는 "한 번 더
+막힐 수 있다"가 된다. 같은 이유로 **`denied` 배열은 누적 감사 기록이 아니다** — 마지막 정리 이후의 것만
+담으므로 총 차단 건수를 세는 데 쓸 수 없다. **키가 `session_id` 가 아니라
 `agent_id` 인 것이 핵심이다** — 서브에이전트는 부모와 `session_id` 를 공유하지만 고유한 `agent_id` 를
 받으므로, 이 키로만 "에이전트당 한 번"이 실제로 에이전트당 한 번이 된다. `agent_id` 가 없는 메인
 세션은 `session_id` 로 떨어진다. 기록은 차단 **직전에** 하고, 기록이 실패하면 차단하지 않는다 —
@@ -256,8 +276,41 @@ ls "$D" 2>/dev/null && cat "$D"/*.json
 > `2>/dev/null` 로는 안 막힌다 — 실패가 셸의 글롭 확장 단계에서 일어나기 때문이다. 위처럼 `ls` 로
 > 존재를 먼저 확인하거나 `setopt local_options null_glob` 을 앞에 둔다.
 
-**2. 도구 이름이 정말 그건가 — 실측**
+**2. 그 도구가 쓰이기는 하는가 — 세션 기록 집계**
 
+하네스가 이미 transcript 에 도구 이름을 남겨 뒀다. **소급해서 읽히고, 설정을 건드리지 않고,
+검색을 다시 시킬 필요도 없다.** 그래서 이게 첫 번째 실측 수단이다.
+
+```bash
+python3 - "$PWD" <<'PY'
+import collections, glob, json, os, sys
+d = os.path.join(os.path.expanduser("~/.claude/projects"), os.path.abspath(sys.argv[1]).replace("/", "-"))
+n, k = collections.Counter(), collections.defaultdict(set)
+for p in glob.glob(os.path.join(d, "*.jsonl")):
+    for line in open(p, encoding="utf-8", errors="replace"):
+        if '"tool_use"' not in line: continue
+        try: rec = json.loads(line)
+        except ValueError: continue
+        for b in (rec.get("message") or {}).get("content") or []:
+            if isinstance(b, dict) and b.get("type") == "tool_use":
+                n[b["name"]] += 1
+                if isinstance(b.get("input"), dict): k[b["name"]].update(b["input"])
+for name, c in n.most_common():
+    print("%-40s %5d  %s" % (name, c, ",".join(sorted(k[name])[:6])))
+PY
+```
+
+도구 이름과 `tool_input` 키가 함께 나오므로 matcher 와 대조할 것이 한 번에 다 나온다.
+
+> **검색 도구가 목록에 아예 없는 경우가 있다.** 그러면 matcher 가 깨진 게 아니라 **확인할 대상이
+> 없는 것이다.** bypass permissions 모드는 모델에게 *"가능한 한 Bash 로 하라 — 검색은 `grep`,
+> `find` 로"* 라고 지시하므로, 그런 환경에서는 `Grep`·`Glob` 이 한 번도 호출되지 않고 검색이 전부
+> Bash 로 간다. 실측 사례 — 어떤 프로젝트의 도구 호출 1906건 중 `Grep`·`Glob` 은 **0건**이었고
+> Bash 가 68%였다. 상태 파일에 `Grep …` 항목이 없다는 것은 그 자체로 고장의 근거가 아니다.
+
+**3. 도구 이름 실측 — 살아 있는 세션에서**
+
+2번으로 갈리지 않을 때만 쓴다(예: 이번 세션의 호출을 실시간으로 보고 싶을 때).
 `TMPDIR` 이 세션마다 다를 수 있으므로 로그는 홈에 고정한다.
 
 ```bash
@@ -286,7 +339,7 @@ PY
 `hooks.json` 의 matcher 와 다르면 그게 원인이다. 확인이 끝나면 probe 를 반드시 지운다(모든 도구
 호출마다 기록한다).
 
-**3. 훅이 뛰었는데 죽었는가 — stderr**
+**4. 훅이 뛰었는데 죽었는가 — stderr**
 
 `claude --debug` 로 실행하면 훅의 stderr 가 보인다. import 실패·타임아웃이 여기서 드러난다.
 
