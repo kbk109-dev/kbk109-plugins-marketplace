@@ -30,7 +30,8 @@ from __future__ import annotations
 import json
 import os
 import sys
-from pathlib import Path
+
+from _codegraph_index import has_codegraph_index
 
 # The subagent dispatch tool. Named `Agent` in current Claude Code; `Task` in
 # older builds. Both are listed because hooks.json matches on the name the model
@@ -59,41 +60,6 @@ DIRECTIVE = """
 - 색인 생성(`codegraph init`)은 제안만 하고 승인 없이 실행하지 않는다.
 
 (이 블록은 project-conventions 플러그인의 PreToolUse 훅이 자동으로 덧붙였다.)"""
-
-
-def has_codegraph_index(cwd: str) -> bool:
-    """True when a .codegraph/ index sits at cwd or an ancestor inside the project.
-
-    Walking up matters because the subagent may be dispatched from a package
-    directory inside a monorepo whose index lives at the repo root — the same
-    resolution the codegraph MCP server does.
-
-    The walk is BOUNDED, which an unbounded resolver would not be. A stray
-    `~/.codegraph` — trivially created by running `codegraph init` once in the
-    home directory — is an ancestor of every project under it, so an unbounded
-    walk would report "indexed" for all of them and this hook would inject into
-    every subagent everywhere. Two stops prevent that:
-
-      * the git repo root (checked, then stop) — the project boundary
-      * $HOME and the filesystem root (never inspected)
-
-    Cost of the bound: a git subrepo whose index lives in the outer repo is
-    missed. That is a silent no-op, whereas the false positive is noise in
-    every unrelated project.
-    """
-    try:
-        start = Path(cwd).resolve()
-        home = Path.home().resolve()
-    except (OSError, ValueError, RuntimeError):
-        return False
-    for directory in (start, *start.parents):
-        if directory == home or directory == directory.parent:
-            return False
-        if (directory / ".codegraph").is_dir():
-            return True
-        if (directory / ".git").exists():
-            return False
-    return False
 
 
 def build_output(tool_input: dict, prompt: str) -> dict:
