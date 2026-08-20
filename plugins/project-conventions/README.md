@@ -188,7 +188,7 @@ git 변경분으로 어디부터 볼지 정한 뒤 `AGENTS.md` 의 주장과 대
 
 | 조건 | 통과(no-op) 하는 경우 |
 |---|---|
-| 도구 | `Grep`·`Glob`·`Bash` 가 아님 |
+| 도구 | `hooks.json` matcher 가 이 훅으로 보내지 않음 (아래) |
 | 색인 | git 저장소 루트까지 올라가도 `.codegraph/` 없음 |
 | 패턴 | 심볼처럼 생기지 않음 (아래) · Bash 라면 명령에서 검색 패턴을 뽑아내지 못함 |
 | 식별자 | `agent_id`·`session_id` 둘 다 없음 — 무엇을 차단했는지 기억할 수 없으면 차단하지 않는다 |
@@ -230,6 +230,65 @@ later"` 가 검색으로 읽히지 않는 이유), `|` 뒤 세그먼트는 건�
 받으므로, 이 키로만 "에이전트당 한 번"이 실제로 에이전트당 한 번이 된다. `agent_id` 가 없는 메인
 세션은 `session_id` 로 떨어진다. 기록은 차단 **직전에** 하고, 기록이 실패하면 차단하지 않는다 —
 기록 없이 차단하면 재호출도 차단돼 이 훅이 절대 만들면 안 되는 루프가 된다.
+
+**도구 이름은 `hooks.json` 에만 있다.** 훅 코드에는 이름 목록이 없다 — `Bash` 한 곳만 예외인데,
+셸 명령은 파싱해야 패턴이 나오기 때문이다. 그 밖에는 `tool_input` 에 `pattern` 문자열이 있으면 검색으로
+본다. 이름을 두 곳에 두면 **둘 다 맞아야 동작하는데 어긋나도 아무 신호가 없다** — matcher 가 새 이름을
+잡아도 훅이 조용히 통과시킨다. 그래서 하나로 줄였고, 덕분에 이 훅이 모르는 검색 도구라도 matcher 가
+보내주기만 하면 그대로 잡힌다.
+
+### 훅이 안 뛰는 것 같을 때
+
+이 훅들의 실패는 **에러 없이 조용하다.** 조건 하나만 어긋나도 아무것도 출력하지 않고 통과하는 것이
+설계이고, 그건 matcher 의 도구 이름이 틀렸을 때도 똑같이 보인다. 그래서 추측 대신 순서대로 측정한다.
+
+**1. 차단된 적이 있는가 — 상태 파일**
+
+```bash
+D=$(python3 -c "import tempfile,os;print(os.path.join(tempfile.gettempdir(),'codegraph-search-gate'))")
+ls "$D" 2>/dev/null && cat "$D"/*.json
+```
+
+`{"denied": ["Bash handleSubmit", …]}` 가 보이면 그 경로는 살아 있는 것이다. 도구 이름이 접두어로
+붙으므로 **어느 경로가 잡혔는지까지** 여기서 읽힌다.
+
+> zsh 에서 `cat "$D"/*.json` 은 매칭되는 파일이 없으면 `no matches found` 로 **명령 전체를 중단**시킨다.
+> `2>/dev/null` 로는 안 막힌다 — 실패가 셸의 글롭 확장 단계에서 일어나기 때문이다. 위처럼 `ls` 로
+> 존재를 먼저 확인하거나 `setopt local_options null_glob` 을 앞에 둔다.
+
+**2. 도구 이름이 정말 그건가 — 실측**
+
+`TMPDIR` 이 세션마다 다를 수 있으므로 로그는 홈에 고정한다.
+
+```bash
+cat > ~/cg-probe.py <<'PY'
+import json, os, sys
+try:
+    d = json.load(sys.stdin)
+    ti = d.get("tool_input")
+    keys = ",".join(sorted(ti)) if isinstance(ti, dict) else "-"
+    with open(os.path.expanduser("~/cg-toolnames.log"), "a") as f:
+        f.write("%s :: %s\n" % (d.get("tool_name", "?"), keys))
+except Exception:
+    pass
+PY
+```
+
+프로젝트의 `.claude/settings.local.json` 에 아래를 넣고(기존 파일이 있으면 `hooks` 만 합친다) 검색을
+몇 번 시킨 뒤 `sort -u ~/cg-toolnames.log` 를 본다. 설정은 재시작 없이 반영된다.
+
+```json
+{"hooks":{"PreToolUse":[{"matcher":".*","hooks":[{"type":"command",
+ "command":"python3 -B /절대/경로/cg-probe.py","timeout":5}]}]}}
+```
+
+경로는 **절대경로**로 쓴다 — 훅이 도는 셸의 `~` 확장을 믿지 않는다. 찍힌 이름이 정본이고,
+`hooks.json` 의 matcher 와 다르면 그게 원인이다. 확인이 끝나면 probe 를 반드시 지운다(모든 도구
+호출마다 기록한다).
+
+**3. 훅이 뛰었는데 죽었는가 — stderr**
+
+`claude --debug` 로 실행하면 훅의 stderr 가 보인다. import 실패·타임아웃이 여기서 드러난다.
 
 ### 두 훅에 공통인 것
 
