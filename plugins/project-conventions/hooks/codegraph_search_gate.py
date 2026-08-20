@@ -7,9 +7,9 @@ sometimes. The sibling hook (codegraph_subagent_guard.py) carries the same rule
 into subagent prompts, but that is still a *directive* — a subagent can ignore
 it exactly the way the main session ignores the rule file.
 
-This hook stops asking. A search whose pattern looks like a symbol is denied,
-and the denial reason tells the model how to run codegraph instead. The model's
-cooperation is not required.
+This hook stops asking. A search whose pattern names something a codebase would
+name is denied, and the denial reason tells the model how to run codegraph
+instead. The model's cooperation is not required.
 
 Bash counts as a search tool. Blocking only the Grep/Glob tools leaves the hole
 wide open — the harness itself tells the model to prefer `grep` through Bash in
@@ -81,19 +81,29 @@ VALUE_FLAGS = {
 # Flags whose value IS the pattern.
 PATTERN_FLAGS = {"-e", "--regexp"}
 
-# What counts as "a symbol search". Deliberately narrow, because the two failure
-# directions are not symmetric: missing a symbol search leaves today's behaviour
-# untouched, while catching a text search interrupts a search the rule document
-# itself calls correct ("문자열 리터럴·설정값·파일명 패턴 검색은 grep 이 맞다").
+# What counts as "a code search". The rule is: does the pattern NAME something a
+# codebase would name — anywhere inside it, not as the whole pattern.
 #
-# IDENTIFIER drops anything a bare identifier cannot contain — regex
-# metacharacters, spaces, quotes, dots, slashes — which also removes essentially
-# every Glob pattern.
-IDENTIFIER = re.compile(r"^[A-Za-z_][A-Za-z0-9_]{2,}$")
+# Requiring the whole pattern to be a bare identifier was measured against 74
+# real search patterns from an indexed project and caught 12 of the 23 that were
+# actually code searches. It missed every pattern that mixes structure with a
+# name — `export const appUser`, `function collectPropertyNames` — and every
+# batched alternation — `enrollRunner\|issueRunnerToken` — which is how a model
+# most often searches for several symbols at once. Scanning tokens instead
+# catches all 23.
+#
+# The cost is 11 of 51 non-code patterns now matching too, mostly SQL and config
+# (`CREATE TABLE app_user`, `DATABASE_URL\|skip`). That is accepted: a wrong
+# guess here costs one retried tool call, and the goal is that code search goes
+# through codegraph — a rule that lets half of it past does not meet the goal.
+TOKEN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # COMPOUND is what separates `handleSubmit` from `error`. A single lowercase
 # word is far more often prose being grepped for than a symbol; a camelCase
 # boundary or an underscore is the cheap signal that someone named this thing.
+# Widening past this was measured too and added 8 false positives (`auth`,
+# `origin`, `outcome`) while catching nothing new.
 COMPOUND = re.compile(r"[a-z][A-Z]|_")
+MIN_TOKEN = 3
 
 # Bounds the state file. A pattern pushed out can be denied a second time, which
 # costs one more retry — the same bounded price every other misfire costs.
@@ -114,8 +124,11 @@ REASON = """이 프로젝트는 codegraph 색인(`.codegraph/`)을 갖고 있다
 (이 차단은 project-conventions 플러그인의 PreToolUse 훅이 걸었다.)"""
 
 
-def is_symbol_shaped(pattern: str) -> bool:
-    return bool(IDENTIFIER.match(pattern) and COMPOUND.search(pattern))
+def is_code_search(pattern: str) -> bool:
+    """True when any token in the pattern looks like something a codebase named."""
+    return any(
+        len(t) >= MIN_TOKEN and COMPOUND.search(t) for t in TOKEN.findall(pattern)
+    )
 
 
 def _segments(tokens: list):
@@ -282,7 +295,7 @@ def run() -> None:
     if not isinstance(tool_input, dict):
         return
     pattern = extract_pattern(tool_name, tool_input)
-    if not isinstance(pattern, str) or not is_symbol_shaped(pattern):
+    if not isinstance(pattern, str) or not is_code_search(pattern):
         return
 
     # Subagents share the parent's session_id but carry their own agent_id, so
