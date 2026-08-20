@@ -336,7 +336,7 @@ flowchart LR
 flowchart TD
   U[사용자 프롬프트] --> UPS[UserPromptSubmit 훅]
   UPS --> M[메인 세션 · 규칙 도달]
-  M --> G1{"Grep · Glob 호출"}
+  M --> G1{"Grep · Glob · Bash 호출"}
   M --> T[Agent · Task 도구 호출]
 
   T -. UserPromptSubmit 이 구조적으로 발화 못 함 .-> SA[서브에이전트 · 규칙 미도달]
@@ -345,8 +345,8 @@ flowchart TD
   SA2 --> G1
 
   G1 --> GATE["PreToolUse 훅 ②<br/>codegraph_search_gate.py"]
-  GATE -->|심볼처럼 생긴 패턴| DENY[deny · codegraph 로 안내]
-  GATE -->|텍스트 · 정규식 · glob| PASS[그대로 grep]
+  GATE -->|"심볼처럼 생긴 패턴<br/>(Bash 는 명령에서 추출)"| DENY[deny · codegraph 로 안내]
+  GATE -->|"텍스트 · 정규식 · glob<br/>파이프 뒤 · heredoc · 검색 아님"| PASS[그대로 grep]
   DENY -->|같은 호출 재시도| PASS
   DENY --> CG[codegraph_explore]
 ```
@@ -356,9 +356,14 @@ flowchart TD
 지점 — 부모의 `Agent`/`Task` 도구 호출 — 을 잡아 프롬프트에 규칙을 물리적으로 심는다.
 
 **훅 ② — 규칙이 부탁이라는 문제.** ① 이 심는 것도 결국 *지시문*이라, 서브에이전트는 메인 세션이
-규칙 파일을 무시하듯 그것을 무시할 수 있다. ② 는 부탁을 그만두고 `Grep`/`Glob` 호출 자체를 잡는다.
+규칙 파일을 무시하듯 그것을 무시할 수 있다. ② 는 부탁을 그만두고 검색 호출 자체를 잡는다.
 심볼처럼 생긴 패턴이면 `deny` 하고 이유문으로 codegraph 호출 방법을 돌려준다.
 **여기서부터 모델의 협조가 필요 없다.**
+
+**Bash 도 검색 도구다.** `Grep`·`Glob` 만 막으면 `grep -rn handleSubmit .` 이 그대로 지나간다.
+하네스가 어떤 모드에서는 *"검색은 Bash 의 grep 으로"* 라고 지시하므로 그쪽이 오히려 기본 경로다.
+② 는 Bash 명령에서 `grep`·`rg`·`ag`·`ack`·`git grep` 의 검색 패턴을 뽑아 같은 휴리스틱에 넣는다.
+대가는 **모든 Bash 호출마다 훅 프로세스가 뜨는 것**이고, 이건 알고 지불하는 비용이다.
 
 플러그인 훅은 **켜진 모든 프로젝트에서 발화**하므로, 조건이 하나라도 어긋나면 아무것도
 출력하지 않고 통과한다.
@@ -367,7 +372,8 @@ flowchart TD
 |---|---|
 | ①·② 공통 | git 저장소 루트까지 올라가도 `.codegraph/` 없음 |
 | ① | 도구가 `Agent`·`Task` 가 아님 · 프롬프트가 비었음 · 프롬프트에 이미 `codegraph` 가 있음(호출자의 탈출구) |
-| ② | 도구가 `Grep`·`Glob` 이 아님 · 패턴이 심볼처럼 생기지 않음 · 에이전트 식별자 없음 · **이미 차단한 `(도구, 패턴)`** · 상태 기록 실패 |
+| ② | 도구가 `Grep`·`Glob`·`Bash` 가 아님 · 패턴이 심볼처럼 생기지 않음 · 에이전트 식별자 없음 · **이미 차단한 `(도구, 패턴)`** · 상태 기록 실패 |
+| ② (Bash) | 검색 바이너리가 없음 · heredoc(`<<`) 포함 · `\|` 뒤 세그먼트 · 첫 토큰이 검색 바이너리가 아님 · 따옴표 불균형 |
 
 **② 의 패턴 휴리스틱은 일부러 좁다.** 정규식 메타문자·공백이 없는 순수 식별자이면서 camelCase 경계나
 밑줄을 가진 것만 잡는다 — `handleSubmit`·`get_user` 는 차단, `error`·`use.*State`·`**/*.ts` 는 통과.
