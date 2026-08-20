@@ -57,6 +57,12 @@ mkdir -p /tmp/cg-fixture/.git /tmp/cg-fixture/.codegraph
 P='{"cwd":"/tmp/cg-fixture","tool_name":"Grep","tool_input":{"pattern":"handleSubmit"},"agent_id":"A"}'
 echo "$P" | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py   # → permissionDecision: deny
 echo "$P" | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py   # → 무출력
+
+# 게이트는 Bash 의 grep 도 본다. 파이프 뒤 grep 은 stdout 필터이므로 통과해야 한다.
+B='{"cwd":"/tmp/cg-fixture","tool_name":"Bash","agent_id":"B","tool_input":{"command":"grep -rn getUserById ."}}'
+echo "$B" | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py   # → deny
+echo '{"cwd":"/tmp/cg-fixture","tool_name":"Bash","agent_id":"B","tool_input":{"command":"ps aux | grep getUserById"}}' \
+  | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py           # → 무출력
 ```
 
 `evals/evals.json` 은 CLI 러너가 없다. `skill-creator:skill-creator` 플러그인이 소비하며,

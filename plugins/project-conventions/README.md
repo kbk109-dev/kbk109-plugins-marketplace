@@ -148,7 +148,7 @@ git 변경분으로 어디부터 볼지 정한 뒤 `AGENTS.md` 의 주장과 대
 | 훅 | 매처 | 하는 일 |
 |---|---|---|
 | `hooks/codegraph_subagent_guard.py` | `Agent\|Task` | 서브에이전트 프롬프트에 규칙을 **삽입** |
-| `hooks/codegraph_search_gate.py` | `Grep\|Glob` | 심볼처럼 생긴 검색을 **차단**하고 codegraph 로 보냄 |
+| `hooks/codegraph_search_gate.py` | `Grep\|Glob\|Bash` | 심볼처럼 생긴 검색을 **차단**하고 codegraph 로 보냄 |
 
 둘 다 `.codegraph/` 색인 판정을 공유한다 (`hooks/_codegraph_index.py`). 그 경계 탐색이 이 플러그인에서
 실제로 버그가 났던 부분이라 사본을 두지 않는다 — 아래 "상향 탐색" 문단이 그 사고의 기록이다.
@@ -177,7 +177,7 @@ git 변경분으로 어디부터 볼지 정한 뒤 `AGENTS.md` 의 주장과 대
 
 ### 2. 심볼 검색을 codegraph 로 통과시키는 훅
 
-`hooks/codegraph_search_gate.py` (`PreToolUse`, matcher `Grep|Glob`)
+`hooks/codegraph_search_gate.py` (`PreToolUse`, matcher `Grep|Glob|Bash`)
 
 **왜 1번만으로 부족한가.** 1번이 심는 것은 *지시문*이다. 서브에이전트는 그것을 메인 세션이 규칙
 파일을 무시하는 것과 똑같이 무시할 수 있다. 심는 쪽을 아무리 다듬어도 "부탁"이라는 성질은 그대로다.
@@ -188,9 +188,9 @@ git 변경분으로 어디부터 볼지 정한 뒤 `AGENTS.md` 의 주장과 대
 
 | 조건 | 통과(no-op) 하는 경우 |
 |---|---|
-| 도구 | `Grep`·`Glob` 이 아님 |
+| 도구 | `Grep`·`Glob`·`Bash` 가 아님 |
 | 색인 | git 저장소 루트까지 올라가도 `.codegraph/` 없음 |
-| 패턴 | 심볼처럼 생기지 않음 (아래) |
+| 패턴 | 심볼처럼 생기지 않음 (아래) · Bash 라면 명령에서 검색 패턴을 뽑아내지 못함 |
 | 식별자 | `agent_id`·`session_id` 둘 다 없음 — 무엇을 차단했는지 기억할 수 없으면 차단하지 않는다 |
 | 탈출구 | 같은 `(도구, 패턴)` 을 이미 차단한 적 있음 |
 | 기록 | 상태 파일 기록 실패 |
@@ -200,6 +200,22 @@ camelCase 경계나 밑줄을 가진 것만 잡는다 — `handleSubmit`·`UserS
 차단, `error`·`TODO`·`foo`·`use.*State`·`**/*.ts` 는 통과. 두 방향의 실패가 대칭이 아니기 때문이다.
 놓치면 오늘과 같을 뿐이지만, 헛발화하면 규칙 문서 2절이 **grep 의 영역이라고 직접 인정한** 검색
 (문자열 리터럴·설정값·파일명 패턴)을 깨뜨린다. 그래서 under-trigger 쪽으로 기운다.
+
+**Bash 의 `grep` 도 본다.** `Grep`·`Glob` 도구만 막으면 구멍이 그대로다 — 하네스는 어떤 모드에서
+모델에게 *"검색은 Bash 의 `grep` 으로 하라"* 고 지시하고, 그런 세션에서 Bash grep 은 우회가 아니라
+**기본 경로**다. 대상은 `grep`·`egrep`·`fgrep`·`rg`·`ag`·`ack`·`git grep` 이며, 명령에서 패턴을 뽑아내
+`Grep` 과 **완전히 같은 휴리스틱**에 넣는다. `find` 는 뺐다 — 파일명 검색은 규칙 문서가 Glob 에
+맡긴 영역이다.
+
+셸 파싱은 전 구간 "확신 없으면 통과"다. 세그먼트의 **첫 토큰만** 바이너리로 인정하고(`echo "run grep
+later"` 가 검색으로 읽히지 않는 이유), `|` 뒤 세그먼트는 건너뛰며(`ps aux | grep node` 는 stdout
+필터다), heredoc(`<<`)이 있으면 통째로 통과시킨다 — 본문의 단어를 `shlex` 가 명령과 구분하지 못하기
+때문이다. 명령 치환 `$(grep …)` 과 `xargs grep` 은 **의도적으로 놓친다.**
+
+**비용을 알고 지불한다.** Bash 를 매처에 넣으면 이 훅이 **켜진 모든 프로젝트의 모든 Bash 호출마다**
+프로세스로 뜬다(호출당 python 기동 수십 ms). v1.9.0 은 바로 이 비용 때문에 Bash 를 채택하지
+않았는데, 그 판단은 Bash grep 이 부차적 경로라는 전제 위에 있었고 **그 전제가 틀렸다.** 대신 Bash
+분기는 가장 싼 검사(명령에 검색 바이너리 이름이 있는가)로 먼저 빠져나가도록 짰다.
 
 **완화 없이 매번 차단한다.** "세션당 1회"·"N회마다" 같은 완화는 심볼 검색의 일부만 codegraph 로
 보낸다. 목적이 "소스 검색은 codegraph 로"인 이상 통과분이 남으면 목적 자체를 놓친다.

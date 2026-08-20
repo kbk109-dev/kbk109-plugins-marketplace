@@ -20,10 +20,12 @@
 
 codegraph 는 심볼 그래프다. 텍스트 검색까지 이걸로 우회할 필요는 없다.
 
-**단, 심볼처럼 생긴 패턴의 Grep/Glob 은 훅이 막는다.** `project-conventions` 플러그인이 켜져 있으면
+**단, 심볼처럼 생긴 패턴의 검색은 훅이 막는다.** `project-conventions` 플러그인이 켜져 있으면
 정규식 메타문자·공백 없이 camelCase 경계나 밑줄을 가진 패턴(`handleSubmit`·`get_user` 등)은 차단되고
-codegraph 로 안내된다. 위 목록의 텍스트 검색(`error`·`TODO` 같은 단일 단어, 정규식, `**/*.ts` 류 glob)은
-휴리스틱에 걸리지 않아 그대로 통과한다.
+codegraph 로 안내된다. **Grep·Glob 도구뿐 아니라 Bash 의 `grep`·`rg`·`ag`·`ack`·`git grep` 도 포함**이다 —
+도구를 갈아타는 것으로는 빠져나가지 못한다. 위 목록의 텍스트 검색(`error`·`TODO` 같은 단일 단어,
+정규식, `**/*.ts` 류 glob)은 휴리스틱에 걸리지 않아 그대로 통과하고, `ps aux | grep foo` 처럼 파이프
+뒤에서 stdout 을 거르는 grep 도 통과한다.
 
 차단당했는데 **정말 텍스트 검색이었거나 codegraph 로 답이 나오지 않으면, 같은 호출을 그대로 다시 한다 —
 동일한 패턴의 재호출은 반드시 통과한다.** 이 절과 훅이 모순돼 보이지 않는 이유가 이것이다. 훅은 기본
