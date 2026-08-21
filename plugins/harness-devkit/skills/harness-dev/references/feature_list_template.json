@@ -12,6 +12,7 @@
       "priority": "high",
       "sprint": 1,
       "status": "fail",
+      "attempts": 0,
       "dependencies": []
     }
   ]

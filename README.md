@@ -1,7 +1,7 @@
 # kbk109 plugins marketplace
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
-[![Marketplace](https://img.shields.io/badge/marketplace-1.14.0-blue)](./docs/release/v1.14.0.md)
+[![Marketplace](https://img.shields.io/badge/marketplace-1.15.0-blue)](./docs/release/v1.15.0.md)
 [![Plugins](https://img.shields.io/badge/plugins-6-informational)](./plugins)
 
 직접 제작한 Claude Code 커스텀 플러그인 모음. Harness Engineering 원칙으로 집필한 스킬 18개를
@@ -35,8 +35,8 @@
 
 ## 릴리스
 
-현재 마켓플레이스 버전은 **1.14.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
-이번 태그 노트는 [docs/release/v1.14.0.md](./docs/release/v1.14.0.md) 를 본다.
+현재 마켓플레이스 버전은 **1.15.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
+이번 태그 노트는 [docs/release/v1.15.0.md](./docs/release/v1.15.0.md) 를 본다.
 
 ## 플러그인
 
@@ -110,7 +110,7 @@
 | [context7 MCP](https://github.com/upstash/context7) | expo-app-kit, firebase-observability, release-workflow, harness-devkit |
 | Notion MCP | release-workflow, product-planning |
 | WebSearch | release-workflow, harness-devkit |
-| `python3` | release-workflow, product-planning, project-conventions |
+| `python3` | release-workflow, product-planning, project-conventions, harness-devkit |
 | EAS CLI (`eas`) | expo-app-kit (ota-hotfix) |
 | 프로젝트 `CLAUDE.md` | project-conventions (init-agent-rules), harness-devkit (dev-monitor) |
 

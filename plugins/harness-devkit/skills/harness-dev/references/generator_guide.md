@@ -156,6 +156,15 @@ feature_list.json의 `dependencies` 필드를 반드시 확인한다. 선행 기
 
 status는 `"pass"`, `"fail"`, `"blocked"` 세 가지만 허용된다. `"pending"`은 존재하지 않는다.
 
+재작업한 경우 `attempts` 를 +1 한다. 이 카운터가 파일에 없으면 세션이 끊길 때 사라져 제약 7(재시도 상한)이 다음 세션에서 무의미해진다.
+
+업데이트 후 검증을 돌린다 — 통과해야 스프린트가 끝난다:
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_feature_list.py \
+  docs/harness/{slug}/feature_list.json
+```
+
 ### progress.md 업데이트
 
 `docs/harness/{slug}/progress.md`에 다음 형식으로 스프린트 결과를 기록한다:
