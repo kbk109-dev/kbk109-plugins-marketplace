@@ -130,7 +130,7 @@ scripts/slugify.py · skills/release-plan/scripts/slugify.py      # 깨짐
 ## Harness Engineering — 스킬 수정 시 지켜야 할 근거
 
 전체 문서: [`docs/harness-engineering/`](./docs/harness-engineering/) ·
-스킬 집필 도구: `harness-devkit:harness-dev`
+3-에이전트 하네스의 참조 구현: `harness-devkit:harness-dev`
 
 **에이전트 = 모델 + 하네스.** 이 저장소 스킬들의 구조는 전부 LLM 의 5가지 구조적 실패 모드를
 막기 위한 것이다. 아래 장치를 "불필요한 복잡성"으로 보고 걷어내지 말 것 — 각각이 특정 실패 모드에
@@ -154,7 +154,7 @@ evidence 로그만 증거로 인정한다 (`release-plan/agents/fact-checker.md`
 - `description` 은 "언제 트리거될지"의 계약서다. 워크플로 요약을 쓰지 말 것 — Claude 가 요약만 읽고
   본문을 건너뛴다. 구체적 트리거(에러 메시지·증상·도구명)와 동의어를 넣어 언더트리거를 막는다
 - 본문 500줄 이하를 목표로 하고, 넘치면 `references/` 로 분리한다 (점진적 정보 공개).
-  현재 초과하는 스킬은 없다(최대 `firebase-analytics-impl` 479줄). 가장 먼저 덜어낼 것은
+  현재 초과하는 스킬은 없다(최대 `dev-monitor` 500줄). 가장 먼저 덜어낼 것은
   **산출 문서 템플릿**이다 — 특정 Phase 에서만 필요한데 분량이 크다
 - 규칙을 나열할 때 **WHY 를 함께 쓴다.** Claude 는 충분히 똑똑하므로 모르는 맥락만 추가한다
 - 정규식·스크립트로 시행 가능한 제약은 스킬 문서에 쓰지 말고 자동화한다 (아키텍처 강제)

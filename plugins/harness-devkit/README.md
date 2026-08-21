@@ -1,6 +1,6 @@
 # harness-devkit
 
-스킬을 만드는 도구와 dev 서버를 감시하는 도구. 스킬 2개.
+요구사항을 스프린트로 분해해 도는 3-에이전트 개발 워크플로와, dev 서버를 띄워 감시하는 도구. 스킬 2개.
 
 ## 설치
 
@@ -19,9 +19,15 @@
 ## 스킬
 
 ### `harness-dev`
-Harness Engineering 원칙으로 스킬을 설계·집필한다. 상태 외부화, Task State Machine,
-독립 검증 루프, 아키텍처 강제를 스킬 구조에 반영하는 방법과 Generator/Evaluator 가이드,
-feature list 템플릿을 제공한다.
+한두 문장짜리 요구사항을 **Planner → Generator → Evaluator** 3-에이전트로 나눠 구현한다.
+Planner 가 기능 목록과 스프린트 계획을 짜고, 스프린트마다 Generator 가 **한 번에 하나씩** 구현한 뒤
+Evaluator 가 독립적으로 5기준(각 7점 미만이면 실패) 채점한다. 실패하면 피드백과 함께 재작업하고,
+2회 실패하면 사용자에게 넘긴다.
+
+상태는 `docs/harness/{slug}/` 의 `feature_list.json` · `progress.md` 로 외부화한다. 모든 기능의
+`status` 는 `"fail"` 로 시작하며, **통과를 증명해야만** `"pass"` 가 된다.
+
+기능 5개 이상의 앱·서비스 빌드에 쓴다. 단순 버그 수정·단일 파일 리팩터·질문에는 쓰지 않는다.
 
 참고 문서 — [`docs/harness-engineering/`](../../docs/harness-engineering/)
 

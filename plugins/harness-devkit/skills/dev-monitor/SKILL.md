@@ -63,6 +63,8 @@ LLM은 세션 간 영구 메모리가 없다. `/loop 10m /harness-devkit:dev-mon
     "port": 8000,
     "server_pid": 12345,
     "monitor_pid": 12346,
+    "monitor_task_id": "b1cgaqjgm",
+    "monitor_pid_file": "~/.claude/dev-monitor/port-8000.monitor.pid",
     "log_path": "/tmp/dev_server_8000.log",
     "server_cmd": "uv run uvicorn api.main:app --reload --port 8000",
     "claude_md_path": "./CLAUDE.md",
@@ -71,22 +73,53 @@ LLM은 세션 간 영구 메모리가 없다. `/loop 10m /harness-devkit:dev-mon
   }
   ````
 
+### `monitor_pid` 와 `monitor_task_id` 는 다른 것이다
+
+`Monitor` 도구는 PID 가 아니라 **task ID 문자열**(`"b1cgaqjgm"`)을 돌려준다. 이 값으로는 `ps -p` 도
+`kill` 도 되지 않는다 — 그래서 Monitor 명령 첫 줄에 `echo $$` 를 넣어 **래퍼 셸의 진짜 PID** 를
+따로 확보한다(Phase 5).
+
+| 필드 | 정체 | 수명 | 쓰는 곳 |
+|---|---|---|---|
+| `server_pid` | 진짜 PID | `nohup` 이라 **세션을 넘어 생존** | `ps -p` · `kill` |
+| `monitor_pid` | 진짜 PID (래퍼 셸) | **세션 종료와 함께 죽음** | `ps -p` · `kill` |
+| `monitor_task_id` | Monitor 도구의 task ID | 같은 세션 안에서만 유효 | `TaskStop` |
+
+**수명이 다른 것이 이 스킬의 핵심 제약이다.** 서버는 세션 경계를 넘고 Monitor 는 못 넘으므로, 새
+세션의 "서버 생존 + Monitor 죽음" 은 사고가 아니라 **정상**이다 — 서버만 재사용하고 재등록한다.
+
+**구스키마 규칙**: `monitor_pid` 가 숫자가 아니면(예: `"b1cgaqjgm"`) 1.1.0 이전 버전이 쓴 파일이다.
+**생존 판정도 `kill` 도 시도하지 말고 죽은 것으로 간주**해 재등록 경로로 보낸다 — Phase 0.5·5·8
+어디서든 동일하게 적용한다.
+
 ### 재진입 절차
 
 1. 상태 파일 경로에서 JSON 로드 시도
 2. 파일이 **없으면** Phase 1로 진행 (신규 세션)
 3. 파일이 **있으면** 프로세스 생존 확인:
    - `ps -p ${server_pid} -o pid= 2>/dev/null` — 종료코드 0이면 서버 생존
-   - `ps -p ${monitor_pid} -o pid= 2>/dev/null` — 동일, Monitor 생존
+   - `ps -p ${monitor_pid} -o pid= 2>/dev/null` — 동일, Monitor 래퍼 생존 (구스키마면 생략)
 4. 분기:
 
 | 서버 PID | Monitor PID | 조치 |
 |---|---|---|
 | 생존 + 포트 일치 | 생존 | **기존 세션 재연결**. Phase 1~5 전부 건너뛰고 Phase 7(상태 보고)로 직행. "기존 Monitor 재사용" 메시지 출력. |
-| 생존 | 죽음 | Monitor만 재등록(Phase 5). 서버 재기동 금지. |
-| 죽음 | 생존 | Monitor kill → stale state 삭제 → Phase 1부터 정상 진행 |
-| 죽음 | 죽음 | stale state 삭제 → Phase 1부터 정상 진행 |
+| 생존 | 죽음 | **고아 tail 정리 후** Monitor만 재등록(Phase 5). 서버 재기동 금지. **새 세션에서 가장 흔한 경우다** — Monitor 는 세션을 못 넘고 서버는 넘기 때문이다 |
+| 죽음 | 생존 | Monitor 종료(Phase 8 절차) → stale state 삭제 → Phase 1부터 정상 진행 |
+| 죽음 | 죽음 | 고아 tail 정리 → stale state 삭제 → Phase 1부터 정상 진행 |
 | 생존, 포트 불일치 | - | 경고 + 사용자 확인 요청(서버가 다른 포트에 있다면 의도적? 상태파일 오염?) |
+
+### 고아 tail 정리 — Monitor 가 죽은 모든 경로에서 필수
+
+Monitor 래퍼 셸이 죽어도 **`tail` 자식은 PID 1 로 재부모화되어 살아남는다** — 세션 종료든 `kill`
+이든 마찬가지다. 정리하지 않으면 재등록할 때마다 같은 로그를 붙든 `tail` 이 하나씩 쌓인다.
+
+````bash
+pkill -f "tail -f ${LOG_PATH}" 2>/dev/null || true
+````
+
+`${LOG_PATH}` 는 상태 파일에서 읽은 값이라 **이 스킬이 띄운 tail 만** 겨냥한다. 경로를 빼면 사용자의
+다른 tail 까지 죽는다.
 
 ### 포트 점유자 교차 검증
 
@@ -104,6 +137,7 @@ LLM은 세션 간 영구 메모리가 없다. `/loop 10m /harness-devkit:dev-mon
 | PORT | 8000 |
 | Server PID | 12345 (생존) |
 | Monitor PID | 12346 (생존) |
+| Monitor Task | b1cgaqjgm |
 | 최초 기동 | 2026-04-19 02:30 |
 | 경과 시간 | 20분 |
 | Log | /tmp/dev_server_8000.log |
@@ -289,6 +323,8 @@ cat > ${STATE_FILE} <<JSON
   "port": ${PORT},
   "server_pid": ${SERVER_PID},
   "monitor_pid": null,
+  "monitor_task_id": null,
+  "monitor_pid_file": null,
   "log_path": "${LOG_PATH}",
   "server_cmd": "${SERVER_CMD}",
   "claude_md_path": "${CLAUDE_MD_PATH}",
@@ -304,28 +340,39 @@ JSON
 
 ### 사전 체크 (중복 등록 방지)
 
-상태 파일의 `monitor_pid` 필드가 `null`이 아니고 해당 PID가 생존 중이면 **재등록을 건너뛴다**. Phase 0.5에서 이미 처리되었어야 하지만, Phase 0.5를 우회한 경로(예: Phase 4 직후 Phase 5로 직행한 fresh 세션에서 재시도가 발생)에서도 최종 방어선으로 한 번 더 확인한다.
+상태 파일의 `monitor_pid` 가 **숫자이고** `null`이 아니며 해당 PID가 생존 중이면 **재등록을 건너뛴다**. Phase 0.5에서 이미 처리되었어야 하지만, Phase 0.5를 우회한 경로(예: Phase 4 직후 Phase 5로 직행한 fresh 세션에서 재시도가 발생)에서도 최종 방어선으로 한 번 더 확인한다.
 
 ### Monitor 등록
 
-**Monitor 백그라운드 태스크를 persistent로 등록**한다:
+**Monitor 백그라운드 태스크를 `persistent: true` 로 등록**한다. 명령 첫 줄의 `echo $$` 가 이 설계의
+핵심이다 — `Monitor` 도구는 task ID 만 돌려주므로, 래퍼 셸의 **진짜 PID** 를 파일로 남기지 않으면
+이후 생존 확인도 종료도 불가능하다.
 
 ````bash
+echo $$ > ~/.claude/dev-monitor/port-${PORT}.monitor.pid
 tail -f ${LOG_PATH} | grep --line-buffered -E "\[(warning|error|critical)\]|Traceback|Exception|raise |AssertionError| [45][0-9]{2} [A-Z]|panic|OOM|FATAL"
 ````
 
-등록 직후 Monitor의 PID를 확보하고 상태 파일을 갱신한다:
+등록 직후 **pidfile 에서 진짜 PID 를 읽고**, Monitor 도구가 반환한 task ID 와 함께 상태 파일을
+갱신한다. pidfile 이 아직 없으면 셸 기동 경합이므로 0.2초 간격으로 최대 2초까지 재시도한다.
 
 ````bash
-MONITOR_PID=<확보한 PID>
+MONITOR_PID=$(cat ~/.claude/dev-monitor/port-${PORT}.monitor.pid)
+MONITOR_TASK_ID=<Monitor 도구가 반환한 task ID>
 python3 -c "
-import json, sys, pathlib
-p = pathlib.Path.home() / '.claude/dev-monitor/port-${PORT}.state.json'
+import json, pathlib
+h = pathlib.Path.home()
+p = h / '.claude/dev-monitor/port-${PORT}.state.json'
 d = json.loads(p.read_text())
 d['monitor_pid'] = ${MONITOR_PID}
+d['monitor_task_id'] = '${MONITOR_TASK_ID}'
+d['monitor_pid_file'] = str(h / '.claude/dev-monitor/port-${PORT}.monitor.pid')
 p.write_text(json.dumps(d, indent=2))
 "
 ````
+
+기록한 PID 가 생존하는지 `ps -p ${MONITOR_PID}` 로 **한 번 확인**한다. 실패하면 monitor 필드를 `null`
+로 되돌리고 보고한다 — 죽은 PID 를 남기면 다음 세션이 "Monitor 생존"으로 오판해 감시 없이 진행한다.
 
 Fallback heartbeat: 20분. heartbeat 때마다 상태 파일의 `last_heartbeat_at`을 갱신해 "최근 살아 있던 시각" 추적이 가능하게 한다.
 
@@ -375,7 +422,7 @@ context7에 없는 경우, 또는 외부 이벤트(사이트 차단 정책, CVE,
 | 서버 | 정상 가동 (PID: ..., Port: ${PORT}) |
 | 마지막 신규 이벤트 | `[HH:MM]` ... |
 | 이후 신규 이상 | 없음 / N건 (기보고) |
-| Monitor ID | ... |
+| Monitor | PID ... (생존) / task ... |
 | 다음 heartbeat | `HH:MM` |
 
 ## Phase 8 — 종료 절차 (`/harness-devkit:dev-monitor stop`, `stop-all`)
@@ -388,7 +435,13 @@ context7에 없는 경우, 또는 외부 이벤트(사이트 차단 정책, CVE,
 ### 각 상태 파일에 대해
 
 1. JSON 로드. 필드 없어도 best-effort로 진행.
-2. `monitor_pid`부터 종료: `kill <monitor_pid>` → 2초 대기 → 살아 있으면 `kill -9 <monitor_pid>`
+2. **Monitor 부터, 자식이 먼저다** — `kill <monitor_pid>` 가 앞서면 `tail` 이 고아로 남는다.
+   1. 같은 세션이면 `TaskStop(<monitor_task_id>)` — 도구 계층에서 깨끗하게 정리된다
+   2. 다른 세션이거나 TaskStop 이 실패하면 **자식 먼저**:
+      `pkill -P <monitor_pid>` → `kill <monitor_pid>` → 2초 대기 → 살아 있으면 `kill -9 <monitor_pid>`
+      (구스키마면 이 단계를 건너뛴다)
+   3. 어느 경로든 마지막에 고아 청소: `pkill -f "tail -f <log_path>" 2>/dev/null || true`
+   4. pidfile 삭제: `rm -f <monitor_pid_file>`
 3. `server_pid` 종료: `kill <server_pid>` → 3초 대기 → 살아 있으면 `kill -9 <server_pid>`
 4. `lsof -ti :<port>`로 해당 포트가 비었는지 재확인. 잔여 PID가 있고 **상태 파일의 server_pid와 일치하면** 추가 `kill -9` (외부 프로세스는 건드리지 않음)
 5. 상태 파일 삭제: `rm ~/.claude/dev-monitor/port-<port>.state.json`
@@ -432,6 +485,14 @@ context7에 없는 경우, 또는 외부 이벤트(사이트 차단 정책, CVE,
 - **기존 Monitor 생존 시 새 Monitor 등록 금지** — `/loop`/재호출에서도 동일
 - **상태 파일 기록 실패 시 서버 방치 금지** — 기록 실패하면 방금 띄운 서버를 kill 후 중단
 - **TaskList만 보고 "Monitor 없음" 판단 금지** — 세션 메모리는 휘발성, 상태 파일이 Ground Truth
+- **`monitor_task_id` 로 `ps -p`·`kill` 시도 금지** — task ID 는 PID 가 아니다. 프로세스 조작은
+  `monitor_pid`(pidfile 로 확보한 진짜 PID), 도구 조작은 `monitor_task_id` 로 갈라 쓴다
+- **Monitor 종료 시 `kill` 먼저 금지** — `pkill -P` 로 자식부터 정리한 뒤 래퍼를 죽인다.
+  순서가 바뀌면 `tail` 이 고아로 남아 재등록마다 하나씩 쌓인다
+- **로그 경로 없이 `pkill tail` 금지** — 반드시 `pkill -f "tail -f ${LOG_PATH}"`.
+  넓히면 사용자의 다른 tail 을 죽인다
+- **새 세션에서 Monitor 가 죽어 있는 것을 사고로 취급 금지** — Monitor 는 세션 경계를 못 넘는다.
+  서버만 재사용하고 Monitor 는 재등록하는 것이 정상 경로다
 - Chrome 등 브라우저 프로세스 kill 금지
 - grep 패턴에 `[0-9]{3}` 단독 사용 금지
 - `[YYYY-MM-DD HH:MM]` 머리글 생략 금지
