@@ -1,6 +1,6 @@
 {
   "name": "release-workflow",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Notion 데이터베이스를 상태 저장소로 쓰는 Harness Engineering 릴리즈 파이프라인 — 계획 수립, 구현 검증, 패치 릴리즈, main 머지",
   "author": {
     "name": "kbk109",

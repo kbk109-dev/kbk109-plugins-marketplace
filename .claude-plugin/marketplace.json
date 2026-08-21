@@ -7,7 +7,7 @@
     "url": "https://github.com/kbk109-dev"
   },
   "metadata": {
-    "version": "1.13.0"
+    "version": "1.14.0"
   },
   "plugins": [
     {
@@ -58,7 +58,7 @@
       "description": "Notion 데이터베이스를 상태 저장소로 쓰는 릴리즈 파이프라인. 버전별 작업 분해·기술 토큰 팩트체크(계획), Task State Machine과 Generator/Evaluator 분리 검증(구현), 패치 릴리즈 자동화, dev→main 머지와 릴리즈 노트 생성까지 다룬다.",
       "source": "./plugins/release-workflow",
       "category": "deployment",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "kbk109",
         "url": "https://github.com/kbk109-dev"
