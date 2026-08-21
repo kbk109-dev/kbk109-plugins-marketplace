@@ -7,7 +7,7 @@
     "url": "https://github.com/kbk109-dev"
   },
   "metadata": {
-    "version": "1.12.0"
+    "version": "1.13.0"
   },
   "plugins": [
     {
@@ -76,10 +76,10 @@
     {
       "name": "harness-devkit",
       "displayName": "Harness Devkit",
-      "description": "Harness Engineering 원칙(상태 외부화·Task State Machine·독립 검증 루프)으로 스킬을 설계·집필하는 도구와, CLAUDE.md에서 서버 실행 명령을 추출해 기동 후 로그를 감시하며 오류를 한국어로 분석 보고하는 dev 서버 모니터를 제공한다.",
+      "description": "Harness Engineering 원칙(상태 외부화·Task State Machine·독립 검증 루프)으로 요구사항을 스프린트로 분해해 구현→독립 평가 루프를 도는 3-에이전트 자율 개발 워크플로와, CLAUDE.md에서 서버 실행 명령을 추출해 기동 후 로그를 감시하며 오류를 한국어로 분석 보고하는 dev 서버 모니터를 제공한다.",
       "source": "./plugins/harness-devkit",
       "category": "development",
-      "version": "1.0.0",
+      "version": "1.1.0",
       "author": {
         "name": "kbk109",
         "url": "https://github.com/kbk109-dev"
