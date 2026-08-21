@@ -20,12 +20,21 @@
 
 codegraph 는 심볼 그래프다. 텍스트 검색까지 이걸로 우회할 필요는 없다.
 
-**단, 심볼처럼 생긴 패턴의 검색은 훅이 막는다.** `project-conventions` 플러그인이 켜져 있으면
-정규식 메타문자·공백 없이 camelCase 경계나 밑줄을 가진 패턴(`handleSubmit`·`get_user` 등)은 차단되고
-codegraph 로 안내된다. **Grep·Glob 도구뿐 아니라 Bash 의 `grep`·`rg`·`ag`·`ack`·`git grep` 도 포함**이다 —
-도구를 갈아타는 것으로는 빠져나가지 못한다. 위 목록의 텍스트 검색(`error`·`TODO` 같은 단일 단어,
-정규식, `**/*.ts` 류 glob)은 휴리스틱에 걸리지 않아 그대로 통과하고, `ps aux | grep foo` 처럼 파이프
-뒤에서 stdout 을 거르는 grep 도 통과한다.
+**단, 이 절에는 훅이 걸리는 경계가 있다.** `project-conventions` 플러그인이 켜져 있으면
+**패턴 안에 이름처럼 생긴 토큰**(camelCase 경계나 밑줄을 가진 3자 이상 토큰 — `handleSubmit`·
+`get_user`·`appUser`)이 하나라도 있으면 차단되고 codegraph 로 안내된다. 패턴 **전체**가 식별자일
+필요는 없다 — `export const appUser` 도, `enrollRunner\|issueRunnerToken` 같은 묶음 검색도 걸린다.
+**Grep·Glob 도구뿐 아니라 Bash 의 `grep`·`rg`·`ag`·`ack`·`git grep` 도 포함**이다 — 도구를 갈아타는
+것으로는 빠져나가지 못한다.
+
+그래서 **위 목록 중 일부는 실제로 막힌다.** `CREATE TABLE app_user` 나 `DATABASE_URL\|skip` 처럼
+설정값·스키마를 찾는데 이름 토큰이 섞인 경우가 그렇다. 의도된 대가다 — "코드 검색은 codegraph 로"를
+지키려면 이름이 보이는 패턴을 통과시킬 수 없고, **막혀도 같은 검색을 다시 하면 통과**하므로 손해가
+재시도 한 번으로 끝난다.
+
+이름 토큰이 없는 검색은 그대로 통과한다 — `error`·`TODO` 같은 단일 단어, `T-[0-9]+`·`^## 4\.` 같은
+문서 패턴, `not ok\|✖` 같은 테스트 출력, `**/*.ts` 류 glob. `ps aux | grep foo` 처럼 파이프 뒤에서
+stdout 을 거르는 grep 도 통과한다.
 
 차단당했는데 **정말 텍스트 검색이었거나 codegraph 로 답이 나오지 않으면, 같은 호출을 그대로 다시 한다 —
 동일한 패턴의 재호출은 반드시 통과한다.** 이 절과 훅이 모순돼 보이지 않는 이유가 이것이다. 훅은 기본

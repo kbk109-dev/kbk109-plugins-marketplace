@@ -1,6 +1,6 @@
 {
   "name": "project-conventions",
-  "version": "1.7.1",
+  "version": "1.8.0",
   "description": "CLAUDE.md 본문을 AGENTS.md 로 이관해 Claude·Cursor 공용 SSoT 로 만들고, git 브랜치 워크플로와 codegraph 코드 검색 규칙을 양쪽 규칙 디렉토리에 설치한 뒤 갈라짐을 검사한다",
   "author": {
     "name": "kbk109",
