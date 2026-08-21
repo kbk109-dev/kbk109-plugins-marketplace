@@ -81,6 +81,12 @@ VALUE_FLAGS = {
 # Flags whose value IS the pattern.
 PATTERN_FLAGS = {"-e", "--regexp"}
 
+# xargs flags that consume the next token, so the real command starts after it.
+XARGS_VALUE_FLAGS = {
+    "-n", "--max-args", "-I", "-i", "--replace", "-P", "--max-procs",
+    "-L", "-l", "--max-lines", "-s", "--max-chars", "-E", "-d", "--delimiter",
+}
+
 # What counts as "a code search". The rule is: does the pattern NAME something a
 # codebase would name — anywhere inside it, not as the whole pattern.
 #
@@ -104,6 +110,18 @@ TOKEN = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
 # `origin`, `outcome`) while catching nothing new.
 COMPOUND = re.compile(r"[a-z][A-Z]|_")
 MIN_TOKEN = 3
+# ALL-CAPS tokens are excluded even though the underscore makes them compound.
+# In the measured project every one of them was an environment variable or a
+# config key — `AUTOQA_ENV`, `DATABASE_URL`, `NEXT_PHASE` — which is a config
+# lookup, not a symbol lookup, and codegraph has nothing to say about it.
+# Dropping them removed 4 of 17 false positives and cost zero real code searches.
+#
+# The trade is real and deliberate: an exported constant like `MAX_RETRY` IS a
+# symbol codegraph indexes, and it now passes. That case lost to the measurement
+# — env vars outnumbered code constants badly enough that keeping ALL-CAPS in
+# was paying for a rare hit with a steady stream of misses. A pattern that also
+# contains a mixed-case token (`MAX_RETRY\|handleSubmit`) is still caught.
+SCREAMING = re.compile(r"^[A-Z0-9_]+$")
 
 # Bounds the state file. A pattern pushed out can be denied a second time, which
 # costs one more retry — the same bounded price every other misfire costs.
@@ -127,7 +145,8 @@ REASON = """이 프로젝트는 codegraph 색인(`.codegraph/`)을 갖고 있다
 def is_code_search(pattern: str) -> bool:
     """True when any token in the pattern looks like something a codebase named."""
     return any(
-        len(t) >= MIN_TOKEN and COMPOUND.search(t) for t in TOKEN.findall(pattern)
+        len(t) >= MIN_TOKEN and COMPOUND.search(t) and not SCREAMING.match(t)
+        for t in TOKEN.findall(pattern)
     )
 
 
@@ -153,6 +172,30 @@ def _segments(tokens: list):
         yield segment, piped
 
 
+def _strip_xargs(tokens: list):
+    """Tokens after a leading `xargs …`, or None when this is not an xargs call.
+
+    `find . -name '*.ts' | xargs grep -n appUser` puts grep downstream of a pipe,
+    which is normally the signal that it filters another command's stdout. Here
+    it does not: xargs feeds file NAMES as arguments, so grep reads the tree.
+    It is a source search wearing a pipe's clothes, and a common idiom rather
+    than an evasion — the pipe rule has to make an exception for it.
+    """
+    if not tokens or os.path.basename(tokens[0]) != "xargs":
+        return None
+    i = 1
+    while i < len(tokens):
+        token = tokens[i]
+        if token in XARGS_VALUE_FLAGS:
+            i += 2
+            continue
+        if token.startswith("-"):
+            i += 1
+            continue
+        break
+    return tokens[i:]
+
+
 def _pattern_from_segment(tokens: list):
     """The search pattern this segment looks for, or None if it is not a search.
 
@@ -163,6 +206,9 @@ def _pattern_from_segment(tokens: list):
     i = 0
     while i < len(tokens) and ENV_ASSIGN.match(tokens[i]):
         i += 1
+    behind_xargs = _strip_xargs(tokens[i:])
+    if behind_xargs is not None:
+        tokens, i = behind_xargs, 0
     if i >= len(tokens):
         return None
 
@@ -215,8 +261,8 @@ def pattern_from_command(command: str):
         except ValueError:
             continue  # unbalanced quotes — cannot parse, so do not judge
         for segment, piped in _segments(tokens):
-            if piped:
-                continue
+            if piped and _strip_xargs(segment) is None:
+                continue  # filters another command's stdout — not a source search
             pattern = _pattern_from_segment(segment)
             if pattern:
                 return pattern
