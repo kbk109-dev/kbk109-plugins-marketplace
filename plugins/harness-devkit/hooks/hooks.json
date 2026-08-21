@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -B \"${CLAUDE_PLUGIN_ROOT}/hooks/harness_feature_list_gate.py\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

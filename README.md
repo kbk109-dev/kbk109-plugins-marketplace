@@ -110,7 +110,7 @@
 | [context7 MCP](https://github.com/upstash/context7) | expo-app-kit, firebase-observability, release-workflow, harness-devkit |
 | Notion MCP | release-workflow, product-planning |
 | WebSearch | release-workflow, harness-devkit |
-| `python3` | release-workflow, product-planning, project-conventions |
+| `python3` | release-workflow, product-planning, project-conventions, harness-devkit |
 | EAS CLI (`eas`) | expo-app-kit (ota-hotfix) |
 | 프로젝트 `CLAUDE.md` | project-conventions (init-agent-rules), harness-devkit (dev-monitor) |
 
