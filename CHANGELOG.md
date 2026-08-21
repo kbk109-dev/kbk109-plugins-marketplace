@@ -1,5 +1,62 @@
 # Changelog
 
+## 1.13.0
+
+`dev-monitor` 의 **Monitor 재사용이 처음부터 동작한 적이 없었다.** 그걸 고치고,
+`harness-dev` 가 무엇인지 잘못 적혀 있던 설명 5곳을 실물에 맞춘다. 사용 가이드를 새로 넣는다.
+
+### ⚠️ 업데이트하면 달라지는 것
+
+**상태 파일 스키마가 바뀐다** (`~/.claude/dev-monitor/port-<port>.state.json`).
+`monitor_task_id` 와 `monitor_pid_file` 이 추가되고, `monitor_pid` 는 이제 **진짜 PID** 다.
+1.1.0 이전 파일은 자동으로 stale 처리되므로 손댈 필요는 없다 — 그냥 다시 실행하면 된다.
+
+**`harness-dev` 는 "스킬 집필 도구"가 아니다.** README·AGENTS.md·매니페스트 3종에 그렇게 적혀
+있었지만, 실제 SKILL.md 는 요구사항을 스프린트로 분해해 구현→독립 평가 루프를 도는
+**3-에이전트(Planner→Generator→Evaluator) 자율 개발 워크플로**다. 스킬 집필 얘기는 한 줄도 없다.
+동작은 그대로고 설명만 실물에 맞췄다.
+
+### 수정 — `harness-devkit` 1.0.0 → 1.1.0
+
+- **`monitor_pid` 로는 `ps -p` 도 `kill` 도 되지 않았다.** `Monitor` 도구는 PID 가 아니라 task ID
+  문자열(`"b1cgaqjgm"`)을 돌려주는데 스킬은 그것을 PID 로 취급했다. 결과적으로 Monitor 는 **항상
+  "죽음"으로 판정**됐다 — 재호출마다 Monitor 가 중복 등록됐고 `stop` 은 Monitor 를 못 죽였다.
+  중복 기동 방지가 이 스킬의 존재 이유인데 그 축이 통째로 죽어 있었다.
+
+  Monitor 명령 첫 줄에 `echo $$` 를 넣어 **래퍼 셸의 진짜 PID** 를 pidfile 로 확보한다. 이제
+  `ps -p` 와 `kill` 이 실제로 동작한다. task ID 는 `monitor_task_id` 로 분리해 `TaskStop` 에만 쓴다.
+
+- **래퍼를 죽이면 `tail` 이 고아로 남는다.** 실측으로 확인했다 — `kill <래퍼>` 하면 자식 `tail` 이
+  PID 1 로 재부모화되어 살아남고, 재등록할 때마다 같은 로그를 붙든 `tail` 이 하나씩 쌓인다.
+  종료 순서를 `pkill -P` → `kill` 로 못 박고, Monitor 가 죽은 모든 경로에 고아 청소
+  (`pkill -f "tail -f ${LOG_PATH}"`)를 넣었다. 로그 경로로 좁혀 잡으므로 사용자의 다른 tail 은
+  건드리지 않는다.
+
+- **서버와 Monitor 는 수명이 다르다는 것을 명문화했다.** 서버는 `nohup` 이라 세션을 넘고 Monitor 는
+  못 넘는다. 근본 원인은 수명이 다른 둘을 같은 `ps -p` + `kill` 로 다루려 한 것이었다. 새 세션의
+  "서버 생존 + Monitor 죽음"은 **사고가 아니라 정상 경로**이며, 서버만 재사용하고 재등록한다.
+
+- 구스키마(`monitor_pid` 가 숫자가 아닌 경우) 감지를 Phase 0.5·5·8 에 일관되게 넣었다.
+
+### 변경 — `harness-dev` 설명 5곳
+
+`plugin.json` · `marketplace.json` · 루트 `README.md` 2곳 · 플러그인 `README.md` 의 "스킬 집필
+도구" 서술을 3-에이전트 개발 워크플로로 고쳤다. `AGENTS.md` 의 "스킬 집필 도구:
+`harness-devkit:harness-dev`" 는 **"3-에이전트 하네스의 참조 구현"** 으로 바꿨다 — 그 섹션의
+맥락(스킬 수정 시 참고할 근거)에서는 참조 구현이라는 의미가 맞다.
+
+### 추가 — 저장소 로컬 (플러그인 아님)
+
+- `docs/guide/harness-devkit.md` (340줄) — `project-conventions` 가이드와 같은 형식.
+  두 스킬이 왜 한 플러그인인지, 3-에이전트가 무엇을 막는지, **같은 패턴을 쓰는 다른 스킬 4개와
+  언제 갈리는지** 구분표, 자주 막히는 곳. 강제 수단이 문서뿐이라는 한계도 적었다.
+
+### 구현 중 잡은 것
+
+- `dev-monitor/SKILL.md` 가 504줄이 되어 AGENTS.md 의 500줄 목표를 넘겼다. 같은 말(구스키마 감지)을
+  네 번 반복하고 있어서 한 곳으로 모으고 500줄에 맞췄다. 이제 이 저장소에서 가장 긴 스킬이므로
+  AGENTS.md 의 "최대 `firebase-analytics-impl` 479줄" 서술도 함께 고쳤다.
+
 ## 1.12.0
 
 두 가지다 — **`xargs grep` 우회를 막고**, 판정이 환경변수·설정 키까지 잡던 것을 줄인다.
