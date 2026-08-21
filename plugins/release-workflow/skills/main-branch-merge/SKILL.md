@@ -7,21 +7,21 @@ description: "dev->main 릴리스 자동화 스킬. 버전 업데이트, Notion 
 
 버전명을 입력받아 dev 브랜치에서 릴리스 프로세스를 자동화하는 스킬.
 
-**입력:** `$ARGUMENTS`에서 버전명을 추출한다. 없으면 사용자에게 요청.
+**입력:** `$ARGUMENTS`에서 버전명을 추출한다. 없으면 Step 2.5에서 저장소 문맥으로 후보를 계산해 제안하고 승인받는다.
 
 ---
 
 ## 실행 순서
 
-아래 10단계를 **순서대로** 실행한다. 각 단계에서 실패하면 해당 단계의 에러 처리를 따른다.
+아래 단계를 **순서대로** 실행한다. 각 단계에서 실패하면 해당 단계의 에러 처리를 따른다.
 
 ---
 
 ### Step 1: 입력 수집 & 검증
 
 1. `$ARGUMENTS`에서 버전명 추출
-2. 버전명이 없으면: "릴리스 버전명을 알려주세요. 예: v1.0.0" 안내 후 **중단**
-3. Semantic Versioning 형식 검증 (`vMAJOR.MINOR.PATCH` 또는 `MAJOR.MINOR.PATCH`)
+2. 버전명이 없으면 **중단하지 않는다.** `버전 미정`으로 표시하고 Step 2 → Step 2.5(버전 제안 게이트)로 진행
+3. 버전명이 있으면 Semantic Versioning 형식 검증 (`vMAJOR.MINOR.PATCH` 또는 `MAJOR.MINOR.PATCH`)
    - `v` 접두사 없으면 자동 추가 (태그명용)
    - 형식 오류 시: "Semantic Versioning 형식이 필요합니다 (예: v1.2.0)" 안내 후 **중단**
 4. CLAUDE.md에서 Notion 연동 정보 읽기 (Parent Page ID, PRD/TRD Page ID, Tasks DB ID, Screen Spec DB ID 등)
@@ -50,10 +50,105 @@ git status --porcelain
 git branch --list main
 # 없으면 master 확인 → 둘 다 없으면 안내 후 중단
 
-# 5. 태그 중복 확인
+# 5. 태그 중복 확인 — 버전이 정해진 경우에만 지금 수행
 git tag -l {버전명}
 # 이미 존재 → "태그 {버전명}이 이미 존재합니다. 다른 버전명을 입력해주세요." 안내 후 중단
+# `버전 미정`이면 이 체크만 건너뛰고, Step 2.5에서 버전이 정해진 직후에 수행한다
 ```
+
+체크 5만 조건부인 이유: 버전 제안은 `git tag` 조회가 전제라 저장소 확인(체크 1) 뒤여야 하고,
+반대로 태그 중복 확인은 버전이 있어야 한다. 두 요구가 맞물리므로 체크 5만 뒤로 미룬다.
+
+---
+
+### Step 2.5: 버전 제안 & 승인 게이트
+
+**버전이 이미 정해졌으면(인자로 받았으면) 이 단계 전체를 건너뛴다.** `버전 미정`일 때만 수행한다.
+
+버전은 태그·커밋 메시지·`docs/release/{버전명}.md` 파일명에 모두 박히고, Step 9.6에서 push하고
+나면 되돌리기 어렵다(아래 "에러 발생 시 롤백 안내" 표 참조). 그래서 추측해서 정하지 않고,
+저장소 문맥에서 후보를 계산해 사용자가 고르게 한다.
+
+**① 문맥 수집**
+
+```bash
+git tag -l --sort=-v:refname          # 기준선 소스
+git log main..dev --oneline           # 변경 성격 판단용 (main 없으면 master)
+```
+
+매니페스트 소스는 **Step 3이 버전을 기록할 바로 그 파일들**(`package.json`, `app.json`의
+`expo.version`, `app.config.ts` / `app.config.js`)의 **현재** 값을 읽는다. 기준선을 잡는 파일과
+갱신 대상 파일이 같아야 기준선이 실제 프로젝트 상태를 뜻한다. 해당 파일이 하나도 없으면
+태그만으로 기준선을 잡는다.
+
+**② 후보 계산 — 스크립트에 위임**
+
+버전 파싱·정렬·증가는 LLM이 직접 수행하지 않는다. 같은 저장소인데 호출마다 다른 후보가 나오면
+게이트의 의미가 없기 때문이다.
+
+```bash
+echo '{"tags":["v1.13.0","v1.12.0"],"manifests":[{"file":"package.json","version":"1.12.0"}]}' \
+  | python3 ${CLAUDE_PLUGIN_ROOT}/skills/main-branch-merge/scripts/compute_next_versions.py
+```
+
+출력에서 `baseline`, `baseline_source`, `candidates.{patch,minor,major}`, `mismatch`,
+`mismatch_detail`, `warnings`를 얻는다. 기준선은 태그와 매니페스트를 통틀어 **최대값**이다 —
+이미 공개된 버전보다 낮은 값을 제안하지 않기 위함이다.
+
+- 종료코드 `2` (유효 X.Y.Z 없음) → 초기 릴리스다. `candidates` 대신 출력의 `initial_candidates`
+  두 개(`0.1.0`, `1.0.0`)를 후보로 제시한다
+- 종료코드 `3` (입력 오류) → 조립한 JSON을 확인하고 재시도. 그래도 실패하면 사용자에게 버전을
+  직접 물어본다
+
+**③ 추천 단계 판단**
+
+`main..dev` 커밋 메시지로 어느 후보를 추천할지 정한다. **이 판단만 LLM이 하고, 산술은 하지 않는다.**
+
+| 신호                                                    | 추천                                                                          |
+| ------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| 본문에 `BREAKING CHANGE`, 또는 `feat!:`·`fix!:` 등 `!` 표기 | major                                                                         |
+| `feat:` 접두사 1건 이상                                  | minor                                                                         |
+| `fix:`·`chore:`·`docs:`·`refactor:`·`test:`만            | patch                                                                         |
+| 접두사를 판별할 수 없음                                  | **추천 표시 없이** 후보만 제시하고, 근거란에 "커밋 접두사 판별 불가"를 적는다 |
+
+마지막 행을 반드시 지킨다 — 근거가 없는데 추천을 붙이면 사용자는 그것을 근거가 있는 것으로 읽는다.
+추천은 힌트일 뿐이고, 어느 단계로 올릴지는 사용자의 판단이다.
+
+**④ 제시 형식**
+
+```
+[YYYY-MM-DD] 릴리스 버전 제안
+
+기준선    : v1.13.0 (최신 태그)
+매니페스트 : package.json 1.12.0   ⚠ 태그와 불일치 — 더 큰 값을 기준선으로 채택했습니다
+변경      : main..dev 커밋 5건 — feat 3, fix 2, BREAKING 0
+
+  [1] v1.13.1  patch — 버그 수정만
+  [2] v1.14.0  minor — 기능 추가 포함   ← 추천
+  [3] v2.0.0   major — 호환성 깨짐
+
+번호를 입력하거나 원하는 버전을 직접 알려주세요 ('중단'이라고 답하면 종료합니다).
+```
+
+- `mismatch`가 false면 매니페스트 줄에서 `⚠` 이하를 뺀다. 매니페스트를 하나도 못 읽었으면 그 줄 자체를 생략한다
+- `mismatch_detail`이 여러 건이면 줄을 나눠 모두 보여준다 — 어느 파일이 뒤처졌는지가 정보다
+- `warnings`(pre-release 무시 등)가 있으면 `변경` 줄 아래에 덧붙인다
+
+**⑤ 승인 게이트**
+
+**사용자 응답 전 진행 금지.** Step 3 이후는 파일을 고치고 커밋·태그·push까지 가므로, 여기서
+멈추지 않으면 잘못된 버전을 되돌릴 기회가 없다.
+
+- 번호(`1`/`2`/`3`) 또는 사용자가 직접 입력한 버전만 통과로 간주한다
+- `중단`·`아니오`·`취소` 등 부정 응답 → **파일·커밋·태그를 일절 만들지 않고 즉시 종료**
+- 애매한 응답("음…", "글쎄")은 재확인 요청으로 처리한다
+
+**⑥ 선택 후 검증**
+
+1. Semantic Versioning 형식 검증 — Step 1의 3번과 같은 규칙. `v` 접두사가 없으면 자동 부여
+2. **Step 2에서 미뤄 둔 태그 중복 확인** — `git tag -l {선택 버전}`. 이미 존재하면 재선택을 요청한다
+   (후보 3개는 기준선에서 계산되므로 충돌하지 않는다. 사용자가 직접 입력한 버전에서만 발생한다)
+3. 선택한 버전이 기준선보다 낮으면 **경고만** 하고 진행한다 — 릴리스 매니지먼트는 사용자의 판단이다
 
 ---
 
@@ -145,7 +240,7 @@ CLAUDE.md의 Notion 연동 정보를 사용하여 프로젝트 문서를 수집�
 **작성 전 반드시** 이 스킬의 레퍼런스 파일을 읽는다:
 
 ```
-Read: .claude/skills/main-branch-merge/references/readme-best-practices.md
+Read: ${CLAUDE_PLUGIN_ROOT}/skills/main-branch-merge/references/readme-best-practices.md
 ```
 
 이 레퍼런스에 README 구조, 필수 섹션, 포맷팅 규칙, RN/Expo 특화 가이드가 모두 포함되어 있으므로, 외부 웹 검색 없이 바로 적용한다.
@@ -161,7 +256,7 @@ Read: .claude/skills/main-branch-merge/references/readme-best-practices.md
 **작성 전 반드시** 이 스킬의 레퍼런스 파일을 읽는다:
 
 ```
-Read: .claude/skills/main-branch-merge/references/release-note-best-practices.md
+Read: ${CLAUDE_PLUGIN_ROOT}/skills/main-branch-merge/references/release-note-best-practices.md
 ```
 
 이 레퍼런스에 Keep a Changelog 포맷, 섹션 분류, Notion Tasks 매핑 가이드가 포함되어 있다.
