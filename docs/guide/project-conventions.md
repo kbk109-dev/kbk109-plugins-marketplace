@@ -2,7 +2,6 @@
 
 > **대상** — Claude Code 와 Cursor 를 함께 쓰는(또는 쓸 예정인) 프로젝트의 개발자
 > **범위** — 스킬 3개(`init-agent-rules`, `check-agent-rules`, `refresh-agent-rules`)
-> + `PreToolUse` 훅 1개
 > **읽는 순서** — 1~2절이 *왜*, 3~5절이 *쓰면 어떻게 되는지*, 6~8절이 *그 다음*
 
 ## 선행 요건과 설치
@@ -228,17 +227,16 @@ alwaysApply: true
 `alwaysApply: true` 라서 Cursor 는 이 규칙을 항상 주입한다. 프론트매터 아래 본문은
 `.claude/rules/git-branch-workflow.md` 와 **바이트 단위로 같아야** 하고, 그것이 검사 5 다.
 
-### 정직한 예시 두 가지
+### 정직한 예시 하나
 
 이 저장소의 결과가 항상 이상적이지는 않다. 그대로 적는다.
 
 | 관측된 것 | 무엇을 말해 주나 |
 |---|---|
 | `AGENTS.md` 가 **255줄** — 목표보다 56줄 많다 | 초과해도 설치는 통과한다. 4절의 "목표이지 상한이 아니다"가 문구가 아니라 실제 동작이다 |
-| `.codegraph/` 가 없어 **codegraph 규칙이 설치되지 않았다** | 조건부 설치가 말뿐이 아니다. 색인 없는 프로젝트에 이 규칙을 넣으면 매 검색마다 쓸 수 없는 도구를 시도하는 소음이 된다 |
 
-선택되지 않은 규칙은 **건너뛸 뿐 지우지 않는다.** 색인을 잠시 지운 상태에서 재설치했다고
-이미 쓰던 규칙이 사라지면 안 되기 때문이다.
+이미 설치된 규칙은 재설치해도 **지워지지 않는다.** 규칙 제거는 `.md`·`.mdc`·마커 블록을
+직접 지우는 수동 작업이다.
 
 ---
 
@@ -326,78 +324,7 @@ flowchart LR
 
 ---
 
-## 7. codegraph 훅 2개 — 부탁을 사실로 바꾸는 지점
-
-`.codegraph/` 색인이 있는 프로젝트에는 "코드 검색은 codegraph 우선" 규칙이 함께 설치된다.
-그런데 규칙은 **문서**다. 메인 세션은 그것을 무시할 수 있고, 서브에이전트에는 아예 닿지도 않는다.
-훅 둘이 각각 다른 지점에서 이 구멍을 막는다.
-
-```mermaid
-flowchart TD
-  U[사용자 프롬프트] --> UPS[UserPromptSubmit 훅]
-  UPS --> M[메인 세션 · 규칙 도달]
-  M --> G1{"Grep · Glob · Bash 호출"}
-  M --> T[Agent · Task 도구 호출]
-
-  T -. UserPromptSubmit 이 구조적으로 발화 못 함 .-> SA[서브에이전트 · 규칙 미도달]
-  T --> PRE["PreToolUse 훅 ①<br/>codegraph_subagent_guard.py"]
-  PRE -->|프롬프트에 규칙을 심음| SA2[서브에이전트 · 규칙 도달]
-  SA2 --> G1
-
-  G1 --> GATE["PreToolUse 훅 ②<br/>codegraph_search_gate.py"]
-  GATE -->|"심볼처럼 생긴 패턴<br/>(Bash 는 명령에서 추출)"| DENY[deny · codegraph 로 안내]
-  GATE -->|"텍스트 · 정규식 · glob<br/>파이프 뒤 · heredoc · 검색 아님"| PASS[그대로 grep]
-  DENY -->|같은 호출 재시도| PASS
-  DENY --> CG[codegraph_explore]
-```
-
-**훅 ① — 서브에이전트 사각지대.** 서브에이전트는 사용자 프롬프트로 시작하지 않으므로
-`UserPromptSubmit` 이 발화할 수 없고, 프로젝트 지시 상속도 보장되지 않는다. 훅 ① 은 반드시 실행되는
-지점 — 부모의 `Agent`/`Task` 도구 호출 — 을 잡아 프롬프트에 규칙을 물리적으로 심는다.
-
-**훅 ② — 규칙이 부탁이라는 문제.** ① 이 심는 것도 결국 *지시문*이라, 서브에이전트는 메인 세션이
-규칙 파일을 무시하듯 그것을 무시할 수 있다. ② 는 부탁을 그만두고 검색 호출 자체를 잡는다.
-심볼처럼 생긴 패턴이면 `deny` 하고 이유문으로 codegraph 호출 방법을 돌려준다.
-**여기서부터 모델의 협조가 필요 없다.**
-
-**Bash 도 검색 도구다.** `Grep`·`Glob` 만 막으면 `grep -rn handleSubmit .` 이 그대로 지나간다.
-하네스가 어떤 모드에서는 *"검색은 Bash 의 grep 으로"* 라고 지시하므로 그쪽이 오히려 기본 경로다.
-② 는 Bash 명령에서 `grep`·`rg`·`ag`·`ack`·`git grep` 의 검색 패턴을 뽑아 같은 휴리스틱에 넣는다.
-대가는 **모든 Bash 호출마다 훅 프로세스가 뜨는 것**이고, 이건 알고 지불하는 비용이다.
-
-플러그인 훅은 **켜진 모든 프로젝트에서 발화**하므로, 조건이 하나라도 어긋나면 아무것도
-출력하지 않고 통과한다.
-
-| 훅 | no-op 하는 경우 |
-|---|---|
-| ①·② 공통 | git 저장소 루트까지 올라가도 `.codegraph/` 없음 |
-| ① | 도구가 `Agent`·`Task` 가 아님 · 프롬프트가 비었음 · 프롬프트에 이미 `codegraph` 가 있음(호출자의 탈출구) |
-| ② | `hooks.json` matcher 가 이 훅으로 보내지 않음 · `tool_input` 에 `pattern`(또는 Bash 의 `command`)이 없음 · 패턴이 심볼처럼 생기지 않음 · 에이전트 식별자 없음 · **이미 차단한 `(도구, 패턴)`** · 상태 기록 실패 |
-| ② (Bash) | 검색 바이너리가 없음 · heredoc(`<<`) 포함 · `\|` 뒤 세그먼트(단 `xargs grep` 은 예외 — 파일명을 인자로 받아 트리를 훑는다) · 첫 토큰이 검색 바이너리가 아님 · 따옴표 불균형 |
-
-**② 는 패턴 안에 이름처럼 생긴 토큰이 있는지로 판정한다.** camelCase 경계나 밑줄을 가진 3자 이상
-토큰이 하나라도 있으면 차단이다 — `handleSubmit`·`export const appUser`·`enrollRunner\|issueRunnerToken`
-은 걸리고, `error`·`T-[0-9]+`·`use.*State`·`**/*.ts` 는 통과한다. 대문자+밑줄 전용
-토큰(`DATABASE_URL`)은 환경변수·설정 키라 신호로 치지 않는다. 실제 프로젝트의 검색 패턴 74종으로
-재보니 이 규칙이 코드 검색 17건을 전부 잡고, 대가로 DB 식별자 검색 13건이 함께 걸린다. 각 1회 재시도로
-끝나므로 받아들였다 — 절반을 통과시키는 규칙은 "코드 검색은 codegraph 로"라는 목적을 달성하지 못한다.
-
-**② 가 차단하는데도 전역 배포가 안전한 이유는 차단이 복구 가능하기 때문이다.** 같은 `(도구, 패턴)` 은
-에이전트당 한 번만 차단되므로 동일한 호출을 그대로 다시 하면 반드시 통과한다. 훅이 오판했을 때의
-최대 대가가 **도구 호출 한 번 재시도**로 유계다. 상태 키가 `session_id` 가 아니라 `agent_id` 인 것이
-핵심이다 — 서브에이전트는 부모와 `session_id` 를 공유하지만 고유한 `agent_id` 를 받는다.
-
-**전 구간 fail-open.** 예외·타임아웃·깨진 입력에도 항상 exit 0 한다. 도구 호출을 영구히
-막을 수 있는 가드는 가드가 없는 것보다 나쁘기 때문이다.
-
-상향 탐색은 git 저장소 루트와 `$HOME` 에서 멈춘다. `codegraph init` 을 홈에서 한 번 잘못
-실행해 생긴 `~/.codegraph` 하나가 홈 아래 모든 프로젝트를 "색인됨"으로 만드는 전역 오탐을
-막기 위해서다. 판정 자체는 `hooks/_codegraph_index.py` 하나에만 있다 — 실제로 버그가 났던
-경계 로직이라 사본을 두지 않는다.
-
----
-
-## 8. 언제 쓰지 말아야 하나 · 자주 막히는 곳
+## 7. 언제 쓰지 말아야 하나 · 자주 막히는 곳
 
 | 상황 | 어떻게 되나 |
 |---|---|
@@ -414,11 +341,11 @@ flowchart TD
 
 ---
 
-## 9. 더 읽을 곳
+## 8. 더 읽을 곳
 
 | 문서 | 내용 |
 |---|---|
-| [플러그인 README](../../plugins/project-conventions/README.md) | 설치되는 것의 목록과 훅 상세 |
+| [플러그인 README](../../plugins/project-conventions/README.md) | 설치되는 것의 목록 |
 | [`init-agent-rules/SKILL.md`](../../plugins/project-conventions/skills/init-agent-rules/SKILL.md) | 에이전트가 실제로 따르는 실행 지시 |
 | [`references/claude_md_rewrite.md`](../../plugins/project-conventions/skills/init-agent-rules/references/claude_md_rewrite.md) | Step 0.5 재작성 규칙 정본 |
 | [`references/conflict_policy.md`](../../plugins/project-conventions/skills/init-agent-rules/references/conflict_policy.md) | `AGENTS.md` 충돌 처리 절차 |

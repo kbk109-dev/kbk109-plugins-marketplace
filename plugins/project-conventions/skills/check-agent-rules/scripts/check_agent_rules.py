@@ -25,8 +25,7 @@ Checks:
 
 Checks 4–6 run once per rule. A rule counts as installed when ANY of its three
 artefacts is present (.md, .mdc, marker block) — that way half an install is a
-failure rather than an invisible no-op. An optional rule with no artefacts at
-all is skipped: not having it is a valid state, not drift.
+failure rather than an invisible no-op.
 """
 from __future__ import annotations
 
@@ -35,13 +34,12 @@ import sys
 from pathlib import Path
 
 # Duplicated from init-agent-rules/scripts/install_agent_rules.py — the installer
-# owns the rule bodies, this script only needs each rule's identity and whether
-# it is mandatory. Add a rule there and it must be added here too, or the new
-# rule silently escapes checking. Kept as a copy rather than an import: the two
-# skills are installed as independent directories.
+# owns the rule bodies, this script only needs each rule's identity. Add a rule
+# there and it must be added here too, or the new rule silently escapes
+# checking. Kept as a copy rather than an import: the two skills are installed
+# as independent directories.
 RULES = (
-    {"name": "git-branch-workflow", "required": True},
-    {"name": "codegraph-search", "required": False},  # only where .codegraph/ exists
+    {"name": "git-branch-workflow"},
 )
 
 
@@ -77,7 +75,7 @@ def strip_mdc_frontmatter(text: str) -> str:
 
 
 def check_rule(root: Path, agents_text: str, rule: dict) -> list[str]:
-    """Checks 4, 5 and 6 for one rule. Empty list when the rule is absent-by-design."""
+    """Checks 4, 5 and 6 for one rule."""
     name = rule["name"]
     errors: list[str] = []
     rule_md = root / claude_rel(name)
@@ -85,12 +83,10 @@ def check_rule(root: Path, agents_text: str, rule: dict) -> list[str]:
     has_marker = mark_begin(name) in agents_text or mark_end(name) in agents_text
 
     if not (rule_md.is_file() or rule_mdc.is_file() or has_marker):
-        if rule["required"]:
-            errors.append(
-                f"4. {claude_rel(name)}: not found — "
-                "run /project-conventions:init-agent-rules"
-            )
-        # Optional rule, nothing installed: the intended state. Say nothing.
+        errors.append(
+            f"4. {claude_rel(name)}: not found — "
+            "run /project-conventions:init-agent-rules"
+        )
         return errors
 
     # 4 --------------------------------------------------------------------

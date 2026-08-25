@@ -47,7 +47,7 @@
 | [`release-workflow`](./plugins/release-workflow) | 4 | Notion 기반 릴리즈 계획·구현·패치·main 머지 |
 | [`harness-devkit`](./plugins/harness-devkit) | 2 | 3-에이전트(Planner→Generator→Evaluator) 자율 개발 워크플로, dev 서버 로그 감시 |
 | [`product-planning`](./plugins/product-planning) | 1 | 노션 문서·회의록 → PRD 10개 섹션 정규화 |
-| [`project-conventions`](./plugins/project-conventions) | 3 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로·codegraph 검색) 동기화. 이관 전 본문을 200줄 목표로 다듬는다. codegraph 검색은 훅 2개로 강제 — 심볼 검색을 차단해 codegraph 로 보내고(Bash 의 grep·rg 포함), 서브에이전트 프롬프트에도 규칙을 심는다 |
+| [`project-conventions`](./plugins/project-conventions) | 3 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로) 동기화. 이관 전 본문을 200줄 목표로 다듬는다. 생성물인 `.mdc` 사본이 원본과 갈라졌는지 바이트 단위로 검사한다 |
 
 ## 스킬 전체 목록
 
@@ -95,7 +95,7 @@
 ### project-conventions
 | 스킬 | 트리거 예 | references |
 |---|---|---|
-| `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘", "codegraph 규칙 넣어줘" | `claude_md_rewrite.md` 외 1 |
+| `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘", "git 브랜치 규칙 넣어줘" | `claude_md_rewrite.md` 외 1 |
 | `check-agent-rules` | "규칙 갈라졌는지 확인", "cursor rules 랑 claude rules 같은지 봐줘" | — |
 | `refresh-agent-rules` | "AGENTS.md 업데이트", "AGENTS.md 가 지금 코드랑 맞는지 봐줘", "프로젝트 바뀌었으니 문서 반영해줘" | `refresh_policy.md` |
 

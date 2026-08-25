@@ -100,16 +100,16 @@
     {
       "id": 5,
       "prompt": "에이전트 규칙 설치해줘",
-      "expected_output": ".codegraph/ 색인이 있으므로 git-branch-workflow 와 codegraph-search 두 규칙이 모두 설치되고, AGENTS.md 에 규칙별 마커 블록이 한 쌍씩 총 두 쌍 들어간다",
-      "files": ["CLAUDE.md", ".codegraph/graph.db"],
+      "expected_output": "git-branch-workflow 규칙이 .claude/rules/ 와 .cursor/rules/ 양쪽에 설치되고, AGENTS.md 에 그 규칙의 마커 블록이 한 쌍 들어간다",
+      "files": ["CLAUDE.md"],
       "assertions": [
         {
-          "id": "installs_both_rules",
-          "text": ".claude/rules/ 와 .cursor/rules/ 에 두 규칙이 모두 생성된다"
+          "id": "installs_git_rule",
+          "text": ".claude/rules/ 와 .cursor/rules/ 에 git-branch-workflow 규칙이 생성된다"
         },
         {
-          "id": "two_marker_blocks",
-          "text": "AGENTS.md 에 규칙별 마커 블록이 각각 한 쌍씩 존재한다"
+          "id": "one_marker_block",
+          "text": "AGENTS.md 에 규칙 마커 블록이 한 쌍 존재한다"
         },
         {
           "id": "uses_installer_script",
@@ -119,26 +119,6 @@
     },
     {
       "id": 6,
-      "prompt": "코드 검색할 때 codegraph 쓰는 규칙도 넣어줘",
-      "expected_output": ".codegraph/ 색인이 없으므로 codegraph-search 규칙은 건너뛰고 그 이유를 사용자에게 보고한다. 색인 생성(codegraph init)은 제안만 하고 승인 없이 실행하지 않는다",
-      "files": ["CLAUDE.md"],
-      "assertions": [
-        {
-          "id": "skips_codegraph_rule",
-          "text": ".codegraph/ 가 없어 codegraph-search 규칙을 건너뛰었음을 보고한다"
-        },
-        {
-          "id": "no_unapproved_index",
-          "text": "사용자 승인 없이 codegraph init 을 실행하지 않는다"
-        },
-        {
-          "id": "git_rule_still_installed",
-          "text": "git-branch-workflow 규칙 설치는 정상적으로 수행한다"
-        }
-      ]
-    },
-    {
-      "id": 7,
       "prompt": "이 프로젝트 CLAUDE.md 를 AGENTS.md 로 옮겨줘",
       "expected_output": "CLAUDE.md 본문에 카파시 4원칙 전용 섹션이 하나도 없다. Step 0.5 에서 10~20줄짜리 짧은 블록을 H1 바로 아래에 prepend 하고, 기존 /init 본문은 그 아래에 그대로 둔 채 이관한다",
       "files": ["CLAUDE.md"],
@@ -162,7 +142,7 @@
       ]
     },
     {
-      "id": 8,
+      "id": 7,
       "prompt": "커서랑 클로드 규칙 같이 쓰게 해줘",
       "expected_output": "CLAUDE.md 에 Think Before Coding / Simplicity First / Surgical Changes / Goal-Driven Execution 네 원칙이 이미 전용 섹션으로 있다. Step 0.5 는 카파시 블록을 prepend 하지 않고 넘어간다",
       "files": ["CLAUDE.md"],
@@ -182,7 +162,7 @@
       ]
     },
     {
-      "id": 9,
+      "id": 8,
       "prompt": "AGENTS.md 로 이관",
       "expected_output": "CLAUDE.md 가 250줄이고 릴리스·PR 다단계 절차 같은 How 가 섞여 있다. Step 0.5 가 분리 후보 표(후보 ID·원문 발췌·제안 목적지·남는 What 한 줄·200줄 영향)를 제시하고 승인을 기다린다. 승인 전에는 파일을 하나도 만들지 않는다",
       "files": ["CLAUDE.md"],
@@ -206,7 +186,7 @@
       ]
     },
     {
-      "id": 10,
+      "id": 9,
       "prompt": "규칙 다시 설치하고 AGENTS.md 도 정리해줘",
       "expected_output": "CLAUDE.md 가 이미 @AGENTS.md 포인터이므로 Step 0.5 의 대상은 AGENTS.md 본문이다. 카파시 블록과 다듬은 본문은 AGENTS.md 상단에만 들어가고 CLAUDE.md 는 포인터인 채로 남는다",
       "files": ["AGENTS.md", "CLAUDE.md", ".claude/rules/git-branch-workflow.md", ".cursor/rules/git-branch-workflow.mdc"],

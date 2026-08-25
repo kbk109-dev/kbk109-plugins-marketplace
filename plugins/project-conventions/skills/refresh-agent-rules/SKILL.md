@@ -72,7 +72,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/refresh-agent-rules/scripts/scan_project_fa
 | `structure` | 포인터 구조 판정. `ok:false` 면 스크립트가 exit 3 으로 이미 멈춘다 |
 | `state` | 상태 파일. `exists:false` 면 첫 실행이므로 기준점 없이 전체 대조 |
 | `git` | `head` · `dirty` · `baseline_valid` · `changed_files` · `deleted_files` · **`renamed_files`** · `commits_since` |
-| `facts` | `command_sources` · `package_managers` · `toolchain_files` · `typescript_strict` · `ci_workflows` · `tree` · `codegraph_index` |
+| `facts` | `command_sources` · `package_managers` · `toolchain_files` · `typescript_strict` · `ci_workflows` · `tree` |
 | `agents_md` | `lines` · `budget` · `over_by` · **`marker_ranges`** |
 
 `command_sources` 는 항목마다 출처를 달고 온다 — `package.json scripts`, `Makefile`,

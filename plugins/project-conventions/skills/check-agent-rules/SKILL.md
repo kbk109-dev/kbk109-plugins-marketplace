@@ -24,11 +24,9 @@ Claude 가 서로 다른 규칙을 따른다. 검사 5 가 이 스킬의 존재 
 검사 3 은 `##` 섹션 헤딩 유무와 줄 수로 판정한다. 포인터 `CLAUDE.md` 는 헤딩 1개와 짧은
 안내문뿐이므로, H2 가 나타났다는 건 본문이 다시 들어왔다는 뜻이다.
 
-**검사 4·5·6 은 규칙마다 반복된다.** 대상 규칙은 `git-branch-workflow`(항상)와
-`codegraph-search`(`.codegraph/` 색인이 있는 프로젝트에만 설치)다. 어떤 규칙이 "설치돼 있다"는
-판정은 `.md`·`.mdc`·마커 블록 **셋 중 하나라도 있으면** 참이고, 그때부터 셋 다 정합해야 한다 —
-반쪽 설치가 조용한 통과가 되지 않게 하려는 것이다. 셋 다 없으면 선택 규칙은 건너뛴다. 색인이 없어
-codegraph 규칙을 안 쓰는 프로젝트는 정상 상태이지 갈라짐이 아니다.
+**검사 4·5·6 은 규칙마다 반복된다.** 대상 규칙은 `git-branch-workflow` 다. 어떤 규칙이
+"설치돼 있다"는 판정은 `.md`·`.mdc`·마커 블록 **셋 중 하나라도 있으면** 참이고, 그때부터 셋 다
+정합해야 한다 — 반쪽 설치가 조용한 통과가 되지 않게 하려는 것이다.
 
 ## 실행
 
@@ -60,7 +58,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/check-agent-rules/scripts/check_agent_rules
 ### 검사 5 실패 — `.mdc` 가 갈라졌을 때
 
 `.mdc` 쪽 수정이 의도된 것일 수도 있다. 먼저 차이를 보여준다 — `RULE` 에 stderr 가 지목한 규칙
-이름(`git-branch-workflow`, `codegraph-search` 등)을 넣는다:
+이름(`git-branch-workflow` 등)을 넣는다:
 
 ```bash
 RULE=git-branch-workflow

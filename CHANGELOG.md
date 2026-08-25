@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.16.0
+
+`project-conventions` 에서 **codegraph 강제를 전부 걷어낸다.** 훅 2개와 규칙 하나가 사라지고,
+이 플러그인은 AGENTS.md 단일 소스화 + git 브랜치 워크플로 규칙만 다룬다.
+
+### ⚠️ 업데이트하면 달라지는 것
+
+**PreToolUse 훅 2개가 사라진다.** `Grep`·`Glob`·`Bash` 호출이 더 이상 차단되지 않고,
+`Agent`·`Task` 디스패치 프롬프트에 규칙 문단이 덧붙지 않는다. `hooks/` 디렉터리 자체가 없어져
+이 플러그인은 **훅 없는 플러그인**이 된다 — 켜져 있어도 도구 호출당 파이썬 기동 비용이 붙지 않는다.
+
+**`codegraph-search` 규칙이 더 이상 설치되지 않는다.** `--codegraph-rule` 옵션도 사라졌다
+(주면 `unrecognized arguments` 로 죽는다).
+
+**이미 설치된 사본은 자동으로 지워지지 않는다.** 되돌리려면 손으로 지운다 — 규칙 제거는
+설치 스크립트가 하지 않는 일이고, 이 릴리스도 예외를 두지 않는다.
+
+```
+.claude/rules/codegraph-search.md
+.cursor/rules/codegraph-search.mdc
+```
+
+그리고 `AGENTS.md` 의 `<!-- >>> agent-rules: codegraph-search >>> -->` ~
+`<!-- <<< agent-rules: codegraph-search <<< -->` 마커 블록. 남겨 두어도 검사는 통과한다 —
+규칙 목록에서 빠졌으므로 `check-agent-rules` 가 그 파일을 아예 보지 않는다.
+
+### 변경 — `project-conventions` 1.9.0 → 2.0.0
+
+- **삭제** — `hooks/codegraph_search_gate.py` · `hooks/codegraph_subagent_guard.py` ·
+  `hooks/_codegraph_index.py` · `hooks/hooks.json` ·
+  `init-agent-rules/templates/codegraph-search.md`
+- **조건부 설치 기계도 함께 제거** — `codegraph-search` 가 유일한 선택적 규칙이었다.
+  `RULES` 의 `required` 플래그, `select_rules()`, `--codegraph-rule` CLI 옵션,
+  checker 의 "선택 규칙은 없어도 통과" 분기가 전부 발화할 수 없는 코드가 되므로 같이 지웠다.
+  선택적 규칙이 다시 필요해지면 그때 넣는다.
+- `refresh-agent-rules` 의 `scan_project_facts.py` 가 내던 `codegraph_index` 사실도 뺐다 —
+  그 값을 소비할 규칙이 없어졌다.
+- 문서에서 훅 설명 제거: 플러그인 README 의 "codegraph 를 강제하는 훅 2개" 절,
+  `docs/guide/project-conventions.md` 7절(이후 절 번호 재조정), 루트 README·AGENTS.md 의 언급.
+
+### 남긴 것
+
+과거 릴리스 노트(`docs/release/v1.3.0`~`v1.12.0`)와 이 CHANGELOG 의 지난 항목은 그대로 둔다.
+그때 실제로 있었던 일의 기록이고, 지금 없다는 사실은 이 항목이 말한다.
+
 ## 1.15.0
 
 `harness-dev` 의 **"8가지 기계적 제약"이 실제로는 전부 산문이었다.** 그중 다섯을 실행 시점에
