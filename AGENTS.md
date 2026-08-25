@@ -47,28 +47,6 @@ python3 plugins/release-workflow/skills/release-plan/scripts/slugify.py "v2.1 Ta
 echo '["v1.9.0","v1.9.1"]' | python3 plugins/release-workflow/skills/fix-plan-impl/scripts/compute_next_patch.py
 bash -n plugins/release-workflow/skills/release-impl/scripts/install_hooks.sh          # 셸 문법
 
-# PreToolUse 훅 2개 — 색인 없는 프로젝트는 둘 다 무출력이 정상(no-op).
-# 출력이 나오면 경계 판정이 깨진 것이다. -B 는 설치된 플러그인 디렉토리에 __pycache__ 를 남기지 않으려는 것.
-echo "{\"cwd\":\"$PWD\",\"tool_name\":\"Agent\",\"tool_input\":{\"prompt\":\"auth 찾아줘\"}}" \
-  | python3 -B plugins/project-conventions/hooks/codegraph_subagent_guard.py
-
-# 검색 게이트는 색인이 있어야 발화하므로 픽스처가 필요하다. 1번째는 deny, 같은 패턴 2번째는 무출력(탈출구).
-mkdir -p /tmp/cg-fixture/.git /tmp/cg-fixture/.codegraph
-P='{"cwd":"/tmp/cg-fixture","tool_name":"Grep","tool_input":{"pattern":"handleSubmit"},"agent_id":"A"}'
-echo "$P" | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py   # → permissionDecision: deny
-echo "$P" | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py   # → 무출력
-
-# 게이트는 Bash 의 grep 도 본다. 파이프 뒤 grep 은 stdout 필터이므로 통과해야 한다.
-B='{"cwd":"/tmp/cg-fixture","tool_name":"Bash","agent_id":"B","tool_input":{"command":"grep -rn getUserById ."}}'
-echo "$B" | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py   # → deny
-echo '{"cwd":"/tmp/cg-fixture","tool_name":"Bash","agent_id":"B","tool_input":{"command":"ps aux | grep getUserById"}}' \
-  | python3 -B plugins/project-conventions/hooks/codegraph_search_gate.py           # → 무출력
-
-# 게이트가 실제로 무언가를 막았는지는 상태 파일이 증거다. 도구 이름이 접두어로 붙는다.
-# zsh 는 매칭 없는 글롭에 명령 전체를 중단시키므로 ls 로 존재를 먼저 본다 (2>/dev/null 로는 안 막힌다).
-D=$(python3 -c "import tempfile,os;print(os.path.join(tempfile.gettempdir(),'codegraph-search-gate'))")
-ls "$D" 2>/dev/null && cat "$D"/*.json
-
 # harness-devkit 훅 — feature_list.json 이 아닌 쓰기는 무출력이 정상. 출력이 나오면 경로 판정이 깨진 것.
 HG=plugins/harness-devkit/hooks/harness_feature_list_gate.py
 echo '{"cwd":"/tmp","tool_name":"Write","agent_id":"A","tool_input":{"file_path":"/tmp/a.ts","content":"x"}}' \
@@ -191,8 +169,8 @@ evidence 로그만 증거로 인정한다 (`release-plan/agents/fact-checker.md`
   ① 조건 미충족이면 아무것도 출력하지 않고 ② 전 구간 fail-open 이며 ③ 도구를 차단한다면
   **복구 가능**한 훅만 허용한다. ③ 은 "같은 호출을 그대로 다시 하면 반드시 통과한다"는 뜻이다 —
   그래야 훅이 오판했을 때 최대 대가가 **도구 호출 한 번 재시도**로 유계이고, 그 유계성이 곧
-  "전역 발화해도 안전하다"의 정의다. 사례는 `project-conventions/hooks/` 의 훅 2개와
-  `harness-devkit/hooks/` 의 훅 1개 (설계 근거는 각 플러그인 README).
+  "전역 발화해도 안전하다"의 정의다. 사례는 `harness-devkit/hooks/` 의 훅 1개
+  (설계 근거는 그 플러그인 README).
 - **`commands/`** — 18개 전부 스킬이고 스킬은 이미 `/plugin:skill` 로 호출된다. 래퍼는 중복이다.
 
 ## 버전 관리

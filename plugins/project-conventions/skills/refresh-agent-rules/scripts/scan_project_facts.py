@@ -228,7 +228,6 @@ def scan_facts(root: Path) -> dict:
         "ci_workflows": ci,
         "tree": tree[:120],
         "tree_truncated": len(tree) > 120,
-        "codegraph_index": (root / ".codegraph").is_dir(),
     }
 
 
