@@ -14,7 +14,6 @@ Usage:
     install_agent_rules.py [--project-root PATH]
                            [--main-branch NAME]
                            [--pre-commit-check CMD]
-                           [--codegraph-rule {auto,on,off}]
                            [--on-existing-agents {abort,append-claude,keep-agents}]
                            [--force] [--dry-run]
     install_agent_rules.py --sync-mdc [--project-root PATH]
@@ -45,7 +44,6 @@ Invariants established:
     - .cursor/rules/<rule>.mdc body == .claude/rules/<rule>.md byte-for-byte
       (modulo the .mdc frontmatter and surrounding blank lines)
     - Re-running replaces each marker block instead of appending a second one
-    - A rule that is not selected is left ALONE, not deleted
 """
 from __future__ import annotations
 
@@ -55,11 +53,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-# The rule table. `required` rules install everywhere; optional ones install only
-# when their condition holds (see select_rules), because a rule for a tool the
-# project does not have is noise the agent would follow anyway.
+# The rule table. Every rule here installs into every project.
 #
-# The names and `required` flags are duplicated in
+# The rule names are duplicated in
 # check-agent-rules/scripts/check_agent_rules.py — the checker locates each block
 # by exact string match, so a rule added here must be added there too. The two
 # skills stay separate scripts on purpose: importing across skill directories
@@ -67,17 +63,9 @@ from pathlib import Path
 RULES = (
     {
         "name": "git-branch-workflow",
-        "required": True,
         "heading": "Git 브랜치 워크플로",
         "pointer": "브랜치·커밋·머지 절차는",
         "mdc_description": "{main} 직접 작업 금지, dev 에서 분기, 커밋 승인, dev 로만 머지",
-    },
-    {
-        "name": "codegraph-search",
-        "required": False,  # only where a .codegraph/ index exists
-        "heading": "코드 검색",
-        "pointer": "코드 검색 절차는",
-        "mdc_description": "코드 검색은 codegraph 우선, 호출 불가 시 경고 후 grep 폴백",
     },
 )
 
@@ -236,34 +224,6 @@ def mdc_frontmatter(rule: dict, main_branch: str) -> str:
     )
 
 
-def select_rules(root: Path, codegraph_mode: str) -> tuple[list[dict], list[str]]:
-    """Return (rules to install, notes explaining anything skipped).
-
-    Optional rules are decided from the project, not from the user: a rule that
-    tells the agent to search with codegraph is only useful where an index
-    exists. Skipping NEVER deletes an already-installed rule — see main().
-    """
-    selected: list[dict] = []
-    notes: list[str] = []
-    for rule in RULES:
-        if rule["required"]:
-            selected.append(rule)
-            continue
-        if rule["name"] == "codegraph-search":
-            if codegraph_mode == "on":
-                selected.append(rule)
-            elif codegraph_mode == "off":
-                notes.append("--codegraph-rule off — codegraph-search 규칙 건너뜀")
-            elif (root / ".codegraph").is_dir():
-                selected.append(rule)
-            else:
-                notes.append(
-                    ".codegraph/ 없음 — codegraph-search 규칙 건너뜀 "
-                    "(색인을 만든 뒤 재실행하거나 --codegraph-rule on)"
-                )
-    return selected, notes
-
-
 def existing_mdc_frontmatter(path: Path) -> str | None:
     """Return the leading '---...---' block of an .mdc file, if it has one."""
     if not path.is_file():
@@ -368,12 +328,6 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--main-branch", default=None)
     ap.add_argument("--pre-commit-check", default="")
     ap.add_argument(
-        "--codegraph-rule",
-        choices=["auto", "on", "off"],
-        default="auto",
-        help="auto: install only when .codegraph/ exists (default); on/off: force",
-    )
-    ap.add_argument(
         "--on-existing-agents",
         choices=["abort", "append-claude", "keep-agents"],
         default="abort",
@@ -399,8 +353,7 @@ def main(argv: list[str]) -> int:
         return sync_mdc(root, branch, args.dry_run)
 
     templates_dir = Path(__file__).resolve().parent.parent / "templates"
-    selected, notes = select_rules(root, args.codegraph_rule)
-    for rule in selected:
+    for rule in RULES:
         if not (templates_dir / f"{rule['name']}.md").is_file():
             print(
                 f"template missing: {templates_dir / (rule['name'] + '.md')}",
@@ -469,12 +422,9 @@ def main(argv: list[str]) -> int:
         agents_text = agents_md.read_text(encoding="utf-8")
         steps.append("기존 AGENTS.md 유지, CLAUDE.md 본문 폐기")
 
-    # ---- render every selected rule ---------------------------------------
-    # Rules that are NOT selected are left untouched: an existing rule file and
-    # its marker block survive a re-run made from a machine where the condition
-    # no longer holds. Removing a rule is a manual, deliberate act.
+    # ---- render every rule -------------------------------------------------
     writes: list[tuple[str, str]] = []
-    for rule in selected:
+    for rule in RULES:
         name = rule["name"]
         template = (templates_dir / f"{name}.md").read_text(encoding="utf-8")
         rule_body = render(template, main_branch, args.pre_commit_check)
@@ -491,7 +441,6 @@ def main(argv: list[str]) -> int:
         steps.append(f"{cursor_rel(name)} 생성 (동일 본문 + 프론트매터)")
 
     steps.append("CLAUDE.md → 포인터로 재작성")
-    steps.extend(notes)
 
     if args.dry_run:
         for s in steps:
