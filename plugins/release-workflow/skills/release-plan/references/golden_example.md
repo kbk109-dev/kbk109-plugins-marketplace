@@ -12,7 +12,7 @@
 
 ## Step 1~3 산출
 
-- **페이지 ID**: notion-search로 "Stage Sudoku" 페이지 확인
+- **페이지 ID**: "Stage Sudoku" 페이지 확인(이 프로젝트에 설치된 Notion 연동 방식으로 위임)
 - **DB 이름**: `릴리즈 플랜` (존재함)
 - **DB slug**: `${CLAUDE_PLUGIN_ROOT}/skills/release-plan/scripts/slugify.py "릴리즈 플랜"` → `untitled` (한글만 → ASCII 변환 결과 빈 문자열이라 fallback)
   - ⚠️ 한글 전용 DB 이름은 slug가 `untitled`로 수렴할 수 있으므로 팀 단위로 영문 별칭을 쓰는 편이 안전하다. 본 예제는 fallback 동작 자체를 보이기 위해 그대로 진행한다.
@@ -68,7 +68,7 @@
 ## Step 6 등록 (사용자가 "전부 포함" 승인)
 
 1. 6-1 중복 검사: 기존 DB의 v2.2.0 레코드 없음, 중복 0건 → 진행.
-2. 6-2: `notion-create-pages`로 3개 레코드 생성.
+2. 6-2: Notion 에 3개 레코드 생성(위임).
 3. "이월 [Task 7]"은 v2.1.0 DB에 그대로 남기고, 연관 선행 관계만 [Task 1]에 반영한다. 이월은 **별도 버전을 건드리지 않는다**.
 
 ## Step 7 관리 문서

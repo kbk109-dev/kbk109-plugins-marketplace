@@ -1,7 +1,6 @@
 ---
 name: create-prd
-description: "Use when a user wants to turn a Notion page, meeting note, or requirements memo into a PRD (Product Requirements Document) — normalizes the source document into the ten canonical PRD sections (Document Information, Overview, User Stories, Functional and Non-Functional Requirements, User Flow, Acceptance Criteria, Dependencies, Risks and Assumptions, Success Metrics), derives Given-When-Then acceptance criteria for every functional requirement, marks any success metric it had to draft itself as [제안] with a stated rationale, then launches design, engineering, and QA reviewer subagents in parallel to cross-review the draft before writing docs/plan/PRD-{slug}.md and publishing a Notion page under a user-specified parent. Triggers on Korean and English phrases including: 'PRD 만들어줘', 'PRD 작성', 'PRD 써줘', '제품 요구사항 문서', '요구사항 문서 만들어줘', '요구사항 정리해줘', '기획서 PRD로 정리해줘', '회의록을 PRD로', '회의록 정리해서 PRD', '노션 문서로 PRD 만들어줘', '이 문서 PRD로 바꿔줘', '유저스토리 정리해줘', '유저 스토리 뽑아줘', '수용기준 만들어줘', '인수 기준 정리', 'Given-When-Then', '기능 요구사항 정리', '비기능 요구사항', '성공 지표 정의', 'PRD 업데이트', 'PRD 검토해줘', 'create-prd', 'write a PRD', 'create a PRD', 'product requirements document', 'turn this doc into a PRD', 'turn this into requirements', 'draft requirements doc', 'acceptance criteria', 'user stories', 'success metrics'."
-compatibility: 'mcp: notion'
+description: "Use when a user wants to turn a Notion page, meeting note, or requirements memo into a PRD (Product Requirements Document) — normalizes the source document into the ten canonical PRD sections (Document Information, Overview, User Stories, Functional and Non-Functional Requirements, User Flow, Acceptance Criteria, Dependencies, Risks and Assumptions, Success Metrics), derives Given-When-Then acceptance criteria for every functional requirement, marks any success metric it had to draft itself as [제안] with a stated rationale, then launches design, engineering, and QA reviewer subagents in parallel to cross-review the draft before writing docs/plan/PRD-{slug}.md and optionally publishing a Notion page under a user-specified parent when the project has Notion access configured. Triggers on Korean and English phrases including: 'PRD 만들어줘', 'PRD 작성', 'PRD 써줘', '제품 요구사항 문서', '요구사항 문서 만들어줘', '요구사항 정리해줘', '기획서 PRD로 정리해줘', '회의록을 PRD로', '회의록 정리해서 PRD', '노션 문서로 PRD 만들어줘', '이 문서 PRD로 바꿔줘', '유저스토리 정리해줘', '유저 스토리 뽑아줘', '수용기준 만들어줘', '인수 기준 정리', 'Given-When-Then', '기능 요구사항 정리', '비기능 요구사항', '성공 지표 정의', 'PRD 업데이트', 'PRD 검토해줘', 'create-prd', 'write a PRD', 'create a PRD', 'product requirements document', 'turn this doc into a PRD', 'turn this into requirements', 'draft requirements doc', 'acceptance criteria', 'user stories', 'success metrics'."
 ---
 
 # Create PRD — 문서를 PRD 10개 섹션으로 정규화
@@ -38,17 +37,21 @@ PRD로 정규화할 노션 페이지 이름 또는 로컬 파일 경로.
 - 이름으로 검색해 결과가 여러 건이면 후보를 제시하고 사용자가 고르게 한다. 임의로 첫 번째를
   고르지 않는다.
 
-### 2. Notion 부모 페이지 (필수)
+### 2. Notion 부모 페이지 (이 프로젝트에 Notion 연동이 있으면 필수, 없으면 생략)
 
-완성된 PRD를 발행할 부모 페이지 이름.
+완성된 PRD를 발행할 부모 페이지 이름. 이 프로젝트에 `.claude/rules/notion-api-only.md` 가
+없으면(아래 "Notion 접근 방식") 이 입력을 요구하지 않는다 — Step 11 이 로컬 저장만으로
+완료된다.
 
-- **미입력 시**: `"PRD를 발행할 노션 부모 페이지 이름을 알려주세요."` 출력 후 종료.
+- **연동이 있는데 미입력 시**: `"PRD를 발행할 노션 부모 페이지 이름을 알려주세요."` 출력 후 종료.
+- **연동이 없으면**: 이 입력을 건너뛴다. 사용자가 그래도 Notion 발행을 원한다면 연동 설정
+  (`/project-conventions:init-agent-rules --notion-rule on`)을 먼저 안내한다.
 
 ### 3. 입력 수집 전략
 
-둘 다 없으면 개별 질문을 반복하지 말고 한 번에 묶는다:
-`"다음 두 가지를 알려주세요: ① PRD로 만들 원본 문서 ② PRD를 발행할 노션 부모 페이지 이름"`
-부분 응답만 오면 누락된 것만 재질의한다.
+원본 문서(+ 연동이 있으면 부모 페이지)가 없으면 개별 질문을 반복하지 말고 한 번에 묶는다:
+`"다음을 알려주세요: ① PRD로 만들 원본 문서 ② PRD를 발행할 노션 부모 페이지 이름"`
+(연동이 없으면 ②는 묻지 않는다.) 부분 응답만 오면 누락된 것만 재질의한다.
 
 ---
 
@@ -59,7 +62,10 @@ Step 0~11 을 순서대로 실행한다. 각 Step 옆의 "원문 대응" 은 근
 
 ### Step 0: 원본 문서 로드
 
-`notion-search` 로 입력받은 문서를 찾고 `notion-fetch` 로 전문을 읽는다. 로컬 경로면 직접 읽는다.
+로컬 경로면 직접 읽는다. Notion 페이지 이름이면 **Notion 접근 방식**을 따른다: 이 프로젝트에
+`.claude/rules/notion-api-only.md` 가 있으면 그 규칙(`.claude/scripts/notion_api.py`)으로
+찾아 전문을 읽고, 없으면 사용자에게 "이 프로젝트는 Notion 연동이 없습니다. 원본 문서 내용을
+직접 붙여넣거나 로컬 파일 경로를 알려주세요."라고 안내한다 — MCP 도구 이름은 지시하지 않는다.
 
 - **못 찾은 경우**: `"해당 이름의 문서를 찾을 수 없습니다: {이름}"` 출력 후 종료.
 - 전문을 `source_excerpt` 로 보관한다. Step 8 리뷰어에게 전달되어 **"원본에 있던 내용"과
@@ -235,7 +241,7 @@ done
 ## PRD 미리보기 — {기능명}
 
 - 로컬: docs/plan/PRD-{slug}.md
-- 발행 예정: {부모 페이지} > PRD — {기능명}
+- 발행 예정: {부모 페이지} > PRD — {기능명}  ← Notion 연동이 없으면 이 줄 생략
 - 구성: 섹션 10/10 · US {n} · FR {n} · NFR {n} · AC {n}
 - 검토: design {verdict} / engineering {verdict} / qa {verdict} (수정 {revision_count}회차)
 
@@ -249,7 +255,7 @@ done
 
 - [engineering] E-1: DEP-1 메일 채널 발송 한도가 가입 급증 시 병목 가능
 
-이대로 Notion 에 발행할까요? (발행 / 수정 요청 / 취소)
+이대로 {Notion 연동이 있으면 "Notion 에 발행할까요" / 없으면 "로컬 문서로 완료할까요}? (발행 / 수정 요청 / 취소)
 ```
 
 `[제안]` 이 0건이면 해당 섹션은 `(없음)` 으로 표기하되 섹션 자체는 유지한다 — 사용자가 "초안
@@ -259,9 +265,12 @@ done
 
 ### Step 11: Notion 발행과 완료 보고
 
-`notion-search` 로 부모 페이지를 찾고, `notion-create-pages` 로 `PRD — {기능명}` 페이지를 그 하위에
-만든다. 발행 후 로컬 문서의 frontmatter 를 갱신한다: `notion_page` 에 URL, `status: reviewed`,
-`updated` 를 당일로.
+**Notion 연동이 있으면**(`.claude/rules/notion-api-only.md` 존재) 그 규칙을 따라 부모 페이지를
+찾고 `PRD — {기능명}` 페이지를 그 하위에 만든다. 발행 후 로컬 문서의 frontmatter 를 갱신한다:
+`notion_page` 에 URL, `status: reviewed`, `updated` 를 당일로.
+
+**연동이 없으면** Notion 발행을 생략하고 `status: reviewed`, `updated` 만 갱신한다 —
+`notion_page` 는 비워 둔다. 완료 보고에 "Notion 미발행 — 로컬 문서만 완성됨"을 명시한다.
 
 > ❗ **완료 선언 금지 지점**: Notion 등록이 끝나도 그 자체를 "완료"로 보고하지 않는다.
 > frontmatter 갱신까지 마친 뒤에만 아래 보고를 출력한다. "발행 성공 = 작업 완료"로 조기 선언하는
@@ -272,7 +281,7 @@ done
 
 - 기능명: {기능명}
 - 로컬: docs/plan/PRD-{slug}.md
-- Notion: {부모 페이지} > PRD — {기능명}
+- Notion: {부모 페이지} > PRD — {기능명}  ← 연동 없으면 "미발행 — 로컬 문서만 완성됨"
 - 구성: 섹션 10/10 · US {n} · FR {n} · NFR {n} · AC {n}
 - 검토: design/engineering/qa 3개 모두 pass (수정 {revision_count}회차)
 - 리뷰 로그: docs/plan/logs/review/{design,engineering,qa}.log
@@ -328,13 +337,12 @@ LLM은 실패 시 동일한 접근을 약간만 바꾸어 반복한다. 리뷰�
 
 ---
 
-## 사용하는 Notion MCP 도구
+## Notion 접근 방식
 
-| 도구 | 용도 |
-| --- | --- |
-| `notion-search` | 원본 문서 검색(Step 0), 부모 페이지 검색(Step 11) |
-| `notion-fetch` | 원본 문서 전문 로드 (Step 0) |
-| `notion-create-pages` | 부모 페이지 하위에 PRD 페이지 발행 (Step 11) |
+이 스킬은 어떤 도구로 Notion 에 접근할지 모른다 — 그건 프로젝트 설정이다(Step 0, Step 11).
+이 프로젝트에 `.claude/rules/notion-api-only.md` 가 있으면 그 규칙을 따르고, 없으면 원본
+문서는 사용자 직접 입력·로컬 파일로, 발행은 로컬 저장만으로 대체한다. MCP 도구 이름은 이
+문서 어디에도 지시하지 않는다.
 
 `engineering-reviewer` 는 기술 토큰 실존성 확인에 `context7` MCP → `WebSearch` 폴백을 쓴다.
 생성 주체는 이 도구를 직접 호출하지 않는다 — 자기평가 편향 차단을 위한 권한 분리다.

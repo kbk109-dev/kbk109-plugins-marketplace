@@ -1,7 +1,7 @@
 # kbk109 plugins marketplace
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
-[![Marketplace](https://img.shields.io/badge/marketplace-1.16.0-blue)](./docs/release/v1.16.0.md)
+[![Marketplace](https://img.shields.io/badge/marketplace-1.17.0-blue)](./docs/release/v1.17.0.md)
 [![Plugins](https://img.shields.io/badge/plugins-6-informational)](./plugins)
 
 직접 제작한 Claude Code 커스텀 플러그인 모음. Harness Engineering 원칙으로 집필한 스킬 18개를
@@ -44,10 +44,10 @@
 |---|---|---|
 | [`expo-app-kit`](./plugins/expo-app-kit) | 4 | Expo/RN 앱의 AdMob 광고 계획·구현, EAS Update(OTA) 핫픽스 |
 | [`firebase-observability`](./plugins/firebase-observability) | 4 | Firebase Analytics(GA4)·Crashlytics 도입 계획·구현 |
-| [`release-workflow`](./plugins/release-workflow) | 4 | Notion 기반 릴리즈 계획·구현·패치·main 머지 |
+| [`release-workflow`](./plugins/release-workflow) | 4 | 릴리즈 계획·구현·패치·main 머지. Notion 은 선택 상태 저장소다 |
 | [`harness-devkit`](./plugins/harness-devkit) | 2 | 3-에이전트(Planner→Generator→Evaluator) 자율 개발 워크플로, dev 서버 로그 감시 |
-| [`product-planning`](./plugins/product-planning) | 1 | 노션 문서·회의록 → PRD 10개 섹션 정규화 |
-| [`project-conventions`](./plugins/project-conventions) | 3 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로) 동기화. 이관 전 본문을 200줄 목표로 다듬는다. 생성물인 `.mdc` 사본이 원본과 갈라졌는지 바이트 단위로 검사한다 |
+| [`product-planning`](./plugins/product-planning) | 1 | 문서·회의록 → PRD 10개 섹션 정규화 (Notion 은 선택) |
+| [`project-conventions`](./plugins/project-conventions) | 3 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로, 선택적 Notion 토큰 API 강제) 동기화. 이관 전 본문을 200줄 목표로 다듬는다. 생성물인 `.mdc` 사본·설치 스크립트가 원본과 갈라졌는지 바이트 단위로 검사한다 |
 
 ## 스킬 전체 목록
 
@@ -95,7 +95,7 @@
 ### project-conventions
 | 스킬 | 트리거 예 | references |
 |---|---|---|
-| `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘", "git 브랜치 규칙 넣어줘" | `claude_md_rewrite.md` 외 1 |
+| `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘", "git 브랜치 규칙 넣어줘", "Notion MCP 막아줘" | `claude_md_rewrite.md` 외 2 |
 | `check-agent-rules` | "규칙 갈라졌는지 확인", "cursor rules 랑 claude rules 같은지 봐줘" | — |
 | `refresh-agent-rules` | "AGENTS.md 업데이트", "AGENTS.md 가 지금 코드랑 맞는지 봐줘", "프로젝트 바뀌었으니 문서 반영해줘" | `refresh_policy.md` |
 
@@ -108,7 +108,7 @@
 | 요건 | 필요한 플러그인 |
 |---|---|
 | [context7 MCP](https://github.com/upstash/context7) | expo-app-kit, firebase-observability, release-workflow, harness-devkit |
-| Notion MCP | release-workflow, product-planning |
+| Notion 연동 (선택 — `project-conventions:init-agent-rules --notion-rule on`) | release-workflow, product-planning. 없으면 각 스킬이 로컬 파일/사용자 입력으로 대체한다 |
 | WebSearch | release-workflow, harness-devkit |
 | `python3` | release-workflow, product-planning, project-conventions, harness-devkit |
 | EAS CLI (`eas`) | expo-app-kit (ota-hotfix) |

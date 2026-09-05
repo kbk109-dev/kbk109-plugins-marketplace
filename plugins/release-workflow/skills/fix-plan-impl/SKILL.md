@@ -125,9 +125,14 @@ ls -1 docs/skills/fix-plan-impl/v*/state.json 2>/dev/null
 
 ### Step 2: Notion 페이지 및 데이터베이스 탐색
 
-1. `notion-search`로 입력받은 페이지 이름(또는 CLAUDE.md에서 찾은 이름)을 검색한다
+이 스킬은 **어떤 도구로 Notion 에 접근할지 모른다** — 그건 프로젝트 설정이다. 이 프로젝트에
+`.claude/rules/notion-api-only.md` 가 있으면 그 규칙(`.claude/scripts/notion_api.py`)을
+그대로 따르고, 없으면 사용자에게 Notion 연동 방식을 확인한다. 아래 "탐색한다"·"조회한다"는
+전부 이 절차를 뜻하며, 이 문서에서 MCP 도구 이름은 지시하지 않는다.
+
+1. 입력받은 페이지 이름(또는 CLAUDE.md에서 찾은 이름)을 찾는다
 2. **찾지 못한 경우**: "해당 이름의 노션 페이지를 찾을 수 없습니다: `{페이지 이름}`" 출력 후 종료
-3. `notion-fetch`로 페이지의 하위 콘텐츠를 확인하여 **"Release Plan"** 또는 유사한 이름의 데이터베이스를 찾는다. 완전 일치가 없으면 "Release", "릴리즈", "Plan" 등 부분 일치를 시도한다
+3. 페이지 하위에서 **"Release Plan"** 또는 유사한 이름의 데이터베이스를 찾는다. 완전 일치가 없으면 "Release", "릴리즈", "Plan" 등 부분 일치를 시도한다
 4. **데이터베이스를 찾지 못한 경우**: "`{페이지 이름}` 아래에서 Release Plan 데이터베이스를 찾지 못했습니다. 먼저 `/release-workflow:release-plan`으로 최초 데이터베이스를 생성해야 합니다." 출력 후 종료
 
 ### Step 3: 최신 버전 조회 + Step 4: 새 버전 결정 (스크립트 위임)
@@ -136,7 +141,7 @@ ls -1 docs/skills/fix-plan-impl/v*/state.json 2>/dev/null
 
 절차:
 
-1. `notion-fetch`로 Release Plan DB의 전체 레코드 조회.
+1. Release Plan DB의 전체 레코드 조회.
 2. "버전" 컬럼 값을 모두 수집하여 JSON 배열로 구성. **상태 컬럼(`Status`/`상태`/`배포`)이 존재하면 released/done/shipped/배포완료 상태만** 채택 (shipped vs in-progress 구분).
 3. `compute_next_patch.py`에 stdin으로 전달:
 
@@ -220,7 +225,7 @@ git status --porcelain
 
 Phase 1 조회 이후 Phase 2 확인까지 사이 시간이 흐르는 동안, 동료가 먼저 같은 버전을 등록했을 수 있다. 브랜치 생성 직전에 **1회 재조회**한다.
 
-1. `notion-fetch`로 Release Plan DB 레코드 재조회.
+1. Release Plan DB 레코드 재조회.
 2. `new_version`과 동일한 버전 레코드가 새로 발견되면 아래 메시지 출력 후 사용자 확인 요청:
 
    > 동일 버전(`v{new_version}`) 레코드가 방금 등록된 것으로 보입니다. 다음 patch로 진행할까요, 기존 것을 이어받을까요? ("다음 patch" / "기존 이어받기" / "중단")
@@ -318,7 +323,7 @@ git status                  # 이관된 파일 목록 확인
 
    스크립트는 `task_list.json` 존재, 작업 수 > 0, 현재 브랜치 == `fix/v{new_version}`을 자동 판정하고 종료코드 0(PASS) / 1(FAIL)로 반환한다.
 
-2. **Notion 레코드 재조회**: `notion-fetch`로 Release Plan DB를 다시 읽어 `{new_version}` 버전 레코드가 실제로 존재하는지 확인한다. (스크립트는 MCP 호출 불가이므로 이 단계는 LLM이 담당.)
+2. **Notion 레코드 재조회**: Release Plan DB를 다시 읽어 `{new_version}` 버전 레코드가 실제로 존재하는지 확인한다. (이 스킬이 도는 프로젝트마다 Notion 연동 방식이 다를 수 있어 스크립트가 그 방식을 하드코딩할 수 없다 — 그래서 이 단계는 LLM이 위임 절차를 통해 담당한다.)
 
 ### 재시도 상한 (루프 감지)
 
@@ -406,7 +411,7 @@ push는 이 스킬이 자동 실행하지 않는다(기계적 제약 #11). 위 �
 11. **git push 금지** — 이 스킬은 push를 자동 실행하지 않는다. 커밋만 생성되고 push는 사용자가 직접 수행
 12. **stash는 폴백 경로에서만** — 기본 경로는 `git checkout -b`만 사용한다. stash는 checkout 실패 시에만 사용하고, stash pop 충돌 시 즉시 사용자 개입을 요청한다
 13. **Phase 4 재시도 상한** — 동일 접근의 검증 재시도는 최대 1회. 2회째 실패 시 자동 중단하고 사용자 개입 요청 (CLAUDE.md 실패모드 #4 — 무한 루프 방지)
-14. **증거 기반 검증** — Phase 4 완료 판정은 `verify_plan.sh`의 종료코드와 `notion-fetch` 재조회 결과를 증거로 사용한다. 산문 체크리스트 자주관 판정으로 통과 처리하지 않는다
+14. **증거 기반 검증** — Phase 4 완료 판정은 `verify_plan.sh`의 종료코드와 Notion 재조회 결과를 증거로 사용한다. 산문 체크리스트 자주관 판정으로 통과 처리하지 않는다
 15. **상태 파일 기록** — 각 Phase 진입 시 `docs/skills/fix-plan-impl/v{new_version}/state.json`을 업데이트한다. 세션 재개 시 이 파일이 유일한 권위 있는 출처다
 
 ---
@@ -427,8 +432,7 @@ push는 이 스킬이 자동 실행하지 않는다(기계적 제약 #11). 위 �
 | `${CLAUDE_PLUGIN_ROOT}/skills/fix-plan-impl/scripts/verify_plan.sh`                | Phase 4 파일·브랜치 증거 기반 검증                       |
 | `Read`                                  | CLAUDE.md, state.json, references 읽기                   |
 | `Write`                                 | state.json 갱신                                          |
-| `notion-search`                         | Notion 페이지 탐색                                       |
-| `notion-fetch`                          | DB 레코드 조회 (Phase 1, Phase 3 Step 0 재조회, Phase 4) |
+| Notion 접근 (위임)                       | 페이지/DB 탐색·레코드 조회 (Phase 1, Phase 3 Step 0 재조회, Phase 4). 어떤 도구를 쓰는지는 프로젝트 설정을 따른다 — Step 2 참조 |
 | `/release-workflow:release-plan` 스킬                    | 릴리즈 계획 수립 및 Notion 등록                          |
 | `/release-workflow:release-impl` 스킬                    | 계획된 작업의 순차 구현                                  |
 

@@ -101,7 +101,7 @@ echo '{
 | 소스 | 입력 규칙 |
 |------|----------|
 | **release-plan/task_list.json** (기본) | `references/contract_consumer.md`의 필드 매핑표 그대로 적용 |
-| **notion-direct** (task_list 부재 시) | Notion `notion-fetch` 응답에서 `name → title`, `수용 기준 → acceptance_criteria`, `[구현 내용] → description` 매핑 |
+| **notion-direct** (task_list 부재 시) | Notion 에서 조회한 row 속성에서 `name → title`, `수용 기준 → acceptance_criteria`, `[구현 내용] → description` 매핑 |
 
 **생성 후 반드시**:
 
@@ -154,7 +154,7 @@ exit 0이 아니면 stderr 오류를 해결한 뒤 재생성한다.
 
 ## 세션 로그
 
-- [YYYY-MM-DD] Step 0: Notion MCP·Context7·CLAUDE.md 모두 가용
+- [YYYY-MM-DD] Step 0: Notion 연동·Context7·CLAUDE.md 모두 가용
 - [YYYY-MM-DD] 초기화: Notion에서 N개 작업 로드, feature_list.json 생성, 이전 버전 M개 스캔 완료
 
 ## 발견된 이슈

@@ -12,7 +12,7 @@
         "선행 관계/병렬 진행 가능 컬럼이 각 작업에 존재하며, 값은 '-' 또는 '^\\[Task \\d+\\](, \\[Task \\d+\\])*$' 형식이다.",
         "선행 관계와 병렬 진행 가능에 등장하는 모든 [Task N] 라벨이 이번 배치 또는 기존 DB에 실제로 존재한다.",
         "각 작업의 '작업 상세'에 [구현 내용]과 [수용 기준] 섹션이 모두 포함되어 있다.",
-        "사용자에게 미리보기를 표시하고 확인을 받기 전에는 notion-create-pages를 호출하지 않는다.",
+        "사용자에게 미리보기를 표시하고 확인을 받기 전에는 Notion 에 레코드를 생성하지 않는다.",
         "미리보기에 '## 추가 제안' 섹션이 포함된다 (과거 계획이 없으면 '(해당 없음)' 표기)."
       ],
       "status": "fail",
@@ -28,7 +28,7 @@
         "버전 분리는 사용자의 명시적 확인이 있기 전에는 적용되지 않는다.",
         "모든 작업이 '^\\[Task \\d+\\] .+' 형식의 제목을 가지며, 동일 버전 내에서 Task 번호가 1부터 연속된다.",
         "선행 관계/병렬 진행 가능 컬럼이 채워져 있으며, 서로 다른 도메인 작업은 병렬 진행 가능으로 표기된다.",
-        "notion-create-pages는 사용자 확인 후에만 호출된다."
+        "Notion 레코드 생성은 사용자 확인 후에만 진행된다."
       ],
       "status": "fail",
       "files": []
@@ -39,7 +39,7 @@
       "acceptance_criteria": [
         "노션 페이지 이름이 없으므로 '릴리즈 계획을 등록할 노션 페이지 이름을 알려주세요.' 문구를 출력한다.",
         "즉시 종료하며 Step 1 이후의 단계를 실행하지 않는다.",
-        "notion-search, notion-fetch, notion-create-database, notion-create-pages 등 Notion MCP 도구를 호출하지 않는다.",
+        "Notion 에 어떤 방식으로도 접근하지 않는다(조회·생성 모두).",
         "업데이트 내용('다크모드 지원 추가')을 임의로 분해하지 않는다."
       ],
       "status": "fail",
@@ -51,7 +51,7 @@
       "acceptance_criteria": [
         "데이터베이스 이름이 없으므로 '릴리즈 계획을 등록할 데이터베이스 이름을 알려주세요.' 문구를 출력한다.",
         "즉시 종료하며 이후 단계를 실행하지 않는다.",
-        "notion-create-database / notion-create-pages를 호출하지 않는다."
+        "Notion 에 DB 나 레코드를 만들지 않는다."
       ],
       "status": "fail",
       "files": []
@@ -62,7 +62,7 @@
       "acceptance_criteria": [
         "버전이 입력되지 않았으므로 '등록할 버전을 X.Y.Z 형식으로 알려주세요. (예: 1.0.0)' 문구를 출력한다.",
         "즉시 종료하며 이후 단계를 실행하지 않는다.",
-        "notion-create-pages를 호출하지 않는다."
+        "Notion 에 레코드를 생성하지 않는다."
       ],
       "status": "fail",
       "files": []
@@ -74,7 +74,7 @@
         "버전 '2.1'이 정규식 '^\\d+\\.\\d+\\.\\d+$'에 매치되지 않아 검증을 실패로 판정한다.",
         "'등록할 버전을 X.Y.Z 형식으로 알려주세요. (예: 1.0.0)' 문구를 출력한다.",
         "즉시 종료하며 이후 단계를 실행하지 않는다.",
-        "notion-create-pages를 호출하지 않는다."
+        "Notion 에 레코드를 생성하지 않는다."
       ],
       "status": "fail",
       "files": []
@@ -99,7 +99,7 @@
       "acceptance_criteria": [
         "Step 6 실행 전에 (버전, 작업명) 조합으로 기존 레코드 중복 여부를 확인한다.",
         "중복이 탐지되면 사용자에게 skip/upsert/abort 중 하나를 선택하도록 안내한다.",
-        "사용자가 명시적으로 선택하기 전까지 notion-create-pages를 호출하지 않는다.",
+        "사용자가 명시적으로 선택하기 전까지 Notion 에 레코드를 생성하지 않는다.",
         "기본 동작은 abort이며, 추측으로 덮어쓰지 않는다."
       ],
       "status": "fail",
@@ -122,9 +122,9 @@
     },
     {
       "id": 10,
-      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v2.3.0으로 릴리즈 계획 등록해줘. 다크모드 지원 추가. (notion-create-database가 권한 부족으로 실패하는 상황을 가정)",
+      "prompt": "Stage Sudoku 페이지의 '릴리즈 플랜' DB에 v2.3.0으로 릴리즈 계획 등록해줘. 다크모드 지원 추가. (Notion 데이터베이스 생성이 권한 부족으로 실패하는 상황을 가정)",
       "acceptance_criteria": [
-        "notion-create-database가 권한 오류로 실패하면 사용자에게 명확한 원인(예: '데이터베이스 생성 권한이 없습니다')과 함께 실행을 중단한다.",
+        "Notion 데이터베이스 생성이 권한 오류로 실패하면 사용자에게 명확한 원인(예: '데이터베이스 생성 권한이 없습니다')과 함께 실행을 중단한다.",
         "부분 상태(DB는 만들어졌으나 레코드는 없음 등)를 남기지 않는다 — 실패 시 이후 Step 6/7을 실행하지 않는다.",
         "다음 호출에서 같은 상태로 재개할 수 있도록, progress.md 또는 사용자 메시지에 실패 지점과 재시도 방법을 기록한다.",
         "로컬 관리 문서(release-plan.md / task_list.json)는 DB 등록이 성공하기 전에는 생성하지 않는다."
@@ -167,7 +167,7 @@
         "fact-checker가 두 토큰을 Context7과 WebSearch 모두에서 매치하지 못하고, task_list.json의 fact_check.verdict 가 'fail'로 기록된다 — Gemma 4 라인업은 E2B/E4B/26B/31B이며 27B 사이즈가 부재하고, '@react-native-firebase/analytics-next' 또한 npm 레지스트리에 없는 가공 패키지이므로.",
         "fact_check.unverified_tokens 배열에 두 토큰이 각각 reason과 함께 기록되며, 각 토큰별 evidence 로그 파일(logs/fact_check/<token-slug>.log)이 실제로 생성되고 비어 있지 않다.",
         "Step 4-11 verify_tech_tokens.py 가 비-영(非零) exit code 를 반환하여 Step 5 미리보기 생성을 차단한다.",
-        "사용자가 토큰을 수정하기 전에는 notion-create-pages가 호출되지 않으며, task_list.json·tokens.json·logs/fact_check/ 가 사용자 결정 전까지 디스크에 보존된다."
+        "사용자가 토큰을 수정하기 전에는 Notion 에 레코드가 생성되지 않으며, task_list.json·tokens.json·logs/fact_check/ 가 사용자 결정 전까지 디스크에 보존된다."
       ],
       "status": "fail",
       "files": []

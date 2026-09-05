@@ -58,9 +58,13 @@ while IFS= read -r f; do
 done < <(find plugins -name SKILL.md | sort)
 
 echo "== 4. 스크립트 경로 하드닝 =="
+# `.claude/scripts/...` · `.claude/hooks/...` 는 이 검사의 대상이 아니다 — 플러그인이
+# 번들한 스크립트가 아니라 init-agent-rules 가 **대상 프로젝트에 설치하는** 파일의 고정
+# 경로다. 그 경로는 언제나 프로젝트 루트 기준이라 ${CLAUDE_PLUGIN_ROOT} 로 하드닝할 대상
+# 자체가 없다(정본은 AGENTS.md/CLAUDE.md 처럼 이미 project-root-relative 로 문서화한다).
 bare=$(grep -rnE '(^|[^}A-Za-z0-9_-])(\{skill_root\}/|skills/[a-z0-9-]+/|\./)?scripts/[a-zA-Z0-9_./-]+\.(py|sh)' \
         --include='*.md' --include='evals.json' --include='install_hooks.sh' plugins 2>/dev/null \
-        | grep -v 'CLAUDE_PLUGIN_ROOT' | wc -l | tr -d ' ')
+        | grep -v 'CLAUDE_PLUGIN_ROOT' | grep -v '\.claude/\(scripts\|hooks\)/' | wc -l | tr -d ' ')
 [ "$bare" = "0" ] && ok "상대 경로 스크립트 호출 0건" \
                   || bad "상대 경로 스크립트 호출 $bare 건 잔존"
 

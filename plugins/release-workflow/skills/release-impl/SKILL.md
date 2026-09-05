@@ -89,11 +89,19 @@ Phase 1 Step 1 전에 단 한 번 수행한다. 상세 거동은 `references/deg
 
 | 도구 | 확인 방법 | 부재 시 |
 |------|----------|---------|
-| Notion MCP (`mcp__plugin_Notion_notion__*`) | 노출된 함수 목록에 접두사 존재 여부 | 로컬 `task_list.json`이 있으면 그것으로 진행, 없으면 종료 |
-| Context7 MCP (`mcp__plugin_context7_context7__*`) | 동일 | 경고만 출력, 진행. Generator가 서드파티 라이브러리 필요 시 사용자 질의로 전환 |
+| Notion 연동 | 이 프로젝트에 `.claude/rules/notion-api-only.md` 가 설치돼 있는가 | 로컬 `task_list.json`이 있으면 그것으로 진행, 없으면 종료 |
+| Context7 MCP (`mcp__plugin_context7_context7__*`) | 노출된 함수 목록에 접두사 존재 여부 | 경고만 출력, 진행. Generator가 서드파티 라이브러리 필요 시 사용자 질의로 전환 |
 | 프로젝트 CLAUDE.md | `{project_root}/CLAUDE.md` Read 성공 여부 | Step 1의 폴백(설정 파일 추론 + 사용자 확인)으로 이동 |
 
 결과는 PROGRESS.md 세션 로그 첫 줄에 기록한다.
+
+### Notion 접근 방식
+
+이 스킬은 Notion 에 **어떤 도구로** 접근할지 모른다 — 그건 프로젝트 설정이다. 이 문서에서
+Step 4·Phase 2 Step C·Phase 3 이 "Notion 을 조회/갱신한다"고 서술한 부분은 전부: 이
+프로젝트에 `.claude/rules/notion-api-only.md` 가 있으면 그 규칙(`.claude/scripts/notion_api.py`)
+을 그대로 따르고, 없으면 각 지점에 적힌 대체 경로로 빠진다는 뜻이다. MCP 도구 이름은
+지시하지 않는다.
 
 ### Step 1: 프로젝트 컨텍스트 파악
 
@@ -142,14 +150,19 @@ release-plan이 이미 생성한 `task_list.json`을 재사용한다. 상세 계
 
 아래 단계의 `{database_name}`은 입력값 #2(데이터베이스 이름)이며, `{version}`은 입력값 #3의 정규화 결과다.
 
-1. `notion-search`로 입력받은 노션 페이지 이름을 검색한다
+1. 입력받은 노션 페이지 이름을 찾는다
    - **못 찾은 경우**: "해당 페이지를 찾을 수 없습니다. Notion 페이지 URL을 직접 입력해주세요." 출력 후 대기
-2. `notion-fetch`로 해당 페이지의 하위 콘텐츠를 확인하여 `{database_name}` 데이터베이스를 찾는다
+2. 해당 페이지 하위에서 `{database_name}` 데이터베이스를 찾는다
    - 완전 일치 우선. 없으면 입력값과 대소문자 구분 없는 부분 일치를 한 번 시도하고, 사용자에게 매칭 DB 이름을 확인받는다
    - **DB 없는 경우**: `"{database_name}" 데이터베이스가 없습니다. 먼저 /release-workflow:release-plan으로 계획을 등록하거나 DB 이름 입력을 확인해주세요.` 출력 후 종료
-3. `notion-fetch`로 데이터베이스의 data source를 조회한다
+3. 데이터베이스의 조회 대상(data source)을 확인한다
 4. `{version}`에 해당하는 작업(Task) 목록을 필터링한다
    - **해당 버전의 작업이 없는 경우**: "버전 {version}에 해당하는 작업이 없습니다." 출력 후 종료
+
+**이 프로젝트에 Notion 연동이 없으면**(Step 0 에서 확인) 위 4단계를 시도하지 않는다 — 대신
+"Notion 연동이 설정돼 있지 않고 로컬 task_list.json 도 없습니다. `/project-conventions:init-agent-rules
+--notion-rule on` 을 실행하거나, release-plan 이 만든 task_list.json 경로를 알려주세요." 를
+출력하고 종료한다.
 
 ### Step 5 + Step 6: feature_list.json + PROGRESS.md 결정적 생성
 
@@ -305,7 +318,7 @@ blocked → fail 복귀 시 `retry_count`는 0으로 리셋하되, `evaluator_fe
 
 Evaluator의 verdict가 `pass`면 호출 측이 수행:
 
-1. **Notion 상태 동기화** (역방향 업데이트) — `mcp__plugin_Notion_notion__notion-update-page`로 해당 task row의 상태 속성을 `완료`로 전이. 상세 payload와 속성 타입별 대응은 `references/notion_integration.md` Phase 2 Step C 참조. 실패는 secondary output으로 처리하여 core 진행을 막지 않는다 (`references/degradation_policy.md`).
+1. **Notion 상태 동기화** (역방향 업데이트) — 해당 task row의 상태 속성을 `완료`로 전이(위임). 이 프로젝트가 요구하는 속성 이름·타입은 `references/notion_integration.md` Phase 2 Step C 참조. 실패는 secondary output으로 처리하여 core 진행을 막지 않는다 (`references/degradation_policy.md`).
 2. **Git 커밋**: `feat(release/v{version}): {title}`. 프로젝트 CLAUDE.md에 다른 커밋 컨벤션이 명시되어 있으면 그것을 우선.
 3. **깨끗한 상태 확인**: `git status`로 미완성 변경이 없는지 확인.
 4. **다음 task로 이동** (세션 시작 오리엔테이션으로 복귀).
@@ -323,7 +336,7 @@ blocked 전이 시에도 1번을 동일한 매핑 규칙으로 시도(`차단`)�
 1. **최종 상태 요약** (feature_list.json 기반 테이블 + `Total/Pass/Fail/Blocked` 라인) 출력
 2. **PROGRESS.md 최종 완료 기록** (`sync_progress.py`로 헤더 재생성)
 3. **git log --oneline**으로 전체 버전 커밋 히스토리 출력
-4. **Notion DB 전체 상태 재확인**: 모든 row가 `완료`인지 `notion-fetch`로 크로스체크. 불일치 시 경고 + 사용자에게 수동 확인 요청 (secondary output)
+4. **Notion DB 전체 상태 재확인**: 모든 row가 `완료`인지 크로스체크(위임). 불일치 시 경고 + 사용자에게 수동 확인 요청 (secondary output)
 5. **다음 단계 안내**: PR 생성·머지·배포는 이 스킬이 수행하지 않는다. 필요 시 `/release-workflow:main-branch-merge` 스킬로 체인하거나 수동 진행
 
 ---
@@ -402,15 +415,14 @@ pass → *            : 금지 — 통과 후 새 이슈는 새 task로 등록 (
 
 | 약칭 | MCP 풀네임 | 용도 |
 |-------|-----------|------|
-| `notion-search` | `mcp__plugin_Notion_notion__notion-search` | 페이지 탐색 (Phase 1 Step 4) |
-| `notion-fetch` | `mcp__plugin_Notion_notion__notion-fetch` | DB·row 조회 (Phase 1 Step 4, Phase 3 최종 확인) |
-| `notion-update-page` | `mcp__plugin_Notion_notion__notion-update-page` | **역방향 상태 동기화** (Phase 2 Step C — pass/blocked 후 Notion row 업데이트) |
 | `resolve-library-id` | `mcp__plugin_context7_context7__resolve-library-id` | Context7 — 서드파티 ID 해석 (Generator가 필요 시) |
 | `query-docs` | `mcp__plugin_context7_context7__query-docs` | Context7 — 최신 API 문서 조회 |
 | Task | Claude 표준 | Generator·Evaluator 서브에이전트 기동 |
 | Git | 표준 CLI | 커밋만. push 자동 실행 금지 |
 
-상세 호출 규약·필터 JSON·상태 속성 매핑은 `references/notion_integration.md`. 도구 미설치·네트워크 실패 시 거동은 `references/degradation_policy.md`.
+Notion 은 이 표에 없다 — 이 스킬은 Notion MCP 도구 이름을 알지 못한다("Notion 접근 방식"
+절 참조). 이 프로젝트가 요구하는 조회/필터/속성 매핑은 `references/notion_integration.md`.
+도구 미설치·연동 없음 시 거동은 `references/degradation_policy.md`.
 
 ---
 
@@ -421,7 +433,7 @@ pass → *            : 금지 — 통과 후 새 이슈는 새 task로 등록 (
 - `references/initializer_guide.md` — Phase 1 상세 (CLAUDE.md 계약, 이전 버전 스캔, feature_list 스키마, PROGRESS 템플릿)
 - `references/failure_modes.md` — 14가지 실패 모드 대응표 + 상태 전이 상세
 - `references/contract_consumer.md` — release-plan ↔ release-impl 필드 매핑·경로 규약
-- `references/notion_integration.md` — Notion MCP 풀네임·필터 JSON·역방향 업데이트 규약
+- `references/notion_integration.md` — 이 스킬이 Notion 에 기대하는 조회 조건·속성 이름·타입, 역방향 업데이트 규약
 - `references/degradation_policy.md` — 외부 도구 장애 처리 정책 (core vs secondary)
 - `references/generator_guide.md` — Generator용 증분 구현·코딩 컨벤션 보조 가이드
 - `references/evaluator_guide.md` — Evaluator용 검증 체크리스트·실패 패턴 보조 가이드

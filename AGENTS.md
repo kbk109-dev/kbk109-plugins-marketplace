@@ -61,6 +61,14 @@ echo "$P" | python3 -B $HG   # → 무출력
 # 검증 스크립트 — 훅과 같은 규칙 모듈을 쓰므로 판정이 일치해야 한다. 위반이 있으면 exit 1.
 python3 -B plugins/harness-devkit/skills/harness-dev/scripts/validate_feature_list.py \
   /tmp/hd-fixture/docs/harness/demo/feature_list.json; echo "exit=$?"
+
+# notion-api-only 훅 — 프로젝트 로컬 설치이므로 탈출구가 없다(harness 훅과 대조).
+# 발화 조건은 "이 프로젝트에서 토큰을 구할 수 있는가" 하나뿐이다.
+NG=plugins/project-conventions/skills/init-agent-rules/templates/notion_mcp_gate.py
+env -u NOTION_TOKEN python3 -B $NG <<< \
+  '{"cwd":"/tmp","tool_name":"mcp__claude_ai_Notion__notion-fetch","tool_input":{}}'   # 무출력(토큰 없음)
+NOTION_TOKEN=dummy python3 -B $NG <<< \
+  '{"cwd":"/tmp","tool_name":"mcp__claude_ai_Notion__notion-fetch","tool_input":{}}'   # deny — 재시도해도 계속 막힘
 ```
 
 `evals/evals.json` 은 CLI 러너가 없다. `skill-creator:skill-creator` 플러그인이 소비하며,
@@ -87,6 +95,12 @@ scripts/slugify.py · skills/release-plan/scripts/slugify.py      # 깨짐
 ```
 
 상대 경로는 cwd 에 의존하고, 스킬이 도는 cwd 는 저장소 루트가 아니라 **사용자의 프로젝트**다.
+
+예외 — **프로젝트에 설치되는** 스크립트(플러그인이 번들한 것이 아니라
+`project-conventions:init-agent-rules` 가 대상 프로젝트에 복사해 넣는 것, 예:
+`.claude/scripts/notion_api.py`)는 이 규칙의 대상이 아니다. 그 파일은 애초에 프로젝트
+루트 기준 고정 경로에 있으므로, 스킬이 `.claude/scripts/notion_api.py` 처럼 프로젝트
+상대 경로로 참조하는 것이 옳다 — `${CLAUDE_PLUGIN_ROOT}` 를 붙이면 오히려 틀린 경로가 된다.
 
 ### 2. 스킬 간 호출은 `<plugin>:<skill>` 네임스페이스
 
@@ -117,8 +131,10 @@ scripts/slugify.py · skills/release-plan/scripts/slugify.py      # 깨짐
 | `firebase-crashlytics-plan` | `docs/plan/CRASHLYTICS_PLAN.md` | `firebase-crashlytics-impl` |
 | `release-plan` | Notion DB + `docs/skills/release-plan/{DB slug}/v{ver}/` | `release-impl` |
 
-`release-workflow` 는 Notion 을 상태 저장소로 쓰고, 로컬 경로의 `{DB slug}` 를 반드시
+`release-workflow` 는 Notion 을 상태 저장소로(선택) 쓰고, 로컬 경로의 `{DB slug}` 를 반드시
 `slugify.py` 출력으로 정한다 — 모델이 kebab-case 를 직접 만들면 경로가 호출마다 달라진다.
+Notion 접근 방법은 플러그인이 모른다 — 프로젝트에 `notion-api-only` 규칙이 있으면 위임하고,
+없으면 로컬 파일·사용자 입력으로 대체한다(자세한 내용은 `release-workflow/README.md`).
 
 ## Harness Engineering — 스킬 수정 시 지켜야 할 근거
 
@@ -163,14 +179,20 @@ evidence 로그만 증거로 인정한다 (`release-plan/agents/fact-checker.md`
   MIT 재배포 대상이 아니다.
 - **`.skill` 번들** — 플러그인은 loose 파일을 로드하므로 zip 사본은 중복이고 원본과 어긋난다.
   `.gitignore` 에 등록돼 있다.
-- **`.mcp.json`** — 스킬이 쓰는 MCP(Notion, context7)는 사용자 환경에 이미 연결돼 있다.
-  플러그인이 재정의하면 충돌한다.
+- **`.mcp.json`** — 스킬이 쓰는 MCP(context7 등)는 사용자 환경에 이미 연결돼 있다.
+  플러그인이 재정의하면 충돌한다. Notion 은 예외다 — 이 저장소는 Notion MCP 를 플러그인이
+  전제하는 것 자체를 지양하고, 토큰 기반 REST(`notion-api-only` 규칙)로 유도한다.
 - **조건 없는 `hooks/`** — 플러그인 훅은 켜진 **모든 프로젝트**에서 발화한다. 기본은 넣지 않되,
   ① 조건 미충족이면 아무것도 출력하지 않고 ② 전 구간 fail-open 이며 ③ 도구를 차단한다면
   **복구 가능**한 훅만 허용한다. ③ 은 "같은 호출을 그대로 다시 하면 반드시 통과한다"는 뜻이다 —
   그래야 훅이 오판했을 때 최대 대가가 **도구 호출 한 번 재시도**로 유계이고, 그 유계성이 곧
   "전역 발화해도 안전하다"의 정의다. 사례는 `harness-devkit/hooks/` 의 훅 1개
   (설계 근거는 그 플러그인 README).
+  **예외** — 이 ③ 은 플러그인이 번들해 **모든 프로젝트**에 뜨는 훅을 전제로 한다.
+  `project-conventions:init-agent-rules` 가 사용자의 명시적 옵트인에 따라 **그 프로젝트에만**
+  설치하는 `notion_mcp_gate.py` 는 전역 발화가 아니므로 이 요구사항의 적용 대상이 아니다 —
+  탈출구 없이 영구 차단해도 된다(단, 토큰을 구할 수 있을 때만 발화 — 대체 경로 없이 막지
+  않는다는 ①②는 그대로 지킨다).
 - **`commands/`** — 18개 전부 스킬이고 스킬은 이미 `/plugin:skill` 로 호출된다. 래퍼는 중복이다.
 
 ## 버전 관리

@@ -7,7 +7,7 @@
     "url": "https://github.com/kbk109-dev"
   },
   "metadata": {
-    "version": "1.16.0"
+    "version": "1.17.0"
   },
   "plugins": [
     {
@@ -55,10 +55,10 @@
     {
       "name": "release-workflow",
       "displayName": "Release Workflow",
-      "description": "Notion 데이터베이스를 상태 저장소로 쓰는 릴리즈 파이프라인. 버전별 작업 분해·기술 토큰 팩트체크(계획), Task State Machine과 Generator/Evaluator 분리 검증(구현), 패치 릴리즈 자동화, dev→main 머지와 릴리즈 노트 생성까지 다룬다.",
+      "description": "Notion 데이터베이스를 상태 저장소로(선택) 쓰는 릴리즈 파이프라인. 버전별 작업 분해·기술 토큰 팩트체크(계획), Task State Machine과 Generator/Evaluator 분리 검증(구현), 패치 릴리즈 자동화, dev→main 머지와 릴리즈 노트 생성까지 다룬다. Notion MCP 도구는 직접 호출하지 않고 프로젝트의 연동 설정에 위임한다.",
       "source": "./plugins/release-workflow",
       "category": "deployment",
-      "version": "1.1.0",
+      "version": "2.0.0",
       "author": {
         "name": "kbk109",
         "url": "https://github.com/kbk109-dev"
@@ -96,10 +96,10 @@
     {
       "name": "product-planning",
       "displayName": "Product Planning",
-      "description": "노션 문서·회의록을 PRD 10개 섹션(문서 정보·개요·유저스토리·기능/비기능 요구사항·유저 플로우·수용기준·의존성·위험·성공 지표)으로 정규화한다. 모든 기능 요구사항에 Given-When-Then 수용기준을 도출하고, 디자인·엔지니어링·QA 리뷰어 3개를 병렬 기동해 초안을 교차 검토한 뒤 Notion 에 발행한다.",
+      "description": "문서·회의록을 PRD 10개 섹션(문서 정보·개요·유저스토리·기능/비기능 요구사항·유저 플로우·수용기준·의존성·위험·성공 지표)으로 정규화한다. 모든 기능 요구사항에 Given-When-Then 수용기준을 도출하고, 디자인·엔지니어링·QA 리뷰어 3개를 병렬 기동해 초안을 교차 검토한다. Notion 은 선택 연동이며, 프로젝트에 설정돼 있으면 원본 조회·발행에 쓴다.",
       "source": "./plugins/product-planning",
       "category": "productivity",
-      "version": "1.0.0",
+      "version": "2.0.0",
       "author": {
         "name": "kbk109",
         "url": "https://github.com/kbk109-dev"
@@ -117,10 +117,10 @@
     {
       "name": "project-conventions",
       "displayName": "Project Conventions",
-      "description": "Claude 와 Cursor 를 번갈아 쓰는 프로젝트의 지시 문서를 한 곳으로 모은다. CLAUDE.md 본문을 AGENTS.md 로 이관해 단일 소스로 만들고 CLAUDE.md 는 포인터만 남긴 뒤, git 브랜치 워크플로 규칙을 .claude/rules/ 와 .cursor/rules/ 양쪽에 동일 본문으로 설치한다. 생성물인 .mdc 사본이 원본과 갈라졌는지는 별도 검사 스킬이 바이트 단위로 잡는다.",
+      "description": "Claude 와 Cursor 를 번갈아 쓰는 프로젝트의 지시 문서를 한 곳으로 모은다. CLAUDE.md 본문을 AGENTS.md 로 이관해 단일 소스로 만들고 CLAUDE.md 는 포인터만 남긴 뒤, git 브랜치 워크플로 규칙을 .claude/rules/ 와 .cursor/rules/ 양쪽에 동일 본문으로 설치한다. 선택적으로 Notion MCP 도구를 차단하고 토큰 기반 REST API 로만 접근하게 강제하는 훅도 설치한다. 생성물인 .mdc 사본·설치 스크립트가 원본과 갈라졌는지는 별도 검사 스킬이 바이트 단위로 잡는다.",
       "source": "./plugins/project-conventions",
       "category": "development",
-      "version": "2.0.0",
+      "version": "3.0.0",
       "author": {
         "name": "kbk109",
         "url": "https://github.com/kbk109-dev"
