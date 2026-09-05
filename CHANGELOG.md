@@ -1,5 +1,92 @@
 # Changelog
 
+## 1.17.0
+
+Notion 을 **플러그인이 전제하는 의존성에서 프로젝트가 선택하는 연동으로** 내린다.
+`release-workflow`·`product-planning` 은 이제 Notion MCP 도구 이름을 하나도 모른다 — Notion 이
+필요한 지점마다 "이 프로젝트에 연동 규칙이 있으면 위임하고, 없으면 대체 경로로 빠진다"만 안다.
+강제는 `project-conventions:init-agent-rules` 하나로 모은다: 프로젝트 세팅 시 Notion 사용 여부를
+묻고, 쓴다고 답하면 그 자리에서 Notion MCP 호출을 막는 훅과 토큰 기반 REST 클라이언트를 설치한다.
+
+MCP 서버 접두사가 환경마다 달라(`mcp__claude_ai_Notion__`, `mcp__plugin_Notion_notion__`, …)
+같은 스킬이 사람마다 다른 도구를 부르고 다른 응답 스키마를 받던 문제, 그리고 `release-impl` 이
+하드코딩했던 접두사가 이미 이 환경과 맞지 않아 도구 가용성 게이트가 항상 실패하던 버그를
+같은 전환으로 없앤다.
+
+### 되돌리는 이전 판단 2건
+
+| 이전 판단 | 뒤집는 근거 |
+|---|---|
+| **v1.4.0** — 프로젝트 `.claude/settings.json` 에 훅 설치를 "설계상 거부한 것"으로 명시. 이유: *"settings.json 병합 로직과 그 병합을 검사할 항목이 새로 필요하다"* | 그 비용을 이번에 지불한다 — `install_agent_rules.py` 에 멱등 병합 로직을, `check-agent-rules` 에 검사 3개를 추가했다. 당시 대안(플러그인 번들 훅)은 켜진 모든 프로젝트에서 발화해 정책형 영구 차단과 양립하지 못한다. 프로젝트 로컬 설치는 사용자가 그 프로젝트에서 명시적으로 옵트인한 것이라 성격이 다르다 |
+| **v1.16.0 / `project-conventions` 2.0.0** — 이 플러그인을 "AGENTS.md 단일 소스화 + git 브랜치 규칙"으로 좁히고 `hooks/` 를 통째로 삭제해 **훅 없는 플러그인**으로 만듦. 조건부 설치 기계(`required` 플래그·`select_rules()`)도 함께 삭제 | 이번 훅은 그때 지운 것과 성격이 다르다 — 제거된 codegraph 훅은 권고형이고 모든 `Bash` 호출마다 상시 비용을 냈다. 이번 훅은 정책형이고 `mcp__*notion*` 에만 발화하며, **프로젝트에** 설치되므로 다른 프로젝트에 비용이 0 이다. "훅을 들고 다니지 않는다"는 그대로 지키면서 "훅을 설치할 수 있는 플러그인"이 됐다. 조건부 설치 기계 복원은 그 릴리스가 *"선택적 규칙이 다시 필요해지면 그때 넣는다"* 고 열어 둔 그 자리다 |
+
+### ⚠️ 업데이트하면 달라지는 것
+
+**`release-plan`·`release-impl`·`fix-plan-impl`·`main-branch-merge`·`create-prd` 가 더 이상
+Notion MCP 도구 이름을 지시하지 않는다.** 각 스킬은 Notion 이 필요한 지점마다 "이 프로젝트에
+`.claude/rules/notion-api-only.md` 가 있으면 그 규칙(`.claude/scripts/notion_api.py`)을 따르고,
+없으면 대체 경로로 빠진다"로 위임한다. Notion MCP 가 이미 연결된 환경에서 지금까지 이 플러그인들이
+동작해 왔다면, 업데이트 후에는 프로젝트에 `notion-api-only` 규칙을 설치해야(또는 대체 경로가
+받아들여져야) 같은 동작을 계속 얻는다.
+
+**`create-prd` 의 `compatibility: 'mcp: notion'` frontmatter 가 사라진다.** MCP 의존을
+선언하는 정확히 그 문구였다. Notion 연동 없이도 로컬 파일 입력만으로 PRD 작성을 완료할 수 있다.
+
+**`main-branch-merge` Step 5(코드 vs Notion 비교)의 "Notion 문서 수정" 능력이 사실상 축소된다.**
+REST API 는 페이지 속성 갱신은 지원하지만 본문 문장 교체에 대응하는 호출이 없다 — 수정 실패는
+이 스킬의 기존 정책("실패 시 리포트만, 블로킹하지 않음")으로 흡수된다.
+
+**`project-conventions:init-agent-rules` 가 프로젝트에 새 파일 카테고리를 설치한다.**
+`--notion-rule on` 을 선택하면 `.claude/scripts/notion_api.py`(REST 클라이언트) ·
+`.claude/hooks/notion_mcp_gate.py`(차단 훅) · `.claude/settings.json` 의 `PreToolUse` 등록
+(기존 키는 보존하며 병합)이 추가된다. 기본값은 `off` — 아무 것도 물어보지 않으면 지금까지와
+동일하게 `git-branch-workflow` 규칙만 설치된다.
+
+**`notion_mcp_gate.py` 는 탈출구가 없다.** 토큰을 구할 수 있는 프로젝트에서 Notion MCP 도구를
+부르면 재시도해도 계속 막힌다 — 프로젝트 로컬 설치라 "전역 훅은 재시도하면 통과해야 한다"는
+저장소 규칙(AGENTS.md)의 적용 대상이 아니기 때문이다. `NOTION_MCP_GATE=off` 로 그 프로젝트에서만
+끌 수 있다.
+
+### 함께 고친 기존 버그 2건
+
+REST API 로 옮기며 드러났다 — MCP 가 관대하게 넘겨줬을 뿐, REST 였다면 이미 `400 validation_error`
+로 터졌을 불일치였다.
+
+- **상태 속성 이름·옵션 불일치**: `release-plan` 이 만드는 DB 는 컬럼 `완료`(옵션
+  계획/진행/완료/**보류**)인데 `release-impl` 은 `상태`(옵션 …/**차단**)를 썼다. `완료`/`보류` 로
+  통일했다.
+- **버전 필터 타입·값 불일치**: 스키마는 `버전` 을 `select` 로 정의하는데 `release-impl` 은
+  `rich_text` 필터에 `v{version}`(`v` 접두) 값을 썼다. `select` 필터에 `{version}`(접두 없는
+  `X.Y.Z`) 값으로 통일했다.
+
+### 추가 — `project-conventions` 2.0.0 → 3.0.0
+
+- `notion-api-only` 규칙 + `notion_api.py`(REST 클라이언트, 서브커맨드 15개) +
+  `notion_mcp_gate.py`(차단 훅) 템플릿
+- `install_agent_rules.py` — `RULES` 에 `required`/`cli_flag` 필드, `select_rules()`,
+  `--notion-rule {on,off}`, `install_scripts()`, `merge_hook_settings()`
+- `check_agent_rules.py` — 검사 7·8·9 (설치본이 플러그인 자신의 템플릿과 sha256 일치하는지,
+  `.claude/settings.json` 에 훅이 정확히 1개 등록됐는지). `notion-api-only` 가 설치돼 있을
+  때만 수행 — 없는 것 자체는 실패가 아니다
+- `init-agent-rules/SKILL.md` Step 1.5 — Notion 사용 여부를 묻는 게이트
+- `init-agent-rules/references/notion_onboarding.md` — integration 생성부터 `.env` 배치까지
+
+### 변경 — `release-workflow` 1.1.0 → 2.0.0
+
+release-plan/release-impl/fix-plan-impl/main-branch-merge 4개 스킬에서 Notion MCP 도구 참조를
+전부 제거하고 위임 패턴으로 교체. `release-impl` 의 도구 가용성 게이트가 하드코딩했던
+`mcp__plugin_Notion_notion__` 접두사(이미 이 환경과 불일치했다)도 이 지점에서 자연히 사라진다.
+`references/notion_integration.md` 를 MCP 호출 규약에서 "이 스킬이 Notion 에 기대하는 것"(요구
+스키마·조회 조건)으로 재작성. `references/notion_schema.md` 에 REST `properties` 스키마
+(`notion_db_schema.json`) 추가.
+
+### 변경 — `product-planning` 1.0.0 → 2.0.0
+
+`create-prd` 의 원본 문서 조회(Step 0)·PRD 발행(Step 11)을 위임 패턴으로 교체. Notion 부모 페이지
+입력이 이제 "Notion 연동이 있는 프로젝트에서만 필수"로 낮아졌다 — 없으면 로컬
+`docs/plan/PRD-{slug}.md` 완성만으로 끝난다. 이 플러그인에 없던 `README.md` 를 추가했다
+(기존 결함 — 루트 README 가 "플러그인별 README" 를 가리키는데 실체가 없었다).
+
 ## 1.16.0
 
 `project-conventions` 에서 **codegraph 강제를 전부 걷어낸다.** 훅 2개와 규칙 하나가 사라지고,
