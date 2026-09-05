@@ -1,6 +1,6 @@
 ---
 name: init-agent-rules
-description: "프로젝트의 CLAUDE.md 본문을 AGENTS.md 로 이관해 Claude·Cursor 공용 단일 소스로 만들고, CLAUDE.md 는 @AGENTS.md 포인터로 바꾼 뒤 규칙(git 브랜치 워크플로)을 .claude/rules/ 와 .cursor/rules/ 양쪽에 설치하는 스킬. 반드시 이 스킬을 사용해야 하는 경우: 'init-agent-rules', 'AGENTS.md 만들어줘', 'CLAUDE.md 를 AGENTS.md 로 옮겨줘', 'CLAUDE.md 랑 AGENTS.md 같이 관리하고 싶어', '커서랑 클로드 규칙 같이 쓰게 해줘', 'Cursor 랑 Claude 설정 통일해줘', 'AGENTS.md 로 이관', '에이전트 규칙 설치', '프로젝트 규칙 초기 설정', 'git 브랜치 규칙 넣어줘', '브랜치 워크플로 규칙 설치해줘', '커밋 규칙 세팅해줘', '.cursor/rules 만들어줘', 'cursor rules 설정', '프로젝트 초기 설정 해줘', '규칙 문서 세팅', 'set up AGENTS.md', 'migrate CLAUDE.md to AGENTS.md', 'share rules between Claude and Cursor', 'install git branch workflow rule', 'set up project conventions', 'sync CLAUDE.md and AGENTS.md'. CLAUDE.md 가 없는 프로젝트에서는 실행되지 않는다 — 이관 대상이 없으므로 /init 를 먼저 안내한다."
+description: "프로젝트의 CLAUDE.md 본문을 AGENTS.md 로 이관해 Claude·Cursor 공용 단일 소스로 만들고, CLAUDE.md 는 @AGENTS.md 포인터로 바꾼 뒤 규칙(git 브랜치 워크플로, 선택적으로 Notion 토큰 API 전용 연동)을 .claude/rules/ 와 .cursor/rules/ 양쪽에 설치하는 스킬. 반드시 이 스킬을 사용해야 하는 경우: 'init-agent-rules', 'AGENTS.md 만들어줘', 'CLAUDE.md 를 AGENTS.md 로 옮겨줘', 'CLAUDE.md 랑 AGENTS.md 같이 관리하고 싶어', '커서랑 클로드 규칙 같이 쓰게 해줘', 'Cursor 랑 Claude 설정 통일해줘', 'AGENTS.md 로 이관', '에이전트 규칙 설치', '프로젝트 규칙 초기 설정', 'git 브랜치 규칙 넣어줘', '브랜치 워크플로 규칙 설치해줘', '커밋 규칙 세팅해줘', '.cursor/rules 만들어줘', 'cursor rules 설정', '프로젝트 초기 설정 해줘', '규칙 문서 세팅', 'Notion MCP 막아줘', 'Notion 을 API 로만 쓰게 강제해줘', 'Notion 토큰 연동', 'set up AGENTS.md', 'migrate CLAUDE.md to AGENTS.md', 'share rules between Claude and Cursor', 'install git branch workflow rule', 'set up project conventions', 'sync CLAUDE.md and AGENTS.md', 'block Notion MCP and enforce token API'. CLAUDE.md 가 없는 프로젝트에서는 실행되지 않는다 — 이관 대상이 없으므로 /init 를 먼저 안내한다."
 ---
 
 # init-agent-rules — CLAUDE.md → AGENTS.md 이관과 규칙 설치
@@ -14,6 +14,10 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 .cursor/rules/git-branch-workflow.mdc  ← 프론트매터 + 동일 본문 (생성물)
 ```
 
+Step 1.5 에서 Notion 연동을 선택하면 여기에 `.claude/rules/notion-api-only.md` +
+`.cursor/rules/notion-api-only.mdc` + `.claude/scripts/notion_api.py` +
+`.claude/hooks/notion_mcp_gate.py` + `.claude/settings.json` 훅 등록이 추가된다.
+
 **왜 AGENTS.md 가 SSoT 인가.** Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 를 읽는다.
 같은 내용을 두 파일에 두면 반드시 갈라진다 — 한쪽만 고치게 되고, 갈라져도 에러가 나지 않아
 알아채지 못한다. `CLAUDE.md` 가 `AGENTS.md` 를 가리키기만 하면 갈라질 여지 자체가 없어진다.
@@ -24,11 +28,13 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 
 ## 설치되는 규칙
 
-| 규칙 | 내용 |
-|---|---|
-| `git-branch-workflow` | `dev` 에서 분기·네이밍·커밋 승인 게이트·`dev` 로만 `--no-ff` 머지 (main 은 사람이) |
+| 규칙 | 내용 | 기본 |
+|---|---|---|
+| `git-branch-workflow` | `dev` 에서 분기·네이밍·커밋 승인 게이트·`dev` 로만 `--no-ff` 머지 (main 은 사람이) | 항상 설치 |
+| `notion-api-only` | Notion MCP 도구 호출을 훅으로 막고 `.claude/scripts/notion_api.py`(토큰 기반 REST) 로만 접근하게 강제 | **Step 1.5 에서 물어본 뒤에만** |
 
-규칙 제거는 `.md`·`.mdc`·`AGENTS.md` 마커 블록을 직접 지우는 **수동 작업**이다 — 스크립트는
+규칙 제거는 `.md`·`.mdc`·`AGENTS.md` 마커 블록(+ `notion-api-only` 는 `.claude/scripts/`·
+`.claude/hooks/`·`.claude/settings.json` 훅 등록)을 직접 지우는 **수동 작업**이다 — 스크립트는
 어떤 경우에도 설치된 규칙을 지우지 않는다.
 
 ## 입력값 확인 (게이트)
@@ -161,6 +167,24 @@ Step 0.5 는 그 뒤에 의도적으로 `CLAUDE.md` 를 더럽히므로 두 지�
 
 없는 명령을 규칙에 박아 두면 에이전트가 매 커밋마다 실패하는 명령을 실행한다. 비워 두는 편이 낫다.
 
+### Step 1.5. Notion 연동 여부
+
+아래를 근거로 제시하고 사용자에게 **묻는다.** 침묵하면 대기한다 — 이관 승인 게이트(0.5-4)와
+같은 규칙이다.
+
+- `.env` 또는 상위 폴더 `.env` 에 `NOTION_TOKEN` 이 있는가
+- `AGENTS.md`/`CLAUDE.md` 에 Notion 언급이 있는가
+- `package.json` 에 `@notionhq/client` 가 있는가
+
+**감지는 근거 제시용이고 자동으로 결정하지 않는다** — 오탐이 프로젝트에 파일 여러 개(규칙
+문서·REST 클라이언트·차단 훅·`.claude/settings.json` 편집)를 남긴다. "예" 면 Step 2 에서
+`--notion-rule on` 을 쓰고, "아니오" 면 그 인자를 생략한다(기본값이 `off`).
+
+"예" 를 골랐으면 [`references/notion_onboarding.md`](./references/notion_onboarding.md) 의
+6단계(integration 생성 → 권한 최소화 → 토큰 발급 → 페이지 공유 → `.env` 배치 → `doctor` 확인)
+를 안내한다. 토큰이 아직 없어도 설치는 진행할 수 있다 — 훅은 토큰을 구할 수 있을 때만
+발화하므로, 온보딩을 나중에 마쳐도 안전하다.
+
 ### Step 2. 설치
 
 먼저 `--dry-run` 으로 무엇이 바뀌는지 사용자에게 보여준다:
@@ -169,6 +193,7 @@ Step 0.5 는 그 뒤에 의도적으로 `CLAUDE.md` 를 더럽히므로 두 지�
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/init-agent-rules/scripts/install_agent_rules.py \
   --project-root . \
   --pre-commit-check "{Step 1 에서 정한 명령}" \
+  --notion-rule {Step 1.5 에서 정한 on 또는 off} \
   --dry-run
 ```
 
@@ -191,6 +216,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/init-agent-rules/scripts/install_agent_rule
 | `--on-existing-agents` | `abort`(기본) / `append-claude` / `keep-agents` |
 | `--force` | `keep-agents` 가 미커밋 `CLAUDE.md` 를 폐기하는 것을 허용 |
 | `--sync-mdc` | `.mdc` 만 현재 `.md` 본문으로 재생성. 아래 참조 |
+| `--notion-rule` | `on` 이면 `notion-api-only` 규칙 + `notion_api.py` + 차단 훅 + `.claude/settings.json` 등록까지 설치. 기본 `off` |
 
 ### 규칙을 프로젝트에 맞게 고칠 때 (`--sync-mdc`)
 
@@ -247,10 +273,20 @@ exit 0 이 아니면 설치가 실패한 것이다. stderr 를 사용자에게 �
 | `CLAUDE.md` | @AGENTS.md 포인터로 교체 |
 | `.claude/rules/git-branch-workflow.md` | 생성 |
 | `.cursor/rules/git-branch-workflow.mdc` | 생성 (본문 동일) |
+| `.claude/rules/notion-api-only.md` 등 4개 | {설치함 — 아래 표 | Notion 연동 선택 안 함} |
+
+(`--notion-rule on` 이었으면 추가로 보고)
+
+| 파일 | 상태 |
+|---|---|
+| `.cursor/rules/notion-api-only.mdc` | 생성 (본문 동일) |
+| `.claude/scripts/notion_api.py` | 설치 (템플릿과 바이트 동일) |
+| `.claude/hooks/notion_mcp_gate.py` | 설치 (템플릿과 바이트 동일) |
+| `.claude/settings.json` | `PreToolUse` 훅 등록(병합 — 기존 키 보존) |
 
 Step 0.5: 카파시 블록 {prepend | 이미 있어 skip | 생략 — 사용자 요청} · How 후보 {N}건 (승인 {N} / 축약 {N} / 보류 {N})
 새로 만든 파일: {승인된 skill·rules 경로 | 없음}
-기본 브랜치: {탐지된 이름} · 커밋 전 검증: {명령 또는 "없음"}
+기본 브랜치: {탐지된 이름} · 커밋 전 검증: {명령 또는 "없음"} · Notion 연동: {on | off}
 
 ### 앞으로
 
@@ -270,3 +306,9 @@ Step 0.5: 카파시 블록 {prepend | 이미 있어 skip | 생략 — 사용자 
   있을 때의 diff 제시 절차와 선택지별 결과
 - [`templates/git-branch-workflow.md`](./templates/git-branch-workflow.md) — 설치되는 규칙 본문.
   `{{MAIN_BRANCH}}` `{{PRE_COMMIT_CHECK}}` 플레이스홀더를 쓴다
+- [`references/notion_onboarding.md`](./references/notion_onboarding.md) — Step 1.5 에서 "예" 를
+  고른 경우 안내할 Notion integration 생성·공유·토큰 발급 절차
+- [`templates/notion-api-only.md`](./templates/notion-api-only.md) — `notion-api-only` 규칙
+  본문(서브커맨드 ↔ 구 MCP 도구 대응표의 유일한 정본). 플레이스홀더 없음
+- `templates/notion_api.py` · `templates/notion_mcp_gate.py` — 그대로(치환 없이) 복사해
+  설치하는 REST 클라이언트와 차단 훅. 손으로 옮겨 적지 않는다

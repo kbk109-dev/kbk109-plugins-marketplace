@@ -8,9 +8,10 @@
 
 | 요건 | 왜 필요한가 |
 |---|---|
-| `python3` | 두 스킬 모두 파이썬 스크립트가 파일을 쓴다 |
+| `python3` | 세 스킬 모두 파이썬 스크립트가 파일을 쓴다 |
 | 프로젝트 `CLAUDE.md` | 이관 대상. 없으면 스킬이 중단하고 `/init` 을 안내한다 |
 | git 저장소 | 이관 시 `git mv` 로 rename 히스토리를 보존한다. git 이 아니어도 동작은 한다 |
+| Notion integration 토큰 (선택) | `notion-api-only` 규칙을 설치할 때만 필요 — 없어도 설치는 되고, 훅은 토큰을 구할 수 있을 때만 발화한다 |
 
 ```
 /plugin marketplace add https://github.com/kbk109-dev/kbk109-plugins-marketplace
@@ -111,14 +112,15 @@ flowchart TD
 
 ### 몇 번 멈춰 서서 물어보나
 
-실행 전에 가장 궁금한 지점이다. **최대 4번**이고, 그 전까지 파일은 하나도 바뀌지 않는다.
+실행 전에 가장 궁금한 지점이다. **최대 5번**이고, 그 전까지 파일은 하나도 바뀌지 않는다.
 
 | # | 멈추는 지점 | 무엇을 묻나 | 안 물어도 되는 경우 |
 |---|---|---|---|
 | 1 | Step 0-3 | 작업 트리가 더러운데 진행할지 | 트리가 깨끗하면 안 묻는다 |
 | 2 | Step 0.5-4 | How 절차를 어디로 분리할지 | 분리 후보가 0건이면 안 묻는다 |
 | 3 | Step 0.5-6 | 다듬은 본문 diff 를 승인할지 | 다듬을 게 없으면 안 묻는다 |
-| 4 | Step 2 | `--dry-run` 계획대로 설치할지 | **항상 묻는다** |
+| 4 | Step 1.5 | 이 프로젝트가 Notion 을 쓰는지 (쓰면 MCP 를 막고 토큰 API 로 강제할지) | **항상 묻는다** — 감지 결과는 근거일 뿐, 자동 결정하지 않는다 |
+| 5 | Step 2 | `--dry-run` 계획대로 설치할지 | **항상 묻는다** |
 
 게이트에서 걸리면 묻는 게 아니라 **중단**한다. `CLAUDE.md` 가 없으면 뼈대를 지어내지 않고,
 내용 있는 `AGENTS.md` 가 있으면 자동 병합하지 않는다 — 규칙 문서는 조용한 유실이 치명적이다.
@@ -259,7 +261,7 @@ flowchart LR
 - 기존 `.mdc` 프론트매터는 **보존**된다. 플러그인이 `description` 문구를 바꿔도 이미 설치된
   프로젝트에서는 자동으로 갱신되지 않는다 — 필요하면 손으로 맞춘다.
 
-### `check-agent-rules` 가 보는 6가지
+### `check-agent-rules` 가 보는 9가지
 
 ```
 /project-conventions:check-agent-rules
@@ -273,10 +275,15 @@ flowchart LR
 | 4 | `.claude/rules/<규칙>.md` 존재 |
 | 5 | `.cursor/rules/<규칙>.mdc` 본문이 4번과 **바이트 동일** |
 | 6 | `AGENTS.md` 의 규칙별 마커 블록이 온전함 |
+| 7 | (`notion-api-only` 설치 시만) `.claude/scripts/notion_api.py` 가 플러그인 템플릿과 sha256 동일 |
+| 8 | (〃) `.claude/hooks/notion_mcp_gate.py` 가 플러그인 템플릿과 sha256 동일 |
+| 9 | (〃) `.claude/settings.json` 에 그 훅이 정확히 1개 등록됨 |
 
 4·5·6 은 규칙마다 반복한다. `.md`·`.mdc`·마커 블록 셋 중 **하나라도** 있으면 그 규칙은
 설치된 것으로 보고 나머지 둘도 요구한다 — 반쪽 설치를 잡기 위해서다. 셋 다 없는 선택 규칙은
-건너뛴다(안 쓰는 것은 갈라짐이 아니다).
+건너뛴다(안 쓰는 것은 갈라짐이 아니다). 7·8·9 는 `notion-api-only` 가 그 정의로 설치돼 있을
+때만 수행되며, 비교 대상은 **이 플러그인 자신의 템플릿**이다 — 검사 5 가 `.mdc` ↔ `.md` 를
+보는 것과 같은 성격이다.
 
 **5번이 이 플러그인의 존재 이유다.** 스크립트는 단독 호출할 수 있고 실패 시 exit 1 이므로
 pre-commit 훅에 걸어도 된다.
@@ -349,6 +356,8 @@ flowchart LR
 | [`init-agent-rules/SKILL.md`](../../plugins/project-conventions/skills/init-agent-rules/SKILL.md) | 에이전트가 실제로 따르는 실행 지시 |
 | [`references/claude_md_rewrite.md`](../../plugins/project-conventions/skills/init-agent-rules/references/claude_md_rewrite.md) | Step 0.5 재작성 규칙 정본 |
 | [`references/conflict_policy.md`](../../plugins/project-conventions/skills/init-agent-rules/references/conflict_policy.md) | `AGENTS.md` 충돌 처리 절차 |
+| [`references/notion_onboarding.md`](../../plugins/project-conventions/skills/init-agent-rules/references/notion_onboarding.md) | `notion-api-only` 선택 시 안내할 Notion integration 온보딩 절차 |
+| [`templates/notion-api-only.md`](../../plugins/project-conventions/skills/init-agent-rules/templates/notion-api-only.md) | 설치되는 규칙 본문 — 구 MCP 도구 ↔ `notion_api.py` 서브커맨드 대응표의 정본 |
 | [`check-agent-rules/SKILL.md`](../../plugins/project-conventions/skills/check-agent-rules/SKILL.md) | 검사 스킬 |
 | [`refresh-agent-rules/SKILL.md`](../../plugins/project-conventions/skills/refresh-agent-rules/SKILL.md) | 갱신 스킬 |
 | [`references/refresh_policy.md`](../../plugins/project-conventions/skills/refresh-agent-rules/references/refresh_policy.md) | 갱신 판정 규칙 정본 |
