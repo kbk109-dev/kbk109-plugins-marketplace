@@ -7,13 +7,13 @@
       "acceptance_criteria": [
         "`git branch --show-current` 실행 결과가 `dev`임을 로그에 출력한다",
         "Read로 `CLAUDE.md`를 읽는다",
-        "`notion-search`로 'MyApp Releases' 페이지를 찾고, `notion-fetch`로 하위 Release Plan DB의 레코드 목록을 가져온다",
+        "'MyApp Releases' 페이지를 찾고, 하위 Release Plan DB의 레코드 목록을 가져온다(Notion MCP 도구를 직접 지시하지 않고 프로젝트 위임 절차를 따른다)",
         "버전 계산에 `${CLAUDE_PLUGIN_ROOT}/skills/fix-plan-impl/scripts/compute_next_patch.py`를 stdin JSON 방식으로 호출한다 (LLM이 직접 patch+1을 계산하지 않는다)",
         "스크립트 출력의 `new_version`이 `latest_version`의 patch 자리만 +1 증가된 값이고, major/minor는 변경되지 않았다",
         "작업 브랜치 이름을 `fix/v{new_version}` 포맷으로 결정하고 Phase 2 확인 메시지에 포함한다",
         "Phase 2 확인 메시지에 `이관 예정 미커밋 파일: 0개 (또는 '없음')`이 포함된다 (working tree clean)",
         "사용자 명시적 확인('yes'/'확인') 전에는 `git checkout -b`, `/release-workflow:release-plan`, `/release-workflow:release-impl` 중 어느 것도 실행하지 않는다",
-        "Phase 3 Step 0에서 `notion-fetch`로 동일 `new_version` 레코드 race 재조회를 1회 수행한다",
+        "Phase 3 Step 0에서 동일 `new_version` 레코드 race 재조회를 1회 수행한다",
         "Phase 3 Step 1에서 `git rev-parse --verify fix/v{new_version}` 와 `git ls-remote --heads origin fix/v{new_version}` 를 모두 실행한다",
         "`git checkout -b fix/v{new_version}` 실행 후 `git branch --show-current` 가 `fix/v{new_version}` 임을 검증한다",
         "`docs/skills/fix-plan-impl/v{new_version}/state.json` 파일이 생성되고 `phase`, `new_version`, `branch`, `confirmed_at` 필드를 포함한다",
@@ -34,7 +34,7 @@
         "`git branch --show-current` 출력이 `dev`가 아님을 확인한다",
         "출력 메시지에 `dev 브랜치에서만 실행할 수 있습니다` 문구가 포함된다",
         "출력 메시지에 `git checkout dev` 를 실행하라는 안내가 포함된다",
-        "`notion-search`, `notion-fetch`, `git checkout -b`, `git stash`, `/release-workflow:release-plan`, `/release-workflow:release-impl` 중 어느 것도 호출하지 않는다",
+        "Notion 조회, `git checkout -b`, `git stash`, `/release-workflow:release-plan`, `/release-workflow:release-impl` 중 어느 것도 호출하지 않는다",
         "`docs/skills/fix-plan-impl/` 아래 어떤 파일도 생성하지 않는다",
         "사용자의 현재 브랜치를 자동으로 `dev`로 checkout하지 않는다"
       ],
@@ -140,7 +140,7 @@
       "acceptance_criteria": [
         "Read 로 `CLAUDE.md` 를 읽는다",
         "CLAUDE.md 에 Notion 정보가 없어도 스킬이 즉시 실패하지 않는다",
-        "사용자가 이미 제공한 'NotifyHub' 페이지 이름을 우선 사용해 `notion-search` 를 수행한다",
+        "사용자가 이미 제공한 'NotifyHub' 페이지 이름을 우선 사용해 페이지를 찾는다",
         "이후 정상 플로우 (Phase 1~6) 진행",
         "Notion 설정을 임의로 추정해서 주입하지 않는다 (사용자 입력이 유일한 권위 있는 출처)"
       ],

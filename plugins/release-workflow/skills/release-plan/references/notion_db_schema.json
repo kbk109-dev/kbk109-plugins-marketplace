@@ -1,0 +1,32 @@
+{
+  "작업": { "title": {} },
+  "완료": {
+    "select": {
+      "options": [
+        { "name": "계획", "color": "gray" },
+        { "name": "진행", "color": "blue" },
+        { "name": "완료", "color": "green" },
+        { "name": "보류", "color": "red" }
+      ]
+    }
+  },
+  "버전": { "select": { "options": [] } },
+  "구분": {
+    "multi_select": {
+      "options": [
+        { "name": "feature", "color": "blue" },
+        { "name": "system", "color": "gray" },
+        { "name": "hotfix", "color": "red" },
+        { "name": "performance", "color": "green" },
+        { "name": "docs", "color": "default" },
+        { "name": "refactor", "color": "purple" },
+        { "name": "infra", "color": "brown" }
+      ]
+    }
+  },
+  "작업 상세": { "rich_text": {} },
+  "선행 관계": { "rich_text": {} },
+  "병렬 진행 가능": { "rich_text": {} },
+  "등록일": { "date": {} },
+  "완료일": { "date": {} }
+}

@@ -1,6 +1,6 @@
 # 외부 도구 장애 처리 정책 (Degradation Policy)
 
-release-impl은 여러 외부 경계(Notion MCP, Context7 MCP, 네트워크, 프로젝트 빌드 도구)에 의존한다. 경계 하나가 실패했다고 스킬 전체를 중단하는 것은 "모 아니면 도"식 극단적 반응이며, 반대로 모든 실패를 조용히 삼키는 것은 "조기 완료 선언"을 숨기는 공범이 된다. 이 문서는 **어떤 실패를 core execution으로 보고, 어떤 실패를 secondary로 분리하는지**를 고정한다.
+release-impl은 여러 외부 경계(Notion 연동, Context7 MCP, 네트워크, 프로젝트 빌드 도구)에 의존한다. 경계 하나가 실패했다고 스킬 전체를 중단하는 것은 "모 아니면 도"식 극단적 반응이며, 반대로 모든 실패를 조용히 삼키는 것은 "조기 완료 선언"을 숨기는 공범이 된다. 이 문서는 **어떤 실패를 core execution으로 보고, 어떤 실패를 secondary로 분리하는지**를 고정한다.
 
 ---
 
@@ -28,9 +28,9 @@ Core는 실패 시 **반드시 표면화하여 사용자에게 에스컬레이�
 
 Phase 1 Step 1(CLAUDE.md 읽기) 전에 **한 번만** 수행한다. 이후 세션·오리엔테이션에서는 반복하지 않는다.
 
-1. **Notion MCP**: 노출된 함수 목록에 `mcp__plugin_Notion_notion__` 접두사가 있는가. 없으면:
-   - 로컬 `docs/skills/release-plan/{slug}/v{version}/task_list.json`이 존재하면 Notion 없이 진행 가능 — 해당 경로로 전환하고 사용자에게 안내 (`"Notion MCP 미연결 — 로컬 task_list.json으로 진행합니다"`).
-   - 로컬 파일도 없으면 종료: `"이 스킬은 Notion MCP 플러그인이 필요합니다. 설치 후 재시도하거나, docs/skills/release-plan/{slug}/v{version}/task_list.json을 먼저 준비해주세요."`
+1. **Notion 연동**: 이 프로젝트에 `.claude/rules/notion-api-only.md` 가 설치돼 있는가. 없으면:
+   - 로컬 `docs/skills/release-plan/{slug}/v{version}/task_list.json`이 존재하면 Notion 없이 진행 가능 — 해당 경로로 전환하고 사용자에게 안내 (`"Notion 연동 없음 — 로컬 task_list.json으로 진행합니다"`).
+   - 로컬 파일도 없으면 종료: `"이 스킬은 Notion 연동이 필요합니다. /project-conventions:init-agent-rules --notion-rule on 을 실행하거나, docs/skills/release-plan/{slug}/v{version}/task_list.json을 먼저 준비해주세요."`
 2. **Context7 MCP**: 노출된 함수 목록에 `mcp__plugin_context7_context7__` 접두사가 있는가. 없으면 경고만 출력하고 계속 진행 — Generator가 서드파티 라이브러리를 건드릴 때 별도 질의 경로를 쓴다 (아래 "Context7 실패" 참조).
 3. **프로젝트 CLAUDE.md**: `{project_root}/CLAUDE.md`가 존재하는가. 없으면 Phase 1 Step 1의 폴백(루트 설정 파일 추론 + 사용자 확인)으로 넘어간다. 이 스킬은 CLAUDE.md 자체를 만들어주지 않는다.
 
@@ -40,11 +40,14 @@ Phase 1 Step 1(CLAUDE.md 읽기) 전에 **한 번만** 수행한다. 이후 세�
 
 ## Notion 조회 실패 (Phase 1 Step 4)
 
+위임 대상(`.claude/scripts/notion_api.py` 가 설치됐다면 그것)이 일시 실패(429/5xx/네트워크)는
+이미 내부적으로 재시도한다 — release-impl 이 재시도 정책을 따로 갖지 않는다. 아래는 그
+재시도가 소진된 뒤(또는 애초에 연동이 없는) 최종 실패에 대한 대응이다.
+
 | 증상 | 대응 |
 |------|------|
-| `notion-search` 호출이 예외/빈 응답 | 3회 지수 backoff(2s → 4s → 8s) retry |
-| 3회 모두 실패, 로컬 `task_list.json` 존재 | `contract_consumer.md` 경로로 전환해 로컬 파일 소비. 사용자에게 전환 사실 안내 |
-| 3회 모두 실패, 로컬 파일 부재 | 종료. `"Notion 조회 실패 — 로컬 task_list.json도 없습니다. Notion 연결을 확인하거나 /release-workflow:release-plan을 먼저 실행해주세요."` |
+| Notion 조회가 최종 실패, 로컬 `task_list.json` 존재 | `contract_consumer.md` 경로로 전환해 로컬 파일 소비. 사용자에게 전환 사실 안내 |
+| Notion 조회가 최종 실패, 로컬 파일 부재 | 종료. `"Notion 조회 실패 — 로컬 task_list.json도 없습니다. Notion 연결을 확인하거나 /release-workflow:release-plan을 먼저 실행해주세요."` |
 | 페이지는 찾았으나 DB 이름 미존재 | 사용자에게 DB 이름 재확인 요청. 자동 유추 금지 (`"Release Plan"` 가정 금지) |
 | DB는 찾았으나 지정 버전의 row가 0건 | `"버전 {version}에 해당하는 작업이 없습니다. /release-workflow:release-plan을 먼저 실행하셨나요?"` 후 종료 |
 
@@ -56,9 +59,8 @@ Phase 1 Step 1(CLAUDE.md 읽기) 전에 **한 번만** 수행한다. 이후 세�
 
 | 증상 | 대응 |
 |------|------|
-| `notion-update-page` 예외 또는 4xx | 경고 stdout + `PROGRESS.md` "발견된 이슈"에 한 줄 기록 + 로컬 `feature_list.json`은 pass 유지. 다음 task로 진행 |
+| Notion 상태 갱신 실패 (인증·권한·validation 오류 등) | 경고 stdout + `PROGRESS.md` "발견된 이슈"에 한 줄 기록 + 로컬 `feature_list.json`은 pass 유지. 다음 task로 진행 |
 | 다수 task에서 반복 실패 | 3회 누적 시 사용자에게 "Notion 쓰기가 반복 실패합니다. 연결을 확인하거나 수동 동기화 계획이 필요합니다"라고 알린다. 여전히 core는 차단하지 않는다 |
-| 5xx 반복 | 위와 동일. Notion 서비스 장애일 수 있으므로 자동 재시도는 3회 내에서만 |
 
 Notion 쓰기는 **secondary output**이다. core execution(구현 + 로컬 상태 업데이트 + git commit)은 항상 우선한다.
 
