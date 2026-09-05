@@ -45,7 +45,7 @@
         },
         {
           "id": "preview_before_notion",
-          "text": "사용자 승인 전에 notion-create-pages 를 호출하지 않음"
+          "text": "사용자 승인 전에 Notion 에 페이지를 발행하지 않음"
         },
         {
           "id": "proposal_in_final_report",
