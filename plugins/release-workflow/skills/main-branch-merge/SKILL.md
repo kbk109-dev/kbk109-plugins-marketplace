@@ -173,20 +173,24 @@ dev 브랜치에서 아래 파일들의 버전을 업데이트한다:
 
 CLAUDE.md의 Notion 연동 정보를 사용하여 프로젝트 문서를 수집한다.
 
+**Notion 접근 방식**: 이 스킬은 어떤 도구로 Notion 에 접근할지 모른다 — 그건 프로젝트
+설정이다. 이 프로젝트에 `.claude/rules/notion-api-only.md` 가 있으면 그 규칙
+(`.claude/scripts/notion_api.py`)을 그대로 따르고, 없으면 아래 "Fallback" 절차로 빠진다.
+
 **수집 대상:**
 
-| 소스                               | Notion 도구                      | 추출 정보                                |
-| ---------------------------------- | -------------------------------- | ---------------------------------------- |
-| 프로젝트 메인 페이지 (Parent Page) | `notion-fetch`                   | 프로젝트명, 개요, 목적, 하위 페이지 목록 |
-| PRD 페이지                         | `notion-fetch`                   | 기능 요구사항, 유저 플로우, KPI          |
-| TRD 페이지                         | `notion-fetch`                   | 기술 스택, 아키텍처, DB 스키마           |
-| Tasks DB                           | `notion-fetch` (Data Source URL) | 전체 태스크 (완료/미완료), Sprint별 분류 |
-| Screen Spec DB                     | `notion-fetch` (Data Source URL) | 화면 목록, 컴포넌트                      |
-| 기타 하위 페이지                   | `notion-fetch` (재귀)            | 모든 하위 문서 내용                      |
+| 소스 | 추출 정보 |
+| --- | --- |
+| 프로젝트 메인 페이지 (Parent Page) | 프로젝트명, 개요, 목적, 하위 페이지 목록 |
+| PRD 페이지 | 기능 요구사항, 유저 플로우, KPI |
+| TRD 페이지 | 기술 스택, 아키텍처, DB 스키마 |
+| Tasks DB | 전체 태스크 (완료/미완료), Sprint별 분류 |
+| Screen Spec DB | 화면 목록, 컴포넌트 |
+| 기타 하위 페이지 (재귀) | 모든 하위 문서 내용 |
 
-**재귀 탐색:** 메인 페이지의 children을 확인하고, 각 child를 `notion-fetch`하여 전체 문서 트리를 수집한다.
+**재귀 탐색:** 메인 페이지의 children을 확인하고, 각 child를 재귀적으로 조회해 전체 문서 트리를 수집한다.
 
-**Notion 연결 실패 시:** "Notion 연결이 필요합니다. Tools 메뉴에서 Notion을 연결해주세요." 안내. Notion 수집에 실패해도 Step 5의 코드 분석은 계속 진행하며, Notion 기반 정보는 TODO placeholder로 표시한다.
+**Notion 연동이 없거나 연결 실패 시:** "이 프로젝트에 Notion 연동이 설정돼 있지 않습니다." 안내. Notion 수집에 실패해도 Step 5의 코드 분석은 계속 진행하며, Notion 기반 정보는 TODO placeholder로 표시한다.
 
 ---
 
@@ -214,7 +218,7 @@ CLAUDE.md의 Notion 연동 정보를 사용하여 프로젝트 문서를 수집�
 코드에 미구현 + Notion 기재 O   → 미구현으로 표시 (삭제하지 않음)
 ```
 
-- `notion-update-page`로 Notion 직접 수정
+- Notion 을 직접 수정한다(위임 — "Notion 접근 방식" 참조)
 - 수정 실패 시: 리포트만 하고, 이후 단계를 **블로킹하지 않음**
 - 수정이 끝나면 **수정 리포트**를 사용자에게 보여준다:
 
@@ -381,7 +385,7 @@ git push origin dev
 
 ## Notion 정보가 전혀 없는 경우의 Fallback
 
-Notion MCP가 미연결이거나 모든 Notion 호출이 실패한 경우에도 릴리스 프로세스는 계속 진행한다:
+이 프로젝트에 Notion 연동이 없거나 모든 Notion 호출이 실패한 경우에도 릴리스 프로세스는 계속 진행한다:
 
 1. **버전 업데이트** → 정상 진행
 2. **Notion 동기화** → 건너뜀 (리포트에 "Notion 미연결" 표시)

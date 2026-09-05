@@ -48,12 +48,14 @@ Invariants established:
 from __future__ import annotations
 
 import argparse
+import json
 import shutil
 import subprocess
 import sys
 from pathlib import Path
 
-# The rule table. Every rule here installs into every project.
+# The rule table. `required` rules install into every project; the rest install
+# only when the project opts in via the rule's `cli_flag` (an {on,off} argument).
 #
 # The rule names are duplicated in
 # check-agent-rules/scripts/check_agent_rules.py — the checker locates each block
@@ -63,11 +65,42 @@ from pathlib import Path
 RULES = (
     {
         "name": "git-branch-workflow",
+        "required": True,
         "heading": "Git 브랜치 워크플로",
         "pointer": "브랜치·커밋·머지 절차는",
         "mdc_description": "{main} 직접 작업 금지, dev 에서 분기, 커밋 승인, dev 로만 머지",
     },
+    {
+        "name": "notion-api-only",
+        "required": False,
+        "cli_flag": "notion_rule",
+        "heading": "Notion 연동 — 토큰 기반 REST API 전용",
+        "pointer": "Notion 연동 방식은",
+        "mdc_description": "Notion MCP 도구 대신 .claude/scripts/notion_api.py 로만 접근",
+    },
 )
+
+# notion-api-only 가 선택됐을 때 함께 설치하는 스크립트. 치환 없이 템플릿을 바이트 그대로
+# 복사한다 — 치환하면 check-agent-rules 의 sha256 비교(설치본 vs 템플릿)가 성립하지 않는다.
+SCRIPT_INSTALLS = (
+    {"template": "notion_api.py", "dest": ".claude/scripts/notion_api.py"},
+    {"template": "notion_mcp_gate.py", "dest": ".claude/hooks/notion_mcp_gate.py"},
+)
+
+# .claude/settings.json 에 병합하는 PreToolUse 훅 항목. command 는 $CLAUDE_PROJECT_DIR 로
+# 참조한다 — 상대 경로는 훅 프로세스의 cwd 가 보장되지 않고, 절대 경로는 저장소 이동 시
+# 깨진다. HOOK_MARKER 로 이 항목을 식별해 재실행 시 중복 없이 교체한다(멱등성).
+HOOK_MARKER = "notion_mcp_gate.py"
+HOOK_ENTRY = {
+    "matcher": "^mcp__.*[Nn]otion",
+    "hooks": [
+        {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notion_mcp_gate.py",
+            "timeout": 5,
+        }
+    ],
+}
 
 
 # Anthropic's documented target for a project instruction file. A GOAL, not a
@@ -299,6 +332,73 @@ def retitle(text: str) -> str:
     return "".join(lines)
 
 
+def select_rules(args: argparse.Namespace) -> tuple[dict, ...]:
+    """설치할 규칙만 골라낸다. required 규칙은 항상 포함되고, 그 외는 각자의 cli_flag
+    가 "on" 일 때만 포함된다 — 기본은 "off"이므로 아무 인자도 주지 않으면 늘던 대로
+    필수 규칙만 설치된다."""
+    selected = []
+    for rule in RULES:
+        if rule.get("required", True):
+            selected.append(rule)
+            continue
+        flag = rule.get("cli_flag")
+        if flag and getattr(args, flag, "off") == "on":
+            selected.append(rule)
+    return tuple(selected)
+
+
+def install_scripts(root: Path, templates_dir: Path, dry_run: bool) -> list[str]:
+    """SCRIPT_INSTALLS 의 템플릿을 대상 프로젝트에 바이트 그대로 복사하고 실행 권한을 준다."""
+    steps = []
+    for item in SCRIPT_INSTALLS:
+        src = templates_dir / item["template"]
+        dest = root / item["dest"]
+        steps.append(f"{item['dest']} 설치 (템플릿과 바이트 동일)")
+        if dry_run:
+            continue
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(src.read_bytes())
+        dest.chmod(dest.stat().st_mode | 0o111)
+    return steps
+
+
+def merge_hook_settings(root: Path, dry_run: bool) -> list[str]:
+    """.claude/settings.json 에 Notion MCP 차단 훅을 멱등하게 병합한다.
+
+    알 수 없는 최상위 키(permissions/env/model/statusLine 등)는 전부 보존한다 — 읽고
+    고쳐 쓰는 것이지 새로 만드는 것이 아니다. 파싱 실패 시 예외를 던져 호출자가 절대
+    덮어쓰지 않고 멈추게 한다 — 이게 이 기능에서 가장 중요한 안전장치다.
+    """
+    path = root / ".claude" / "settings.json"
+    if path.is_file():
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(
+                f".claude/settings.json 파싱 실패 — 손으로 고친 뒤 다시 실행하세요: {exc}"
+            ) from exc
+        if not isinstance(data, dict):
+            raise RuntimeError(".claude/settings.json 의 최상위가 객체가 아닙니다.")
+    else:
+        data = {}
+
+    hooks = data.setdefault("hooks", {})
+    pre_tool_use = hooks.setdefault("PreToolUse", [])
+    # 멱등성: 우리 command 를 담은 기존 항목을 전부 제거하고 다시 추가한다(내용이 바뀌어도
+    # 중복이 남지 않는다).
+    pre_tool_use[:] = [
+        entry for entry in pre_tool_use
+        if not any(HOOK_MARKER in h.get("command", "") for h in entry.get("hooks", []))
+    ]
+    pre_tool_use.append(HOOK_ENTRY)
+
+    steps = [".claude/settings.json 에 Notion MCP 차단 훅 등록 (PreToolUse)"]
+    if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return steps
+
+
 def upsert_marker_block(text: str, rule: dict) -> str:
     """Insert this rule's marker block, or replace it in place if already present."""
     name = rule["name"]
@@ -339,6 +439,12 @@ def main(argv: list[str]) -> int:
         action="store_true",
         help="only re-mirror the .mdc from the current .md; touch nothing else",
     )
+    ap.add_argument(
+        "--notion-rule",
+        choices=["on", "off"],
+        default="off",
+        help="install the notion-api-only rule + REST client + MCP-blocking hook",
+    )
     args = ap.parse_args(argv[1:])
 
     root = Path(args.project_root).resolve()
@@ -352,14 +458,22 @@ def main(argv: list[str]) -> int:
         )
         return sync_mdc(root, branch, args.dry_run)
 
+    selected = select_rules(args)
+    notion_selected = any(r["name"] == "notion-api-only" for r in selected)
+
     templates_dir = Path(__file__).resolve().parent.parent / "templates"
-    for rule in RULES:
+    for rule in selected:
         if not (templates_dir / f"{rule['name']}.md").is_file():
             print(
                 f"template missing: {templates_dir / (rule['name'] + '.md')}",
                 file=sys.stderr,
             )
             return 2
+    if notion_selected:
+        for item in SCRIPT_INSTALLS:
+            if not (templates_dir / item["template"]).is_file():
+                print(f"template missing: {templates_dir / item['template']}", file=sys.stderr)
+                return 2
 
     claude_md = root / "CLAUDE.md"
     agents_md = root / "AGENTS.md"
@@ -422,9 +536,9 @@ def main(argv: list[str]) -> int:
         agents_text = agents_md.read_text(encoding="utf-8")
         steps.append("기존 AGENTS.md 유지, CLAUDE.md 본문 폐기")
 
-    # ---- render every rule -------------------------------------------------
+    # ---- render every selected rule ----------------------------------------
     writes: list[tuple[str, str]] = []
-    for rule in RULES:
+    for rule in selected:
         name = rule["name"]
         template = (templates_dir / f"{name}.md").read_text(encoding="utf-8")
         rule_body = render(template, main_branch, args.pre_commit_check)
@@ -441,6 +555,14 @@ def main(argv: list[str]) -> int:
         steps.append(f"{cursor_rel(name)} 생성 (동일 본문 + 프론트매터)")
 
     steps.append("CLAUDE.md → 포인터로 재작성")
+
+    if notion_selected:
+        try:
+            steps.extend(install_scripts(root, templates_dir, args.dry_run))
+            steps.extend(merge_hook_settings(root, args.dry_run))
+        except (OSError, RuntimeError) as exc:
+            print(f"write failed: {exc}", file=sys.stderr)
+            return 1
 
     if args.dry_run:
         for s in steps:

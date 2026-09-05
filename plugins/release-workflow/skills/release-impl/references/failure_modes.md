@@ -19,7 +19,7 @@ release-impl이 방어하려는 **구조적 실패 모드**와 그 대응책. CL
 | acceptance_criteria 변조 | 달성 불가한 criterion을 완화하여 통과 | 생성 시 SHA-256 해시 (`acceptance_criteria_hashes`). `check_state_transition.py`가 해시 변경을 무조건 reject |
 | 계약 없는 즉흥 구현 | Generator가 "완료의 모양" 없이 코딩 시작 | `${CLAUDE_PLUGIN_ROOT}/skills/release-impl/scripts/check_sprint_contract.py` — 세 섹션(예상 수정 파일/검증 커맨드/실패 가능점) 비어 있으면 Evaluator가 즉시 fail |
 | 무한 재시도 | `retry_count` 상한 없음 | 스키마 조건부: `retry_count ≤ 2`. `blocked` 전이는 `retry_count==2`와 동시에만 성립 |
-| Notion 상태 고착 | 구현 후 Notion 쪽은 여전히 "계획 중" | Phase 2 Step C pass 처리에서 `notion-update-page` 역방향 업데이트 강제 (단, 실패 시 secondary) |
+| Notion 상태 고착 | 구현 후 Notion 쪽은 여전히 "계획 중" | Phase 2 Step C pass 처리에서 Notion 역방향 상태 업데이트 강제 (단, 실패 시 secondary) |
 | 오케스트레이터 체인 중단 | 자동 호출 중 사용자 확인 게이트 블록 | "호출 모드 감지" 섹션이 task_list/브랜치/프롬프트 신호로 자동 판별 → 오케스트레이터 모드에서 Step 7 게이트 생략 |
 | 조용한 실패 | Notion 오프라인·Context7 부재를 감지 못 하고 진행 | Phase 1 Step 0 도구 가용성 체크 + `references/degradation_policy.md`의 core vs secondary 분류 |
 

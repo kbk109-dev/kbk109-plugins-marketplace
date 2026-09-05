@@ -121,7 +121,7 @@ criterion이 "기존 import가 모두 제거됨", "어떤 패턴이 교차 파�
 
 Notion 상태 업데이트, 외부 알림 등 **secondary output**의 실패는 core execution을 차단하지 않는다:
 
-- Notion `notion-update-page` 실패 → 경고 출력 + `PROGRESS.md` "발견된 이슈"에 한 줄 기록 + 로컬 `feature_list.json`은 pass 유지
+- Notion 상태 갱신 실패 → 경고 출력 + `PROGRESS.md` "발견된 이슈"에 한 줄 기록 + 로컬 `feature_list.json`은 pass 유지
 - 외부 API 실패 → 로컬 상태는 계속 진행
 
 이 정책은 release-impl 전용 설계 원칙으로 **역방향 Notion 동기화가 실패해도 구현 자체는 멈추지 않게** 한다. 자세한 처리 규약은 (Sprint 3에서 추가될) `references/degradation_policy.md` 참조.

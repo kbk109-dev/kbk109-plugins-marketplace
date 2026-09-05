@@ -48,6 +48,19 @@ compatibility: 'mcp: context7'
 
 ---
 
+## Notion 접근 방식
+
+이 스킬은 **어떤 도구로 Notion 에 접근할지 모른다** — 그건 프로젝트 설정이다. 아래 Step 에서
+"Notion 페이지를 찾는다"·"DB 를 만든다"처럼 서술한 부분은 매번 이 절차를 뜻한다.
+
+1. 이 프로젝트에 `.claude/rules/notion-api-only.md` 가 있는지 확인한다.
+2. 있으면 그 규칙이 지시하는 방법(`.claude/scripts/notion_api.py`)을 그대로 따른다 — **이
+   스킬은 MCP 도구 이름을 지시하지 않는다.**
+3. 없으면 사용자에게 Notion 연동 방식을 확인한다. 이 스킬은 Notion 을 유일한 상태 저장소로
+   쓰므로 로컬 전용 대체 경로가 없다 — 연동이 없다는 응답이면 등록 전에 중단하고
+   `"Notion 연동이 설정돼 있지 않습니다. /project-conventions:init-agent-rules --notion-rule on 을
+   먼저 실행하거나, 사용자가 직접 Notion 에 접근할 방법을 알려주세요."` 를 안내한다.
+
 ## 호출 모드 (오케스트레이터 감지)
 
 이 스킬은 사용자가 직접 호출하는 경우와 `fix-plan-impl` 같은 오케스트레이터가 호출하는 경우를 구분해야 한다. 분리 제안을 잘못 발동하면 오케스트레이션 체인이 깨진다.
@@ -82,25 +95,30 @@ LLM은 실패 시 동일한 접근을 약간만 바꾸어 반복하는 경향이
 
 ### Step 1: Notion 페이지 탐색
 
-`notion-search`로 입력받은 노션 페이지 이름을 검색한다.
+입력받은 노션 페이지 이름을 찾는다(위 "Notion 접근 방식" 절차).
 
 - **찾은 경우**: 페이지 ID를 기록하고 Step 2로 진행
 - **못 찾은 경우**: `"해당 이름의 노션 페이지를 찾을 수 없습니다: {페이지 이름}"` 출력 후 종료
 
 ### Step 2: 지정된 데이터베이스 확인
 
-`notion-fetch`로 해당 페이지 하위를 확인하여, 입력된 **{DB 이름}**과 동일한 제목의 데이터베이스 존재 여부를 판단한다.
+해당 페이지 하위에서 입력된 **{DB 이름}**과 동일한 제목의 데이터베이스 존재 여부를 판단한다.
 
 - **있는 경우**: 기존 DB를 사용. Step 3으로 진행.
 - **없는 경우**: Step 2-1에서 새로 생성.
 
 #### Step 2-1: 데이터베이스 생성
 
-`notion-create-database`로 [`references/notion_schema.md`](./references/notion_schema.md)에 정의된 스키마(컬럼·DDL·RICH_TEXT 포맷 계약)로 **입력된 {DB 이름}** 제목의 데이터베이스를 생성한다.
+[`references/notion_schema.md`](./references/notion_schema.md)에 정의된 스키마(컬럼·속성 타입·
+RICH_TEXT 포맷 계약)로 **입력된 {DB 이름}** 제목의 데이터베이스를 만든다. 스키마 자체는 이
+스킬 소유다 — "무엇을 저장하는가"는 여기서 정하고, "어떻게 만드는가"만 위임한다.
 
 #### Step 2-2: 데이터베이스 뷰 설정
 
-DB 생성 직후 `notion-create-view`로 `references/notion_schema.md`의 "뷰 설정" 섹션에 따라 **버전별**(table, GROUP BY 버전)과 **진행 현황**(board, GROUP BY 완료) 두 개의 뷰를 생성한다.
+DB 생성 직후 `references/notion_schema.md`의 "뷰 설정" 섹션에 따라 **버전별**(table, GROUP BY
+버전)과 **진행 현황**(board, GROUP BY 완료) 두 개의 뷰를 만든다. 위임 대상이 뷰 생성을
+지원하지 않으면(예: 구 버전 스크립트) 이 단계는 secondary 로 취급한다 — 실패해도 Step 3 으로
+계속 진행하고, 최종 보고에 "뷰 수동 생성 필요"를 남긴다.
 
 ### Step 3: 과거 계획 컨텍스트 수집
 
@@ -108,7 +126,7 @@ DB 생성 직후 `notion-create-view`로 `references/notion_schema.md`의 "뷰 �
 
 **수집 대상:**
 
-1. **Notion DB 전체 레코드**: `notion-fetch`로 대상 DB의 모든 레코드를 조회하여 버전별로 그룹핑. 각 버전의 작업 목록·완료 상태·구분 분포를 집계.
+1. **Notion DB 전체 레코드**: 대상 DB의 모든 레코드를 조회해 버전별로 그룹핑. 각 버전의 작업 목록·완료 상태·구분 분포를 집계.
 2. **로컬 관리 문서**: `docs/skills/release-plan/{DB slug}/v*/release-plan.md`, `task_list.json`, `progress.md` 파일을 시간순으로 로드. **직전 최대 3개 버전**만 읽는다(컨텍스트 과부하 방지). `{DB slug}`는 반드시 `${CLAUDE_PLUGIN_ROOT}/skills/release-plan/scripts/slugify.py "{DB 이름}"`의 출력값을 사용한다(모델이 slug를 임의로 만들면 경로가 호출마다 달라진다).
 3. **현재 버전 내 기존 Task**: 입력된 대상 버전과 동일한 버전이 DB에 이미 존재하면, **해당 버전의 최대 Task 번호**와 기존 작업 제목·선행 관계·상태를 수집 (Step 4-4의 번호 이어 붙이기에 사용).
 
@@ -299,10 +317,10 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/release-plan/scripts/verify_tech_tokens.py 
 
 #### 6-1. 중복 검사 (멱등성 가드)
 
-`notion-create-pages` 호출 전에 Step 3에서 조회한 DB 레코드를 이용해 **이번 배치에 등록할 각 `(버전, 작업명)` 조합이 이미 존재하는지** 확인한다. 검사는 작업명 전체가 아니라 `[Task N]` 말머리를 제외한 뒷부분을 대소문자 무시·공백 정규화 후 비교한다(예: `이메일 로그인 구현` vs `이메일 로그인  구현`).
+Notion 레코드 생성을 위임하기 전에 Step 3에서 조회한 DB 레코드를 이용해 **이번 배치에 등록할 각 `(버전, 작업명)` 조합이 이미 존재하는지** 확인한다. 검사는 작업명 전체가 아니라 `[Task N]` 말머리를 제외한 뒷부분을 대소문자 무시·공백 정규화 후 비교한다(예: `이메일 로그인 구현` vs `이메일 로그인  구현`).
 
 - **중복이 없는 경우**: 6-2로 진행.
-- **중복이 있는 경우**: 사용자에게 `skip` / `upsert` / `abort` 중 하나를 선택받는다. 기본 동작은 `abort`이며, 선택 없이는 `notion-create-pages`를 호출하지 않는다.
+- **중복이 있는 경우**: 사용자에게 `skip` / `upsert` / `abort` 중 하나를 선택받는다. 기본 동작은 `abort`이며, 선택 없이는 Notion 에 레코드를 생성하지 않는다.
   - `skip`: 중복된 작업만 제외하고 나머지만 등록한다.
   - `upsert`: 중복된 레코드의 작업 상세/선행/병렬 컬럼을 새 값으로 업데이트한다(단, `완료` 상태가 `완료`·`진행`인 레코드는 건드리지 않는다).
   - `abort`: 이번 실행을 즉시 종료한다. 부분 등록을 남기지 않는다.
@@ -311,7 +329,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/release-plan/scripts/verify_tech_tokens.py 
 
 #### 6-2. 레코드 생성
 
-`notion-create-pages`로 각 작업을 개별 레코드로 생성한다.
+각 작업을 개별 레코드로 Notion 에 만든다(위 "Notion 접근 방식" 절차).
 
 **각 레코드 속성:**
 
@@ -397,21 +415,11 @@ Harness Engineering 관리 문서가 생성되었습니다:
 13. **기존 버전 폴더 보존**: 이전 버전 폴더의 문서를 수정·삭제하지 않는다.
 14. **acceptance_criteria 불변**: 생성 후 삭제·수정 금지.
 15. **slug는 스크립트로만 결정**: 로컬 경로에 쓰는 `{DB slug}`는 반드시 `${CLAUDE_PLUGIN_ROOT}/skills/release-plan/scripts/slugify.py`의 출력. 모델이 kebab-case를 직접 만들지 않는다.
-16. **중복 검사 필수**: Step 6-1에서 `(버전, 작업명)` 중복을 확인하고, 중복 존재 시 사용자가 `skip`/`upsert`/`abort`를 명시적으로 선택하기 전까지 `notion-create-pages`를 호출하지 않는다(기본 `abort`).
+16. **중복 검사 필수**: Step 6-1에서 `(버전, 작업명)` 중복을 확인하고, 중복 존재 시 사용자가 `skip`/`upsert`/`abort`를 명시적으로 선택하기 전까지 Notion 에 레코드를 생성하지 않는다(기본 `abort`).
 17. **조기 완료 선언 금지**: Step 6까지 끝나도 "완료"를 보고하지 않는다. Step 7 문서 생성 + `validate_task_list.py` 통과 후 Step 8에서만 최종 보고.
 18. **외부 기술 토큰 검증 필수**: Step 4-9에서 추출된 모든 토큰은 Step 4-10 Fact-checker(별개 Task 호출)가 Context7 → WebSearch로 검증한다. Step 4-11 `verify_tech_tokens.py` 게이트가 비-영(非零)이면 Step 5 미리보기로 진행하지 않는다. 외부 도구가 모두 응답 실패한 경우에만 사용자 명시 승인 후 `fact_check.verdict = "unverified-user-approved"`로 진행하며 `progress.md`에 사유를 기록한다. Fact-checker는 자기 기억으로 토큰을 통과시키지 않는다 — evidence 로그 파일이 유일한 근거다.
 
 ---
-
-## 사용하는 Notion MCP 도구
-
-| 도구                     | 용도                                                  |
-| ------------------------ | ----------------------------------------------------- |
-| `notion-search`          | 입력받은 이름으로 노션 페이지 검색                    |
-| `notion-fetch`           | 페이지 하위 구조 확인, DB 레코드 조회(과거 계획 포함) |
-| `notion-create-database` | 입력된 이름의 DB가 없을 때 SQL DDL로 생성             |
-| `notion-create-view`     | 버전별 그룹핑 뷰 및 진행 현황 보드 뷰 생성            |
-| `notion-create-pages`    | 분해된 작업 항목을 DB 레코드로 등록                   |
 
 ## 사용하는 외부 검증 도구 (Step 4-10)
 
@@ -426,7 +434,8 @@ Fact-checker 서브에이전트가 호출한다. 분해 주체(Generator)는 직
 
 ## 참조 문서
 
-- [`references/notion_schema.md`](./references/notion_schema.md) — DB 컬럼·DDL·뷰 설정·RICH_TEXT 포맷 계약
+- [`references/notion_schema.md`](./references/notion_schema.md) — DB 컬럼·DDL·뷰 설정·RICH_TEXT 포맷 계약 (컬럼 이름·옵션의 정본)
+- [`references/notion_db_schema.json`](./references/notion_db_schema.json) — 위 스키마를 REST `properties` 객체로 표현한 파일(DB 생성 위임 시 사용)
 - [`references/task_list_contract.md`](./references/task_list_contract.md) — task_list.json 스키마·상태 전이·검증 지시
 - [`references/harness_docs_templates.md`](./references/harness_docs_templates.md) — release-plan.md·progress.md 템플릿
 - [`references/golden_example.md`](./references/golden_example.md) — 종단간 실행 예제 (Stage Sudoku v2.2.0)

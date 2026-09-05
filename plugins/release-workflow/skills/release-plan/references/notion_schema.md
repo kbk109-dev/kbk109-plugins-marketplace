@@ -36,7 +36,7 @@ CREATE TABLE (
 
 선행 관계·병렬 진행 가능을 RELATION이 아닌 RICH_TEXT로 둔 이유는 두 가지다.
 
-1. `notion-create-pages`의 단일 트랜잭션 생성 시점에는 각 레코드의 ID가 아직 존재하지 않아 self-relation을 거는 것이 어렵다.
+1. 여러 레코드를 한 배치로 만드는 시점에는 각 레코드의 ID가 아직 존재하지 않아 self-relation을 거는 것이 어렵다.
 2. `[Task N]` 말머리 자체가 읽을 때 충분한 식별력을 제공한다 — 사람도, 후속 스킬(release-impl)도 번호만으로 Task를 지목할 수 있다.
 
 ## RICH_TEXT 포맷 계약
@@ -52,9 +52,15 @@ CREATE TABLE (
 
 ## 뷰 설정
 
-DB 생성 직후 `notion-create-view`로 두 개의 뷰를 만든다.
+DB 생성 직후 두 개의 뷰를 만든다.
 
 | 뷰 이름   | 타입  | 설정                                     | 용도                         |
 | --------- | ----- | ---------------------------------------- | ---------------------------- |
 | 버전별    | table | `GROUP BY "버전"; SORT BY "등록일" DESC` | 버전별 작업 그룹핑 (기본 뷰) |
 | 진행 현황 | board | `GROUP BY "완료"`                        | 칸반 스타일 진행 추적        |
+
+## REST 스키마 (`notion_db_schema.json`)
+
+Notion REST API 로 DB 를 생성할 때는 위 SQL DDL 대신 `references/notion_db_schema.json` 의
+`properties` 객체를 쓴다. **컬럼 이름·옵션은 이 문서가 정본이다** — REST 스키마 파일이 이
+표와 어긋나면 이 표를 기준으로 REST 스키마 파일을 고친다.

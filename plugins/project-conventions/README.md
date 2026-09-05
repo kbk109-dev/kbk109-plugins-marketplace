@@ -1,7 +1,8 @@
 # project-conventions
 
 Claude 와 Cursor 를 번갈아 쓰는 프로젝트에서, 에이전트 지시 문서를 한 곳으로 모으고 작업 규칙을
-양쪽에 설치한다. 스킬 3개 + 서브에이전트 훅 1개.
+양쪽에 설치한다. 스킬 3개. `git-branch-workflow` 는 항상 설치되고, `notion-api-only`(Notion
+MCP 차단 훅 + 토큰 기반 REST 클라이언트)는 사용자가 선택했을 때만 설치된다.
 
 ## 설치
 
@@ -23,9 +24,10 @@ Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 와 `.cursor/rules/` 를 읽�
 
 | 요건 | 비고 |
 |---|---|
-| `python3` | 두 스킬 모두 |
+| `python3` | 세 스킬 모두 |
 | 프로젝트 `CLAUDE.md` | `init-agent-rules` 의 실행 전제. 없으면 중단한다 |
 | git 저장소 | 이관 시 `git mv` 로 히스토리를 보존한다. git 저장소가 아니면 일반 이동으로 대체 |
+| Notion integration 토큰 (선택) | `notion-api-only` 규칙을 설치할 때만. 온보딩 절차는 `init-agent-rules/references/notion_onboarding.md` |
 
 ## 스킬
 
@@ -57,9 +59,10 @@ Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 와 `.cursor/rules/` 를 읽�
 
 설치되는 규칙:
 
-| 규칙 | 내용 |
-|---|---|
-| `git-branch-workflow` | `dev` 에서 분기·네이밍, 커밋 승인 게이트, `dev` 로만 `--no-ff` 머지 (main 은 사람이) |
+| 규칙 | 내용 | 기본 |
+|---|---|---|
+| `git-branch-workflow` | `dev` 에서 분기·네이밍, 커밋 승인 게이트, `dev` 로만 `--no-ff` 머지 (main 은 사람이) | 항상 설치 |
+| `notion-api-only` | Notion MCP 도구 호출을 훅으로 막고 `.claude/scripts/notion_api.py`(토큰 기반 REST)로만 접근하게 강제 | `--notion-rule on` 일 때만 |
 
 스크립트는 어떤 경우에도 이미 설치된 규칙을 **지우지 않는다** — 제거는 수동 작업이다.
 
@@ -71,6 +74,10 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 .claude/rules/git-branch-workflow.md   ← 규칙 본문
 .cursor/rules/git-branch-workflow.mdc  ← 프론트매터 + 동일 본문 (생성물)
 ```
+
+`--notion-rule on` 이면 여기에 `.claude/rules/notion-api-only.md` + `.cursor/rules/notion-api-only.mdc`
++ `.claude/scripts/notion_api.py` + `.claude/hooks/notion_mcp_gate.py` +
+`.claude/settings.json` 의 `PreToolUse` 훅 등록(기존 키는 보존하며 병합)이 추가된다.
 
 **`CLAUDE.md` 가 없으면 중단한다.** 뼈대를 지어내지 않는다 — 프로젝트 지시를 추측으로 채우는
 것보다 멈추는 게 낫고, 초안 작성은 `/init` 의 몫이다.
@@ -85,7 +92,7 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 
 ### `check-agent-rules`
 
-설치된 구조가 갈라졌는지 검사한다. 검사 항목 6가지:
+설치된 구조가 갈라졌는지 검사한다. 검사 항목 9가지:
 
 | # | 검사 |
 |---|---|
@@ -95,9 +102,13 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 | 4 | `.claude/rules/<규칙>.md` 존재 |
 | 5 | `.cursor/rules/<규칙>.mdc` 본문이 4번과 **바이트 동일** |
 | 6 | `AGENTS.md` 의 규칙별 마커 블록이 온전함 |
+| 7 | (`notion-api-only` 설치 시만) `.claude/scripts/notion_api.py` 가 플러그인 템플릿과 sha256 동일 |
+| 8 | (〃) `.claude/hooks/notion_mcp_gate.py` 가 플러그인 템플릿과 sha256 동일 |
+| 9 | (〃) `.claude/settings.json` 에 그 훅이 정확히 1개 등록됨 |
 
 4·5·6 은 규칙마다 반복한다. `.md`·`.mdc`·마커 블록 셋 중 하나라도 있으면 그 규칙은 설치된 것으로
 보고 나머지 둘도 요구한다 — 반쪽 설치를 잡기 위해서다. 셋 다 없는 선택 규칙은 건너뛴다.
+7·8·9 도 `notion-api-only` 가 그 정의로 설치돼 있을 때만 수행된다.
 
 ```
 /project-conventions:check-agent-rules

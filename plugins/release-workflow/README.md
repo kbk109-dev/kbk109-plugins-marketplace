@@ -15,7 +15,7 @@ Notion 데이터베이스를 상태 저장소로 쓰는 릴리즈 파이프라�
 
 | 요건 | 쓰는 곳 | 비고 |
 |---|---|---|
-| Notion MCP | 전부 | DB 생성·조회·상태 역동기화. 이게 없으면 동작하지 않는다 |
+| Notion 연동 (선택) | 전부 | DB 생성·조회·상태 역동기화. 프로젝트에 `.claude/rules/notion-api-only.md`(`project-conventions:init-agent-rules --notion-rule on`)가 있으면 그것을 쓰고, 없으면 각 스킬이 로컬 파일/사용자 입력으로 대체한다. 이 플러그인은 Notion MCP 도구를 직접 호출하지 않는다 |
 | context7 MCP | release-plan, release-impl | 기술 토큰 팩트체크 (모델 ID·라이브러리·버전) |
 | WebSearch | release-plan | context7 로 확인 안 되는 토큰의 2차 검증 |
 | `python3` | release-plan, release-impl, fix-plan-impl | 검증 스크립트 17개 실행 |
