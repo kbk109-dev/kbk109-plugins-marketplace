@@ -33,6 +33,12 @@ failure rather than an invisible no-op. Checks 7–9 run only when notion-api-on
 is installed by that same definition — they compare the PROJECT'S installed
 copy against THIS PLUGIN'S OWN template, the same "generated copy can drift"
 concern check 5 already covers for the .mdc mirror, not a cross-plugin check.
+
+No check covers .claude/settings.local.json (the --auto-compact-window option).
+That's deliberate, not an oversight: settings.json/.claude/scripts//.claude/hooks/
+are committed policy artefacts, so drift there is a real bug to catch. settings.
+local.json is a gitignored personal file — it varying per teammate, or being
+absent entirely, is the correct and expected state, not drift.
 """
 from __future__ import annotations
 
