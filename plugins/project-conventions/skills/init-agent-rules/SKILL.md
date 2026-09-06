@@ -18,6 +18,9 @@ Step 1.5 에서 Notion 연동을 선택하면 여기에 `.claude/rules/notion-ap
 `.cursor/rules/notion-api-only.mdc` + `.claude/scripts/notion_api.py` +
 `.claude/hooks/notion_mcp_gate.py` + `.claude/settings.json` 훅 등록이 추가된다.
 
+Step 1.6 에서 자동 압축 임계값을 설정하면 `.claude/settings.local.json`(개인,
+gitignore 대상)에 `autoCompactWindow` 가 추가된다.
+
 **왜 AGENTS.md 가 SSoT 인가.** Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 를 읽는다.
 같은 내용을 두 파일에 두면 반드시 갈라진다 — 한쪽만 고치게 되고, 갈라져도 에러가 나지 않아
 알아채지 못한다. `CLAUDE.md` 가 `AGENTS.md` 를 가리키기만 하면 갈라질 여지 자체가 없어진다.
@@ -185,6 +188,28 @@ Step 0.5 는 그 뒤에 의도적으로 `CLAUDE.md` 를 더럽히므로 두 지�
 를 안내한다. 토큰이 아직 없어도 설치는 진행할 수 있다 — 훅은 토큰을 구할 수 있을 때만
 발화하므로, 온보딩을 나중에 마쳐도 안전하다.
 
+### Step 1.6. 자동 압축(auto-compact) 임계값
+
+탐지 근거가 없으므로 그냥 **묻는다.** "이 프로젝트에서 컨텍스트 자동 압축이 도는 시점을
+낮추고 싶은가?" 예이면 몇 %인지 받는다(사용자가 숫자를 안 주면 기본 제안은 `50`).
+
+질문에 반드시 담을 사실 두 가지 — 빠뜨리면 설치 후 오해로 이어진다:
+
+- 기본값은 90%다. 낮출수록 압축이 더 자주 일어난다 — 긴 세션에서 컨텍스트 여유가 생기는
+  대신 **압축 횟수와 프롬프트 캐시 무효화가 늘어난다.**
+- 자동 압축에는 "작업이 끝난 뒤" 라는 개념이 없다. 매 요청 직전에 **토큰 임계값만** 보고
+  판단하므로, 작업 도중이라도 임계값을 넘는 순간 그 자리에서 압축된다.
+
+**아니오면 Step 2 에서 `--auto-compact-window` 를 생략한다** — 기본이 미설정이라 아무
+설정 파일도 건드리지 않는다. "예" 면 받은 %를 100 으로 나눈 값(예: `50` → `0.5`)을
+Step 2 명령에 넣는다.
+
+**왜 `.claude/settings.local.json` 인가.** 이 값은 프로젝트 규약이 아니라 모델·컨텍스트
+크기·작업 습관에 딸린 개인 환경 값이다. 커밋되는 `.claude/settings.json` 에 쓰면 이
+저장소를 클론한 모든 사람의 개인 `~/.claude/settings.json` 설정을 덮어쓴다. 설치
+스크립트가 `.gitignore` 대상 여부를 확인해 대상이 아니면 경고를 출력한다 —
+`.gitignore` 는 고치지 않고 보고만 하므로, 경고가 뜨면 사용자에게 그대로 전달한다.
+
 ### Step 2. 설치
 
 먼저 `--dry-run` 으로 무엇이 바뀌는지 사용자에게 보여준다:
@@ -194,6 +219,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/init-agent-rules/scripts/install_agent_rule
   --project-root . \
   --pre-commit-check "{Step 1 에서 정한 명령}" \
   --notion-rule {Step 1.5 에서 정한 on 또는 off} \
+  --auto-compact-window {Step 1.6 에서 정한 값, 예: 0.5. 설정 안 하면 이 인자를 생략} \
   --dry-run
 ```
 
@@ -217,6 +243,7 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/init-agent-rules/scripts/install_agent_rule
 | `--force` | `keep-agents` 가 미커밋 `CLAUDE.md` 를 폐기하는 것을 허용 |
 | `--sync-mdc` | `.mdc` 만 현재 `.md` 본문으로 재생성. 아래 참조 |
 | `--notion-rule` | `on` 이면 `notion-api-only` 규칙 + `notion_api.py` + 차단 훅 + `.claude/settings.json` 등록까지 설치. 기본 `off` |
+| `--auto-compact-window` | `0` 초과 `1` 미만 값이면 `.claude/settings.local.json` 에 `autoCompactWindow` 기록. 생략하면 그 파일을 건드리지 않음 |
 
 ### 규칙을 프로젝트에 맞게 고칠 때 (`--sync-mdc`)
 
@@ -274,6 +301,7 @@ exit 0 이 아니면 설치가 실패한 것이다. stderr 를 사용자에게 �
 | `.claude/rules/git-branch-workflow.md` | 생성 |
 | `.cursor/rules/git-branch-workflow.mdc` | 생성 (본문 동일) |
 | `.claude/rules/notion-api-only.md` 등 4개 | {설치함 — 아래 표 | Notion 연동 선택 안 함} |
+| `.claude/settings.local.json` | {autoCompactWindow={값} 기록 | 설정 안 함} |
 
 (`--notion-rule on` 이었으면 추가로 보고)
 
@@ -286,7 +314,8 @@ exit 0 이 아니면 설치가 실패한 것이다. stderr 를 사용자에게 �
 
 Step 0.5: 카파시 블록 {prepend | 이미 있어 skip | 생략 — 사용자 요청} · How 후보 {N}건 (승인 {N} / 축약 {N} / 보류 {N})
 새로 만든 파일: {승인된 skill·rules 경로 | 없음}
-기본 브랜치: {탐지된 이름} · 커밋 전 검증: {명령 또는 "없음"} · Notion 연동: {on | off}
+기본 브랜치: {탐지된 이름} · 커밋 전 검증: {명령 또는 "없음"} · Notion 연동: {on | off} ·
+자동 압축: {값 | 설정 안 함}
 
 ### 앞으로
 

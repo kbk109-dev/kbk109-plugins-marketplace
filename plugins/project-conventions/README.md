@@ -79,6 +79,12 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 + `.claude/scripts/notion_api.py` + `.claude/hooks/notion_mcp_gate.py` +
 `.claude/settings.json` 의 `PreToolUse` 훅 등록(기존 키는 보존하며 병합)이 추가된다.
 
+`--auto-compact-window {0~1 값}` 을 주면 `.claude/settings.local.json`(개인, gitignore
+대상)에 `autoCompactEnabled`/`autoCompactWindow` 를 기록한다. 압축 임계값은 프로젝트
+규약이 아니라 개인 환경 값이라 공유 `settings.json` 에는 쓰지 않는다 — 그러면 이 저장소를
+클론한 모든 팀원의 개인 설정을 덮어쓰기 때문이다. 생략하면 기본값(미설정)이라 이 파일을
+건드리지 않는다.
+
 **`CLAUDE.md` 가 없으면 중단한다.** 뼈대를 지어내지 않는다 — 프로젝트 지시를 추측으로 채우는
 것보다 멈추는 게 낫고, 초안 작성은 `/init` 의 몫이다.
 

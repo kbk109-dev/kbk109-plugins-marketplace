@@ -15,8 +15,15 @@ Usage:
                            [--main-branch NAME]
                            [--pre-commit-check CMD]
                            [--on-existing-agents {abort,append-claude,keep-agents}]
+                           [--notion-rule {on,off}]
+                           [--auto-compact-window FLOAT]
                            [--force] [--dry-run]
     install_agent_rules.py --sync-mdc [--project-root PATH]
+
+--auto-compact-window writes autoCompactEnabled/autoCompactWindow into the
+project's .claude/settings.local.json (a personal, gitignored file — never
+.claude/settings.json, which is shared and would override every teammate's
+own setting). Omit it to leave that file untouched.
 
 --sync-mdc re-mirrors the .mdc from the CURRENT .md instead of the template,
 so a project-specific edit to the rule survives. Use it after editing
@@ -362,25 +369,34 @@ def install_scripts(root: Path, templates_dir: Path, dry_run: bool) -> list[str]
     return steps
 
 
+def _load_settings_object(path: Path) -> dict:
+    """settings 계열 JSON 파일을 dict 로 읽는다. 없으면 {}.
+
+    파싱 실패·최상위가 객체가 아닌 경우 예외를 던져 호출자가 절대 덮어쓰지 않고
+    멈추게 한다 — settings.json 류를 건드리는 모든 함수가 공유하는 안전장치다.
+    두 번 베끼면 한쪽만 고쳐졌을 때 설정 파일을 통째로 날리는 경로가 생긴다.
+    """
+    if not path.is_file():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        raise RuntimeError(
+            f"{path.name} 파싱 실패 — 손으로 고친 뒤 다시 실행하세요: {exc}"
+        ) from exc
+    if not isinstance(data, dict):
+        raise RuntimeError(f"{path.name} 의 최상위가 객체가 아닙니다.")
+    return data
+
+
 def merge_hook_settings(root: Path, dry_run: bool) -> list[str]:
     """.claude/settings.json 에 Notion MCP 차단 훅을 멱등하게 병합한다.
 
     알 수 없는 최상위 키(permissions/env/model/statusLine 등)는 전부 보존한다 — 읽고
-    고쳐 쓰는 것이지 새로 만드는 것이 아니다. 파싱 실패 시 예외를 던져 호출자가 절대
-    덮어쓰지 않고 멈추게 한다 — 이게 이 기능에서 가장 중요한 안전장치다.
+    고쳐 쓰는 것이지 새로 만드는 것이 아니다.
     """
     path = root / ".claude" / "settings.json"
-    if path.is_file():
-        try:
-            data = json.loads(path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            raise RuntimeError(
-                f".claude/settings.json 파싱 실패 — 손으로 고친 뒤 다시 실행하세요: {exc}"
-            ) from exc
-        if not isinstance(data, dict):
-            raise RuntimeError(".claude/settings.json 의 최상위가 객체가 아닙니다.")
-    else:
-        data = {}
+    data = _load_settings_object(path)
 
     hooks = data.setdefault("hooks", {})
     pre_tool_use = hooks.setdefault("PreToolUse", [])
@@ -393,6 +409,42 @@ def merge_hook_settings(root: Path, dry_run: bool) -> list[str]:
     pre_tool_use.append(HOOK_ENTRY)
 
     steps = [".claude/settings.json 에 Notion MCP 차단 훅 등록 (PreToolUse)"]
+    if not dry_run:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    return steps
+
+
+def merge_local_settings(root: Path, window: float, dry_run: bool) -> list[str]:
+    """.claude/settings.local.json 에 자동 압축 설정을 병합한다.
+
+    settings.json(공유, 커밋됨)이 아니라 settings.local.json(개인, gitignore 대상)에
+    쓴다 — 압축 임계값은 프로젝트 규약이 아니라 모델·컨텍스트 크기·작업 습관에 딸린
+    개인 환경 값이라, 공유 파일에 쓰면 이 파일을 읽는 모든 팀원의 개인
+    ~/.claude/settings.json 값을 덮어쓴다(settings.local.json 이 우선순위가 더 높다).
+
+    autoCompactEnabled 를 함께 쓰는 이유: 기본값이 이미 true 라 중복으로 보이지만,
+    전역에서 자동 압축을 꺼 둔 사용자에게 window 값만 써 주면 그 값이 아무 효과도
+    내지 못한다 — settings.local.json 이 사용자 전역 설정보다 우선하기 때문이다.
+    """
+    path = root / ".claude" / "settings.local.json"
+    data = _load_settings_object(path)
+    data["autoCompactEnabled"] = True
+    data["autoCompactWindow"] = window
+
+    steps = [f".claude/settings.local.json 에 autoCompactWindow={window} 기록"]
+
+    # 이 파일이 gitignore 대상이 아니면 커밋될 수 있다 — 그러면 팀원의 개인 설정을
+    # 덮어쓰는 바로 그 문제가 재발한다. .gitignore 는 고치지 않고 보고만 한다 — 고칠지는
+    # 사용자의 판단이다.
+    if in_git_repo(root):
+        code, _ = git(root, "check-ignore", "-q", ".claude/settings.local.json")
+        if code != 0:
+            steps.append(
+                "⚠ .claude/settings.local.json 이 .gitignore 대상이 아닙니다 — "
+                "커밋되면 이 값을 읽는 모든 팀원의 개인 설정을 덮어씁니다"
+            )
+
     if not dry_run:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -445,7 +497,30 @@ def main(argv: list[str]) -> int:
         default="off",
         help="install the notion-api-only rule + REST client + MCP-blocking hook",
     )
+    ap.add_argument(
+        "--auto-compact-window",
+        type=float,
+        default=None,
+        help=(
+            "write autoCompactWindow into .claude/settings.local.json (0<x<1). "
+            "Omit to leave that file untouched."
+        ),
+    )
     args = ap.parse_args(argv[1:])
+
+    if args.auto_compact_window is not None and not (0 < args.auto_compact_window < 1):
+        hint = (
+            f" (did you mean {args.auto_compact_window / 100}?)"
+            if args.auto_compact_window > 1
+            else ""
+        )
+        print(
+            "--auto-compact-window must be between 0 and 1 (exclusive) — a 0-1 "
+            f"fraction of the context window, not a percentage. Got: "
+            f"{args.auto_compact_window}{hint}",
+            file=sys.stderr,
+        )
+        return 2
 
     root = Path(args.project_root).resolve()
     if not root.is_dir():
@@ -560,6 +635,13 @@ def main(argv: list[str]) -> int:
         try:
             steps.extend(install_scripts(root, templates_dir, args.dry_run))
             steps.extend(merge_hook_settings(root, args.dry_run))
+        except (OSError, RuntimeError) as exc:
+            print(f"write failed: {exc}", file=sys.stderr)
+            return 1
+
+    if args.auto_compact_window is not None:
+        try:
+            steps.extend(merge_local_settings(root, args.auto_compact_window, args.dry_run))
         except (OSError, RuntimeError) as exc:
             print(f"write failed: {exc}", file=sys.stderr)
             return 1
