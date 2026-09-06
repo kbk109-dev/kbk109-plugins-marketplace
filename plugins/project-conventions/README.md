@@ -91,6 +91,11 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 **`AGENTS.md` 가 이미 있으면 중단한다.** 두 파일의 차이를 보여주고 어떻게 할지 물은 뒤 진행한다.
 자동 병합하지 않는다 — 규칙 문서는 조용한 유실이 치명적이다.
 
+**Notion 연동 여부를 물을 때, 이미 `notion-api-only.md` 가 있거나 그와 무관한 커스텀 Notion
+규칙 파일이 있으면 그 사실을 먼저 알린다.** 특히 후자는 이 프로젝트가 이미 다른 방식(예:
+되돌리기 난이도별 쓰기 정책)으로 Notion 을 관리 중이라는 뜻이라, 일반 템플릿을 그대로
+설치하면 두 워크플로가 충돌할 수 있다 — 자동으로 막지는 않고 그 위험을 명시해 되묻는다.
+
 재실행해도 안전하다. 마커 블록 구간만 교체하고 `.mdc` 를 다시 생성한다.
 
 **규칙을 프로젝트에 맞게 고쳤다면** `.claude/rules/` 쪽 원본을 고친 뒤 `--sync-mdc` 로 사본만
@@ -151,3 +156,39 @@ git 변경분으로 어디부터 볼지 정한 뒤 `AGENTS.md` 의 주장과 대
 카파시 4원칙 블록·What/How 분리·200줄 예산은 `init-agent-rules` 와 **같은 규칙**을 쓴다.
 정본은 `init-agent-rules/references/claude_md_rewrite.md` 하나다 — 규칙 정본이 둘이면 반드시
 갈라지고, 그게 이 플러그인이 막으려는 실패다.
+
+## 문제 해결
+
+### 마켓플레이스를 업데이트하고 리로드했는데 새 버전 동작이 안 보인다
+
+`/plugin marketplace update` 는 마켓플레이스 **카탈로그**(버전 번호 등 메타데이터)만
+갱신하고, `/reload-plugins` 는 **이미 캐시에 있는 파일**을 다시 로드할 뿐이다. 플러그인
+캐시는 버전별 디렉토리(`~/.claude/plugins/cache/<marketplace>/<plugin>/<version>/`)로
+분리되어 있어서, 실제 새 버전 파일을 받으려면 **명시적 재설치**가 필요하다.
+
+```
+/plugin marketplace update kbk109-plugins-marketplace
+/plugin install project-conventions@kbk109-plugins-marketplace
+/reload-plugins
+```
+
+그래도 이전 버전이 로드되면 캐시를 밀고 재시작한다:
+
+```bash
+rm -rf ~/.claude/plugins/cache
+```
+
+Claude Code 를 재시작한 뒤 다시 설치한다.
+
+### 플러그인을 올렸는데 `.claude/settings.local.json` 이 안 생긴다
+
+플러그인을 갱신·리로드하는 것은 어떤 스킬도 자동 실행하지 않는다. 이미 세팅된
+프로젝트에서 `--auto-compact-window` 처럼 새로 추가된 옵션을 쓰려면
+`/project-conventions:init-agent-rules` 를 **다시 호출**해서 그 질문에 "예"로 답해야 한다.
+`notion-api-only` 나 다른 선택 규칙도 마찬가지다 — 플러그인 갱신은 새 기능을 "쓸 수 있게"
+만들 뿐, 이미 설치된 프로젝트에 소급 적용하지 않는다.
+
+**이때 주의할 점.** 이미 세팅된 프로젝트에서 스킬을 다시 돌리면 `git-branch-workflow` 도
+템플릿에서 재렌더링된다. 이전에 커스텀 `--pre-commit-check` 명령이나 `--main-branch` 값을
+줬다면, 이번에도 Step 1·Step 1.5 질문에 **같은 값**으로 답해야 그 내용이 유지된다 — 빈
+값으로 넘기면 검증 명령 줄이 통째로 빠진다.
