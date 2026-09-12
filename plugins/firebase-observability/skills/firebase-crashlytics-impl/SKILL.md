@@ -1,6 +1,6 @@
 ---
 name: firebase-crashlytics-impl
-description: "Harness Engineering 기반 Firebase Crashlytics 구현 스킬. CRASHLYTICS_PLAN.md 계획 문서를 읽고 Three-Agent Architecture(Planner-Generator-Evaluator)와 Task State Machine으로 안정적으로 Firebase Crashlytics를 구현합니다. 각 구현 항목을 개별 task로 분해하고, acceptance_criteria 기반 독립 검증 루프를 실행하여 조기 완료 선언과 미완성 상태를 구조적으로 방지합니다. 반드시 이 스킬을 사용해야 하는 경우: 'firebase-crashlytics-impl', 'CRASHLYTICS_PLAN 기반으로 구현해줘', 'Firebase Crashlytics 코드 넣어줘', '크래시 리포팅 코드 구현해줘', 'CRASHLYTICS_PLAN.md 보고 구현해줘', 'Error Boundary 만들어줘', '에러 핸들링 코드 넣어줘', 'crashlytics 구현 시작해줘', '크래시 리포팅 설정해줘', 'crashlytics 구현 이어서 해줘', '나머지 에러 핸들링도 구현해줘', 'recordError 코드 넣어줘', '글로벌 에러 핸들러 설정해줘', '비치명적 에러 리포팅 구현해줘', '크래시 추적 코드 추가해줘', '@react-native-firebase/crashlytics 구현', 'Firebase Crashlytics 구현해줘', 'crashlytics 적용해줘', '하네스로 crashlytics 구현'. Firebase Crashlytics/크래시 리포팅 구현/적용 관련 키워드가 포함된 모든 한국어/영어 요청에 트리거."
+description: "Implements Firebase Crashlytics from docs/plan/CRASHLYTICS_PLAN.md using the Three-Agent harness (Planner-Generator-Evaluator): splits each Error Boundary/recordError item into a task with acceptance_criteria and verifies it in a separate evaluator loop. Refuses if CRASHLYTICS_PLAN.md is missing. Trigger: 'CRASHLYTICS_PLAN 기반으로 구현해줘', '글로벌 에러 핸들러 설정해줘', 'recordError 코드 넣어줘', '하네스로 crashlytics 구현'."
 compatibility: 'mcp: context7'
 ---
 

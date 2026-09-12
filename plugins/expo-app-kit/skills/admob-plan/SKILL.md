@@ -1,6 +1,6 @@
 ---
 name: admob-plan
-description: Plans AdMob ad placement strategy for React Native Expo projects — analyzes the codebase screen-by-screen, assembles a 5-expert virtual agent team (Best Practices Researcher, Monetization Expert, RN Implementation Specialist, Policy Compliance Reviewer, UX Designer) that cross-reviews ad type selection and placement, then produces a structured plan saved to docs/plan/ADMOB-PLAN.md and writes test Ad Unit IDs to .env.local. Use this skill whenever the user mentions AdMob integration, ad placement planning, ad monetization strategy, banner/interstitial/rewarded ad placement, ad unit ID setup, or wants to update an existing ADMOB-PLAN.md. Also triggers on Korean phrases like "admob 계획", "광고 배치 계획", "광고 전략 수립", "어디에 광고 넣을지", "광고 타입별 배치", "admob 설계", "광고 ID 정리", "admob 환경변수", "광고 unit id", "ADMOB-PLAN 수정해줘", "광고 수익 최적화", "배너 광고 어디에 넣어", "전면 광고 언제 띄워야 해", "보상형 광고 설계".
+description: Plans AdMob ad placement strategy for React Native Expo — a 5-expert virtual team (monetization, RN implementation, policy compliance, UX) reviews screen-by-screen ad type/placement, then writes docs/plan/ADMOB-PLAN.md and test Ad Unit IDs to .env.local. Trigger: '광고 배치 계획', '어디에 광고 넣을지', 'admob 설계', 'ADMOB-PLAN 수정해줘'.
 ---
 
 # AdMob Ad Placement Plan

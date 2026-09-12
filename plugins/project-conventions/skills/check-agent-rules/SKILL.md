@@ -1,6 +1,6 @@
 ---
 name: check-agent-rules
-description: "AGENTS.md 를 단일 소스로 쓰는 프로젝트에서 규칙 문서가 갈라졌는지 검사하는 스킬. .cursor/rules/*.mdc 사본이 .claude/rules/*.md 원본과 여전히 같은지, CLAUDE.md 가 포인터로 남아 있는지, AGENTS.md 마커 블록이 온전한지, (설치돼 있다면) Notion REST 클라이언트·차단 훅·settings.json 등록이 템플릿과 일치하는지를 확인한다. 반드시 이 스킬을 사용해야 하는 경우: 'check-agent-rules', '규칙 갈라졌는지 확인', 'AGENTS.md 검사', 'CLAUDE.md AGENTS.md 동기화 확인', 'cursor rules 랑 claude rules 같은지 확인', '.mdc 랑 .md 다른지 봐줘', '규칙 문서 검증', '에이전트 규칙 점검', 'drift 검사', '규칙 동기화 확인해줘', '커서 규칙 최신인지 봐줘', '규칙 파일 정합성', 'notion_api.py 갈라졌는지 확인', 'Notion 차단 훅 확인', 'check agent rules', 'verify AGENTS.md setup', 'check rule drift', 'are cursor and claude rules in sync', 'validate agent rule files'. 커밋 전 점검이나 다른 도구로 규칙을 고친 뒤 확인할 때도 사용한다."
+description: "Checks whether an AGENTS.md-single-source project's rule copies drifted — .cursor/rules/*.mdc vs .claude/rules/*.md, CLAUDE.md pointer intact, AGENTS.md marker block intact, and (if installed) Notion REST client/gate hook/settings.json registration vs template. Trigger: '규칙 갈라졌는지 확인', 'cursor rules 랑 claude rules 같은지 봐줘', 'notion_api.py 갈라졌는지 확인'. Also run before a commit or after another tool edited the rules."
 ---
 
 # check-agent-rules — 규칙 문서 갈라짐 검사

@@ -1,6 +1,6 @@
 ---
 name: dev-monitor
-description: "프로젝트 CLAUDE.md에서 서버 실행 명령을 추출한 뒤, 지정한 포트의 기존 프로세스를 정리하고 서버를 백그라운드로 기동한다. 이후 로그를 실시간 모니터링하면서 WARNING/ERROR/CRITICAL/스택 트레이스/HTTP 4xx·5xx를 감지할 때마다 [날짜, 시간] 헤더와 함께 원인·해결책을 한국어로 분석 보고한다. 상태는 ~/.claude/dev-monitor/port-<port>.state.json 에 외부화되어 /loop·재호출 시 기존 Monitor·서버를 재사용하고 중복 기동을 방지한다. 포트번호는 필수 입력. 하위 명령 'stop'/'stop <port>'/'stop-all'/'status'를 지원한다. 서버 기동 명령은 CLAUDE.md가 단일 소스(SSoT)이며, 없거나 모호하면 즉시 중단한다. 기술적 사실은 context7 MCP로, 외부 이벤트는 WebSearch로 근거를 확보한다. 트리거: '서버 모니터링', '포트 정리하고 서버 실행', 'dev 서버 띄우고 로그 감시', '/harness-devkit:dev-monitor', '/harness-devkit:dev-monitor stop'."
+description: "Extracts the server start command from project CLAUDE.md (single source), kills any existing process on the given port, and starts the server in background. Monitors logs live and reports WARNING/ERROR/CRITICAL/stack traces/HTTP 4xx-5xx in Korean with cause and fix. State externalized to ~/.claude/dev-monitor/port-<port>.state.json so /loop reuses the same Monitor/server. Port is required. Subcommands: stop [port], stop-all, status. Refuses if CLAUDE.md has no server command."
 disable-model-invocation: true
 argument-hint: <port> [log-path] | stop [port] | stop-all | status
 allowed-tools: Bash, Read, Grep, Glob, WebSearch, WebFetch

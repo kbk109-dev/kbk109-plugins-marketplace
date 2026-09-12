@@ -1,6 +1,6 @@
 ---
 name: refresh-agent-rules
-description: "이미 AGENTS.md 를 단일 소스로 쓰는 프로젝트에서, 시간이 지나 문서가 실제 코드베이스와 어긋났는지 다시 분석해 갱신하는 스킬. 프로젝트를 스캔해 명령·패키지 매니저·디렉터리 구조 같은 사실을 모으고 AGENTS.md 의 주장과 대조한 뒤, 바꿀 것이 있을 때만 승인을 받아 고친다. 바꿀 것이 없으면 파일을 건드리지 않는다. 반드시 이 스킬을 사용해야 하는 경우: 'refresh-agent-rules', 'AGENTS.md 업데이트', 'AGENTS.md 갱신해줘', 'AGENTS.md 최신화', 'AGENTS.md 현행화', 'AGENTS.md 낡았어', 'AGENTS.md 가 지금 코드랑 맞는지 봐줘', '프로젝트 바뀌었으니 에이전트 문서 반영해줘', '에이전트 지시 최신인지 확인하고 고쳐줘', '프로젝트 규칙 다시 분석해줘', '테스트 명령 바뀌었는데 문서도 고쳐줘', '디렉터리 구조 바뀐 거 문서에 반영', 'AGENTS.md 오래됐어', 'update AGENTS.md', 'refresh agent rules', 'AGENTS.md is out of date', 'sync AGENTS.md with the codebase', 're-analyze the project and update AGENTS.md', 'is AGENTS.md still accurate'. 아직 이관하지 않은 프로젝트에서는 실행되지 않는다 — 고칠 AGENTS.md 가 없으므로 init-agent-rules 를 먼저 안내한다."
+description: "Re-analyzes a project that already uses AGENTS.md as its single source, checking whether it drifted from the actual codebase (commands, package manager, directory structure), and updates only what changed after approval. Trigger: 'AGENTS.md 업데이트', 'AGENTS.md 가 지금 코드랑 맞는지 봐줘', '프로젝트 바뀌었으니 문서 반영해줘'. If AGENTS.md doesn't exist yet, use project-conventions:init-agent-rules instead."
 ---
 
 # refresh-agent-rules — AGENTS.md 를 프로젝트 현황에 맞게 갱신

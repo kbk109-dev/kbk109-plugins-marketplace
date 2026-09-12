@@ -1,6 +1,6 @@
 ---
 name: new-plugin
-description: "이 저장소에서 새 플러그인을 만들거나 기존 플러그인에 스킬을 추가할 때 따르는 절차. marketplace.json 등록 여부와 버전 규칙이 두 경우에 다르므로 A/B 로 나뉜다. 반드시 이 스킬을 사용해야 하는 경우: '새 플러그인 만들어줘', '플러그인 추가', '스킬 추가해줘', '기존 플러그인에 스킬 넣어줘', 'plugin.json 만들어줘', 'marketplace.json 에 등록해줘', '새 스킬 만들기', 'add a new plugin', 'add a skill to an existing plugin', 'register a plugin in the marketplace'."
+description: "Creates a new plugin or adds a skill to an existing one in this marketplace repo — registration and versioning differ between the two cases (A/B split in the skill body). Trigger: 'plugin.json 만들어줘', 'marketplace.json 에 등록해줘', '새 플러그인 만들어줘', '스킬 추가해줘'."
 ---
 
 # 새 플러그인·스킬 만들기

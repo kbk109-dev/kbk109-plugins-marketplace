@@ -1,6 +1,6 @@
 ---
 name: init-agent-rules
-description: "프로젝트의 CLAUDE.md 본문을 AGENTS.md 로 이관해 Claude·Cursor 공용 단일 소스로 만들고, CLAUDE.md 는 @AGENTS.md 포인터로 바꾼 뒤 규칙(git 브랜치 워크플로, 선택적으로 Notion 토큰 API 전용 연동)을 .claude/rules/ 와 .cursor/rules/ 양쪽에 설치하는 스킬. 반드시 이 스킬을 사용해야 하는 경우: 'init-agent-rules', 'AGENTS.md 만들어줘', 'CLAUDE.md 를 AGENTS.md 로 옮겨줘', 'CLAUDE.md 랑 AGENTS.md 같이 관리하고 싶어', '커서랑 클로드 규칙 같이 쓰게 해줘', 'Cursor 랑 Claude 설정 통일해줘', 'AGENTS.md 로 이관', '에이전트 규칙 설치', '프로젝트 규칙 초기 설정', 'git 브랜치 규칙 넣어줘', '브랜치 워크플로 규칙 설치해줘', '커밋 규칙 세팅해줘', '.cursor/rules 만들어줘', 'cursor rules 설정', '프로젝트 초기 설정 해줘', '규칙 문서 세팅', 'Notion MCP 막아줘', 'Notion 을 API 로만 쓰게 강제해줘', 'Notion 토큰 연동', 'set up AGENTS.md', 'migrate CLAUDE.md to AGENTS.md', 'share rules between Claude and Cursor', 'install git branch workflow rule', 'set up project conventions', 'sync CLAUDE.md and AGENTS.md', 'block Notion MCP and enforce token API'. CLAUDE.md 가 없는 프로젝트에서는 실행되지 않는다 — 이관 대상이 없으므로 /init 를 먼저 안내한다."
+description: "Migrates a project's CLAUDE.md body into AGENTS.md as a Claude/Cursor shared single source, replaces CLAUDE.md with an @AGENTS.md pointer, then installs rules (git branch workflow, optionally Notion token-API-only) into both .claude/rules/ and .cursor/rules/. Refuses if CLAUDE.md is missing — run /init first. Trigger: 'CLAUDE.md 를 AGENTS.md 로 옮겨줘', '커서랑 클로드 규칙 같이 쓰게 해줘', 'git 브랜치 규칙 넣어줘', 'Notion MCP 막아줘'."
 ---
 
 # init-agent-rules — CLAUDE.md → AGENTS.md 이관과 규칙 설치
