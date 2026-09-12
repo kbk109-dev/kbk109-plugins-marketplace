@@ -1,6 +1,6 @@
 ---
 name: release-plan
-description: "Use when a user wants to plan, register, or break down a release into tasks on a Notion database — takes a Notion page name, database name, target semantic version (X.Y.Z), and update description, then produces version-scoped task records with [Task N] labels, dependencies, and parallel-work metadata, and verifies every technology token (model IDs, library names, package versions) appearing in task details against Context7 MCP and WebSearch via a separate fact-checker subagent — blocks Notion registration on any unverified token through the verify_tech_tokens.py gate. Triggers on Korean and English phrases including: '릴리즈 계획', '릴리즈 플랜', '업데이트 계획 등록', '버전 계획', '릴리즈 작업 등록', 'release-plan', '릴리즈 작업 분해', '버전 계획 세워줘', '릴리즈 계획 등록해줘', '업데이트 항목 정리해줘', 'Notion에 릴리즈 등록', '릴리즈 DB에 작업 추가', '다음 버전 계획', '작업 분해해서 노션에 등록', 'release plan', 'plan release tasks', 'register release items', 'break down update into tasks'."
+description: "Plans a release on a Notion database — given a page/DB name and target version (X.Y.Z), produces version-scoped [Task N] records with dependencies, and verifies every tech token (model IDs, library names, versions) via Context7 MCP + WebSearch fact-checker before registering (verify_tech_tokens.py gate). Trigger: '릴리즈 계획', '작업 분해해서 노션에 등록'. For a bug-fix patch release use release-workflow:fix-plan-impl instead."
 compatibility: 'mcp: context7'
 ---
 

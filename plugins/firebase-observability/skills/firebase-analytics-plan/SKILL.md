@@ -1,6 +1,6 @@
 ---
 name: firebase-analytics-plan
-description: Plans Firebase Analytics (@react-native-firebase/analytics) integration for React Native Expo projects — decides where to initialize, which GA4 events to log, and exactly where to insert tracking code. Uses a virtual expert agent team (GA4 Strategist, Expo/RN Architect, Privacy Advisor, Growth Analyst) that cross-reviews recommendations before producing a structured plan saved to docs/plan/GA_PLAN.md. Use this skill whenever the user mentions Firebase Analytics, GA4 event design, screen_view tracking, event tracking plans, analytics instrumentation for Expo/RN, @react-native-firebase/analytics, analytics best practices, or wants to update an existing GA_PLAN.md. Also triggers on Korean phrases like "이벤트 트래킹 계획", "Firebase Analytics 어디에 넣을지", "GA4 이벤트 설계", "GA 계획 업데이트", "분석 삽입 위치".
+description: Plans @react-native-firebase/analytics integration for React Native Expo — a virtual team (GA4, RN architecture, privacy, growth) decides init point, which GA4 events to log, and where tracking code goes, then writes docs/plan/GA_PLAN.md. Trigger: 'GA4 이벤트 설계', '이벤트 트래킹 계획', 'screen_view 트래킹'.
 ---
 
 # Firebase GA Plan

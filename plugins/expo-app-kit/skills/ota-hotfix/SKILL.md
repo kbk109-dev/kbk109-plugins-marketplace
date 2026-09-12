@@ -1,6 +1,6 @@
 ---
 name: ota-hotfix
-description: "Expo 프로젝트에서 EAS Update(OTA)가 앱에 반영되지 않을 때, fingerprint(runtimeVersion) 불일치를 진단하고 빌드 커밋 기반 임시 브랜치에서 JS 변경만 적용하여 OTA를 재배포하는 자동화 스킬. 반드시 이 스킬을 사용해야 하는 경우: 'OTA 업데이트 안 돼', 'OTA 반영 안 됨', 'eas update 반영 안 돼', 'OTA 핫픽스', 'OTA 재배포', 'fingerprint 불일치', 'runtime version 안 맞아', '업데이트가 앱에 안 뜸', '업데이트 다이얼로그 안 나와', 'OTA 디버깅', '앱 업데이트 안 됨', 'eas update 했는데 적용 안 돼', 'OTA update not working', 'eas update not reflecting', 'fingerprint mismatch', 'runtime version mismatch', 'OTA hotfix', 'OTA redeploy', 'app not updating after eas update', 'update not detected'. runtimeVersion.policy: fingerprint 정책을 사용하는 Expo 프로젝트에서 OTA 관련 문제를 언급하면 이 스킬을 트리거할 것."
+description: "Diagnoses EAS Update (OTA) not reflecting in an Expo app — checks fingerprint(runtimeVersion) mismatch, then redeploys JS-only changes from a temp branch off the build commit. Trigger: 'OTA 반영 안 됨', 'fingerprint 불일치', 'eas update 했는데 적용 안 돼', 'fingerprint mismatch', 'OTA update not working'. Applies to Expo projects using runtimeVersion.policy: fingerprint."
 ---
 
 # ota-hotfix — Fingerprint 불일치 OTA 진단 & 재배포

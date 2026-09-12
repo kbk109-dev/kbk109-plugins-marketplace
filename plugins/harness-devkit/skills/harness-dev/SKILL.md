@@ -1,6 +1,6 @@
 ---
 name: harness-dev
-description: "3-에이전트 아키텍처(Planner-Generator-Evaluator) 기반 자율 개발 워크플로. 복잡한 앱/서비스 요구사항을 스프린트 단위로 분해하고, 각 스프린트마다 구현→독립 평가→피드백 루프를 실행하여 품질을 보장합니다. 반드시 이 스킬을 사용해야 하는 경우: 'harness-dev', '하네스 개발', '3-에이전트로 만들어줘', '복잡한 앱 만들어줘', '풀스택 개발', '대규모 기능 구현', '스프린트로 나눠서 개발해줘', '단계별로 구현하고 평가해줘', '계획-구현-평가 루프', 'generator-evaluator 패턴', '제대로 된 앱 만들어줘', '품질 높게 개발해줘', '평가까지 해줘', 'build a complex app', 'full-stack development with evaluation', 'sprint-based development with quality gates', 'plan-implement-evaluate loop'. 한 문장짜리 요구사항이지만 기능이 5개 이상 필요해 보이는 복잡한 빌드 요청에도 사용. 단순 버그 수정, 한 파일 리팩토링, 간단한 스크립트, 질문/답변에는 사용하지 않음."
+description: "Runs a 3-agent (Planner-Generator-Evaluator) sprint loop for complex builds — decomposes a multi-feature app into sprints, then implements, evaluates, and retries each independently. Trigger: '복잡한 앱 만들어줘', '스프린트로 나눠서 개발해줘', '계획-구현-평가 루프'. Not for a single bug fix, one-file refactor, or Q&A."
 ---
 
 # Harness-Dev: 3-에이전트 자율 개발 워크플로

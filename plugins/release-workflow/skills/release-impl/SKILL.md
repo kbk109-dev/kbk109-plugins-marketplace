@@ -1,6 +1,6 @@
 ---
 name: release-impl
-description: "Use when a user wants to implement release tasks that release-plan has already registered in a Notion database for a specific semantic version — reads the per-version task list and executes it through a 3-agent Harness (Generator + Evaluator sub-agents, Task State Machine with fail/pass/blocked transitions, evidence-log gated pass, sprint contracts, Notion reverse status sync). Requires three inputs: Notion page name, database name, and version (vX.Y.Z). Triggers on Korean and English phrases including: 'release-impl', '릴리즈 구현', '릴리즈 작업 시작', '릴리즈 구현 시작', '릴리즈 개발', '릴리즈 작업 이어서', 'Release Plan 기반으로 구현', '노션 릴리즈 플랜 작업', 'release implementation', 'release impl', 'implement release', as well as semver-scoped forms like 'v0.9.0 구현', 'v1.2.0 개발 시작', 'v2.0.0 작업 시작' (a 'vX.Y.Z' token must accompany '구현/개발/작업 시작' to trigger — bare '작업 시작' without a semver token does NOT trigger, which reserves this skill for release implementation and avoids over-triggering on generic 'start working' requests)."
+description: "Implements release tasks that release-plan already registered on Notion for a version — reads the per-version task list and runs it through the 3-agent Generator+Evaluator harness with evidence-gated pass and Notion status sync. Requires Notion page name, DB name, and version (vX.Y.Z). Trigger: 'v1.2.0 구현', '릴리즈 작업 시작' (bare '작업 시작' without a vX.Y.Z token does not trigger)."
 ---
 
 # release-impl — Harness Engineering 기반 릴리즈 구현

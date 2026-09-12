@@ -1,6 +1,6 @@
 ---
 name: admob-impl-harness
-description: "Harness Engineering 기반 AdMob 광고 구현 스킬. ADMOB-PLAN.md 계획 문서를 읽고 Three-Agent Architecture(Planner-Generator-Evaluator)와 Task State Machine으로 안정적으로 AdMob 광고를 구현합니다. 각 기능을 개별 task로 분해하고, acceptance_criteria 기반 독립 검증 루프를 실행하여 조기 완료 선언과 미완성 상태를 구조적으로 방지합니다. 반드시 이 스킬을 사용해야 하는 경우: 'admob-impl-harness', 'AdMob 구현해줘', 'AdMob 적용해줘', '광고 구현해줘', '광고 적용해줘', '애드몹 구현', '애드몹 적용', 'ADMOB-PLAN 기반으로 구현', 'ADMOB-PLAN 구현해줘', '광고 계획 실행', '광고 계획 구현', 'implement AdMob', 'apply AdMob ads', '배너 광고 코드 넣어줘', '전면 광고 구현해줘', '보상형 광고 컴포넌트 만들어줘', '나머지 광고도 구현해줘', 'AdMob harness', '하네스로 광고 구현'. AdMob/광고 구현/적용 관련 키워드가 포함된 모든 한국어/영어 요청에 트리거."
+description: "Implements AdMob ads from docs/plan/ADMOB-PLAN.md using the Three-Agent harness (Planner-Generator-Evaluator): splits each placement into a task with acceptance_criteria and verifies it in a separate evaluator loop, tracking PROGRESS.md across sessions. Refuses if ADMOB-PLAN.md is missing. Opt-in only — trigger on '하네스로 광고 구현', 'AdMob harness', 'task 단위로 검증하며 구현'. Plain 'AdMob 구현해줘' / 'ADMOB-PLAN 기반으로 구현해줘' belong to expo-app-kit:admob-impl instead."
 compatibility: 'mcp: context7'
 ---
 

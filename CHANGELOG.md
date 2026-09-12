@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.20.0
+
+스킬 18개 전체의 `description` 을 재작성해 세션당 상시 컨텍스트 고정비를 줄인다.
+`description`+`when_to_use` 는 스킬이 호출되지 않아도 모든 세션에 항상 로드되는데,
+개편 전 합계가 14,197자(한글 3,015자) ≈ 7,318토큰이었다. 대부분은 의미상 중복인
+한글 굴절 변형이었다 — `admob-impl` 하나에 `'구현해줘'`/`'적용해줘'`/`'넣어줘'`/`'만들어줘'`
+가 따로 들어 있는 식. 서술부를 영어로 통일하고 트리거를 고신호 앵커(아티팩트 파일명·
+API 심볼·에러 문자열)로 좁혀 **합계 6,845자(한글 375자) ≈ 2,180토큰으로 줄였다 (-70%)**.
+
+부수적으로 `expo-app-kit:admob-impl` ↔ `admob-impl-harness` 의 트리거 집합이 13개
+글자 그대로 겹쳐 있던 라우팅 충돌을 해소했다 — `admob-impl` 을 기본으로 하고
+`admob-impl-harness` 는 하네스를 명시했을 때만 뜨도록 양쪽에 안티트리거를 넣었다.
+같은 이유로 `release-plan`/`release-impl` ↔ `fix-plan-impl`,
+`init-agent-rules` ↔ `refresh-agent-rules` 에도 안티트리거를 명시했다.
+
+`scripts/validate-marketplace.sh` 에 검사 3개를 추가해 이 예산을 기계적으로 강제한다:
+description 길이·한글 길이·평균(검사 6), SKILL.md 500줄 상한(검사 7),
+README `트리거 예` 표 문구가 description 에 실재하는지(검사 8 — 언더트리거 회귀 감시).
+검사 2 도 `marketplace.json` ↔ `plugin.json` 의 `version` 동등까지 비교하도록 넓혔다 —
+기존에는 `name` 만 비교해 두 곳이 어긋나도 통과했다. 작성 규격은 `AGENTS.md`
+"`description` 작성 규격" 절에 근거와 함께 정리했다.
+
+영향받은 플러그인 6개 전부 minor 버전을 올린다: `expo-app-kit` 1.1.0,
+`firebase-observability` 1.1.0, `release-workflow` 2.1.0, `harness-devkit` 1.3.0,
+`product-planning` 2.1.0, `project-conventions` 3.3.0.
+
 ## 1.19.0
 
 `project-conventions:init-agent-rules` Step 1.5(Notion 연동 여부 질문)의 감지 범위를
