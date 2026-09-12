@@ -1,6 +1,6 @@
 ---
 name: admob-impl
-description: Implements AdMob ads in React Native Expo projects based on an ADMOB-PLAN.md planning document. Reads the plan, looks up the latest `react-native-google-mobile-ads` API via Context7 MCP, then generates/modifies actual source files — ad utility module, Banner/Interstitial/Rewarded/AppOpen ad components, screen-level ad placement, app.json plugin config, and .env.local ad unit IDs. Use this skill whenever the user asks to implement, code, insert, apply, or add AdMob ads based on a plan document, or mentions ADMOB-PLAN.md implementation, ad code generation, banner ad insertion, interstitial ad placement, rewarded ad component creation, or incremental ad implementation. Also triggers on Korean phrases like "ADMOB-PLAN 기반으로 구현해줘", "AdMob 구현해줘", "AdMob 적용해줘", "광고 구현해줘", "광고 적용해줘", "애드몹 구현", "배너 광고 코드 넣어줘", "전면 광고 구현해줘", "보상형 광고 컴포넌트 만들어줘", "광고 계획 실행해줘", "나머지 광고도 구현해줘".
+description: Implements AdMob ads in React Native Expo from docs/plan/ADMOB-PLAN.md — reads the plan, looks up react-native-google-mobile-ads via Context7 MCP, then generates ad components, screen placement, app.json config, and .env.local unit IDs. Refuses if ADMOB-PLAN.md is missing. Trigger: 'ADMOB-PLAN 기반으로 구현해줘', '배너 광고 코드 넣어줘', 'AdMob 구현해줘'. For the Three-Agent harness workflow use expo-app-kit:admob-impl-harness instead — only when explicitly requested.
 ---
 
 # AdMob Implementation

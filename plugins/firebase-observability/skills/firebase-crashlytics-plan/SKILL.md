@@ -1,6 +1,6 @@
 ---
 name: firebase-crashlytics-plan
-description: Plans Firebase Crashlytics (@react-native-firebase/crashlytics) integration for React Native Expo projects — decides where to initialize, which Error Boundaries to place, where to insert recordError/log/setAttribute calls, and how to structure crash reporting across the app. Uses a virtual expert agent team (Crashlytics Strategist, Expo/RN Architect, Privacy & Compliance Advisor, Reliability Engineer) that cross-reviews recommendations before producing a structured plan saved to docs/plan/CRASHLYTICS_PLAN.md. Use this skill whenever the user mentions Firebase Crashlytics, crash reporting planning, Error Boundary placement strategy, recordError design, crash monitoring setup, non-fatal error classification, or wants to update an existing CRASHLYTICS_PLAN.md. Also triggers on Korean phrases like "Crashlytics 어디에 넣을지", "크래시 리포팅 계획 세워줘", "Error Boundary 어디에 넣어야 해?", "에러 추적 설정 도와줘", "crash-free rate 전략", "CRASHLYTICS_PLAN 수정해줘", "non-fatal 에러 어떻게 기록해?", "커스텀 키 뭐 넣어야 해?", "앱 안정성 모니터링 설정하고 싶어".
+description: Plans @react-native-firebase/crashlytics integration for React Native Expo — a virtual team (RN architecture, privacy, reliability) decides init point, Error Boundary placement, and recordError/log/setAttribute call sites, then writes docs/plan/CRASHLYTICS_PLAN.md. Trigger: '크래시 리포팅 계획 세워줘', 'Error Boundary 어디에 넣어야 해?', 'non-fatal 에러 어떻게 기록해?'.
 ---
 
 # Firebase Crashlytics Plan

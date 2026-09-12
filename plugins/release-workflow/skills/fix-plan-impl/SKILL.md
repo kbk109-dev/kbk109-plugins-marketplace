@@ -1,6 +1,6 @@
 ---
 name: fix-plan-impl
-description: "버그 수정(fix) 릴리즈의 계획 수립부터 구현까지 한 번에 자동 진행하는 오케스트레이터 스킬. Notion Release Plan DB에서 최신 shipped 버전을 조회해 maintenance(patch) 버전을 +1 증가시킨 새 버전으로 `fix/v{버전}` 전용 브랜치를 만든 뒤 `/release-workflow:release-plan`과 `/release-workflow:release-impl`을 순차 호출한다. 반드시 이 스킬을 사용해야 하는 경우: 'fix-plan-impl', '버그 수정 릴리즈', 'fix 릴리즈', '패치 릴리즈', 'maintenance 릴리즈', 'patch 버전 올려서 구현', '핫픽스 계획+구현', '버그픽스 계획부터 구현까지', '버그 고치고 릴리즈', '버그 고친 거 릴리즈', '패치 버전으로 구현해줘', 'fix 배포', '빠른 패치 배포', 'fix release plan and impl', 'patch release plan+impl', 'small bug fix release', '버그 수정 릴리즈 시작', 'fix 릴리즈 자동화'. 단, 단순 릴리즈 계획(/release-workflow:release-plan)만 또는 단순 릴리즈 구현(/release-workflow:release-impl)만 요청하는 경우에는 트리거하지 않는다 — 이 스킬은 계획과 구현을 한 번에 묶어서 처리할 때만 사용한다. 한국어·영어 모두 트리거."
+description: "Orchestrates a bug-fix release end to end — looks up the latest shipped version in the Notion Release Plan DB, bumps the patch version, creates a fix/v{version} branch, then calls release-workflow:release-plan and release-workflow:release-impl in sequence. Trigger: '버그 수정 릴리즈', '패치 릴리즈', '핫픽스 계획+구현'. Not for a plan-only or impl-only request — those use release-plan / release-impl directly."
 ---
 
 # fix-plan-impl — Fix 릴리즈 계획+구현 오케스트레이터

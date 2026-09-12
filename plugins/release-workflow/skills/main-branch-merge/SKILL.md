@@ -1,6 +1,6 @@
 ---
 name: main-branch-merge
-description: "dev->main 릴리스 자동화 스킬. 버전 업데이트, Notion 문서 정합성 동기화, README/Release Note 생성, main 머지 & 태그 생성까지 한번에 수행. 반드시 이 스킬을 사용해야 하는 경우: 'main 머지', '릴리스', 'release note', 'README 업데이트', '버전 올려줘', 'dev에서 main으로', '배포 문서', '태그 찍어줘', 버전명(v1.0.0 등)과 함께 머지/릴리스/배포를 언급할 때, 'Notion 보고 README', 'Notion 기반 릴리스 노트'. 한국어/영어 모두 트리거."
+description: "Automates dev->main release: version bump across plugin.json/marketplace.json, Notion doc sync, README/release notes generation, main merge, and tag creation. Trigger: 'main 머지', '릴리스 노트', '태그 찍어줘'."
 ---
 
 # Main Branch Merge — 릴리스 자동화
