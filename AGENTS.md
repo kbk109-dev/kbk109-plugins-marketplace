@@ -315,3 +315,14 @@ Cursor 는 `.cursor/rules/git-branch-workflow.mdc` 로 같은 내용을 받는�
 재실행하면 덮어쓴다. 규칙 본문을 바꾸려면 `.claude/rules/git-branch-workflow.md` 를 고치고
 `/project-conventions:check-agent-rules` 로 사본과의 일치를 확인한다.
 <!-- <<< agent-rules: git-branch-workflow <<< -->
+
+<!-- >>> agent-rules: commit-agent >>> -->
+## 커밋 — commit-agent 서브에이전트 전담
+
+커밋 실행 방식은 `.claude/rules/commit-agent.md` 를 따른다.
+Cursor 는 `.cursor/rules/commit-agent.mdc` 로 같은 내용을 받는다.
+
+이 블록은 `/project-conventions:init-agent-rules` 가 관리한다. 직접 고치지 말 것 —
+재실행하면 덮어쓴다. 규칙 본문을 바꾸려면 `.claude/rules/commit-agent.md` 를 고치고
+`/project-conventions:check-agent-rules` 로 사본과의 일치를 확인한다.
+<!-- <<< agent-rules: commit-agent <<< -->
