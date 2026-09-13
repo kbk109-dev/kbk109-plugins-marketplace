@@ -1,6 +1,6 @@
 # release-workflow
 
-Notion 데이터베이스를 상태 저장소로 쓰는 릴리즈 파이프라인. 스킬 4개.
+Notion 데이터베이스를 상태 저장소로 쓰는 릴리즈 파이프라인. 스킬 3개.
 
 이 플러그인의 스킬들은 **상태를 Notion + 로컬 `docs/skills/` 에 외부화**한다. 세션이 끊겨도
 다음 세션이 같은 상태에서 이어받고, "구현했다"는 선언 대신 **증거 로그로 통과를 증명**하게 만든다.
@@ -19,7 +19,7 @@ Notion 데이터베이스를 상태 저장소로 쓰는 릴리즈 파이프라�
 | context7 MCP | release-plan, release-impl | 기술 토큰 팩트체크 (모델 ID·라이브러리·버전) |
 | WebSearch | release-plan | context7 로 확인 안 되는 토큰의 2차 검증 |
 | `python3` | release-plan, release-impl, fix-plan-impl | 검증 스크립트 17개 실행 |
-| git | fix-plan-impl, main-branch-merge | 브랜치 생성·머지·태그 |
+| git | fix-plan-impl | 브랜치 생성 |
 
 ## 스킬
 
@@ -54,17 +54,14 @@ Generator/Evaluator 서브에이전트 분리, fail/pass/blocked 전이를 갖�
 
 트리거 — "버그 수정 릴리즈", "패치 릴리즈", "핫픽스 계획+구현", "버그 고치고 릴리즈"
 
-### `main-branch-merge`
-dev→main 릴리스 자동화. 버전 업데이트, Notion 문서 정합성 동기화, README/릴리즈 노트 생성,
-main 머지와 태그 생성까지 수행한다.
-
-트리거 — "main 머지", "릴리스", "release note", "태그 찍어줘", "Notion 기반 릴리스 노트"
+`main-branch-merge` 는 `project-conventions` 플러그인으로 이동했다 — dev→main 머지는 커밋
+정책과 함께 그쪽이 관장한다.
 
 ## 권장 흐름
 
 ```
-일반 릴리즈:   release-plan  →  release-impl  →  main-branch-merge
-패치 릴리즈:   fix-plan-impl (계획+구현 일괄)  →  main-branch-merge
+일반 릴리즈:   release-plan  →  release-impl  →  project-conventions:main-branch-merge
+패치 릴리즈:   fix-plan-impl (계획+구현 일괄)  →  project-conventions:main-branch-merge
 ```
 
 ## 산출물 위치
