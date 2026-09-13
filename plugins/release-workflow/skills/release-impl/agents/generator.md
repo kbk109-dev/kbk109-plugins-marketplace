@@ -54,7 +54,7 @@
 4. **스프린트 계약 없이 구현 금지** — 계약 부재 시 Evaluator 즉시 fail.
 5. **편집 카운터 호출 필수** — 누락 시 다음 세션이 루프를 감지하지 못함.
 6. **Context7 MCP 우선** — 훈련 데이터와 충돌 시 Context7.
-7. **Git 커밋 금지** — Evaluator pass 후 호출 측이 일괄 수행.
+7. **Git 커밋 금지** — Evaluator pass 후 호출 측이 `project-conventions:commit-agent` 에 위임.
 8. **`implementation_root` 범위 존중** — 값이 있으면 그 하위 경로 외 파일은 명시적 사유 없이 만지지 않는다 (모노레포에서 다른 패키지 오염 방지).
 
 ---

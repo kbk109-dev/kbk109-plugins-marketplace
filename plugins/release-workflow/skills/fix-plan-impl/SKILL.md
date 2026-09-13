@@ -386,7 +386,7 @@ git status                  # 이관된 파일 목록 확인
    ```bash
    git checkout dev && git merge --no-ff fix/v{new_version}
    ```
-4. 이후 `/release-workflow:main-branch-merge` 또는 수동 PR로 main 반영
+4. 이후 `/project-conventions:main-branch-merge` 또는 수동 PR로 main 반영
 5. 배포 파이프라인 실행
 ```
 

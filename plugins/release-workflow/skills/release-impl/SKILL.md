@@ -187,13 +187,12 @@ echo '{
 
 입력 소스별 필드 매핑 (task_list.json → init 입력)은 `references/contract_consumer.md`. 전체 스키마 계약은 `${CLAUDE_PLUGIN_ROOT}/skills/release-impl/scripts/schemas/feature_list.schema.json` (Draft-2020-12). 생성되는 PROGRESS.md 템플릿과 헤더 구조, `previous_context` 포맷 예시는 `references/initializer_guide.md` "Step 5·Step 6" 참조.
 
-### Step 7: 초기 커밋
+### Step 7: 사용자 확인 게이트
 
-```
-chore: initialize release v{version} task list
-```
+대화형 모드에서는 초기화 결과(feature_list.json 요약, tasks 개수, previous_context 항목 수)를 보여주고 "구현을 시작할까요?"를 사용자에게 묻는다. 오케스트레이터 모드에서는 결과를 stdout에 출력만 하고 Phase 2로 자동 진행한다. 모드 판정은 위 "호출 모드 감지" 섹션의 규칙을 따른다.
 
-**사용자 확인 게이트**: 대화형 모드에서는 초기화 결과(feature_list.json 요약, tasks 개수, previous_context 항목 수)를 보여주고 "구현을 시작할까요?"를 사용자에게 묻는다. 오케스트레이터 모드에서는 결과를 stdout에 출력만 하고 Phase 2로 자동 진행한다. 모드 판정은 위 "호출 모드 감지" 섹션의 규칙을 따른다.
+커밋은 이 스킬이 수행하지 않는다 — `project-conventions:commit-agent` 로 위임한다(프로젝트가
+`commit-agent` 규칙을 설치했다면 훅이 강제한다).
 
 ---
 
@@ -285,7 +284,7 @@ Evaluator가 `feature_list.json`과 `evidence_logs`를 직접 업데이트한다
 
 | verdict | 처리 |
 |---------|-----|
-| `pass` | `sync_progress.py`로 PROGRESS.md 헤더 재생성 → git commit `feat(release/v{version}): {task.title}` → 세션 시작 오리엔테이션으로 복귀 |
+| `pass` | `sync_progress.py`로 PROGRESS.md 헤더 재생성 → 아래 "작업 완료 후 처리" → 세션 시작 오리엔테이션으로 복귀 |
 | `fail` (retry_count < 2) | Generator를 재기동 (Step A). prompt에 이번 `evaluator_feedback`을 반드시 포함시켜 동일 실수 반복 방지 |
 | `blocked` 또는 retry_count==2 | 사용자 에스컬레이션 — 다음 섹션 참조. 자동 재시도하지 않는다 |
 
@@ -319,9 +318,9 @@ blocked → fail 복귀 시 `retry_count`는 0으로 리셋하되, `evaluator_fe
 Evaluator의 verdict가 `pass`면 호출 측이 수행:
 
 1. **Notion 상태 동기화** (역방향 업데이트) — 해당 task row의 상태 속성을 `완료`로 전이(위임). 이 프로젝트가 요구하는 속성 이름·타입은 `references/notion_integration.md` Phase 2 Step C 참조. 실패는 secondary output으로 처리하여 core 진행을 막지 않는다 (`references/degradation_policy.md`).
-2. **Git 커밋**: `feat(release/v{version}): {title}`. 프로젝트 CLAUDE.md에 다른 커밋 컨벤션이 명시되어 있으면 그것을 우선.
-3. **깨끗한 상태 확인**: `git status`로 미완성 변경이 없는지 확인.
-4. **다음 task로 이동** (세션 시작 오리엔테이션으로 복귀).
+2. **커밋 위임**: `project-conventions:commit-agent` 에 위임한다(프로젝트가 `commit-agent`
+   규칙을 설치했다면 메인 에이전트의 직접 `git commit` 은 훅이 막는다).
+3. **다음 task로 이동** (세션 시작 오리엔테이션으로 복귀).
 
 blocked 전이 시에도 1번을 동일한 매핑 규칙으로 시도(`차단`)한다. 실패는 secondary output.
 
@@ -337,7 +336,7 @@ blocked 전이 시에도 1번을 동일한 매핑 규칙으로 시도(`차단`)�
 2. **PROGRESS.md 최종 완료 기록** (`sync_progress.py`로 헤더 재생성)
 3. **git log --oneline**으로 전체 버전 커밋 히스토리 출력
 4. **Notion DB 전체 상태 재확인**: 모든 row가 `완료`인지 크로스체크(위임). 불일치 시 경고 + 사용자에게 수동 확인 요청 (secondary output)
-5. **다음 단계 안내**: PR 생성·머지·배포는 이 스킬이 수행하지 않는다. 필요 시 `/release-workflow:main-branch-merge` 스킬로 체인하거나 수동 진행
+5. **다음 단계 안내**: PR 생성·머지·배포는 이 스킬이 수행하지 않는다. 필요 시 `/project-conventions:main-branch-merge` 스킬로 체인하거나 수동 진행
 
 ---
 

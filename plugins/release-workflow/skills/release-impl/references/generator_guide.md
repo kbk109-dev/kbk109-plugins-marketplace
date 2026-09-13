@@ -97,10 +97,8 @@
 
 ## 세션 종료 절차 (Evaluator pass 후 호출 측이 수행)
 
-1. **Git 커밋**:
-   - pass: `feat(release/v{version}): {title}`
-   - blocked: `wip(release/v{version}): {title} — blocked`
-   - 프로젝트 CLAUDE.md에 다른 컨벤션이 있으면 그것 우선
+1. **커밋 위임**: `project-conventions:commit-agent` 에 위임한다 — 이 스킬은 git commit 을
+   직접 실행하지 않는다
 2. **feature_list.json**: Evaluator가 이미 업데이트함 — 호출 측은 재검증만
 3. **PROGRESS.md**: `sync_progress.py`로 헤더 재생성 후 세션 로그 한 줄 추가
 4. **깨끗한 상태**: 미완성 코드/디버그 로그/임시 파일이 남지 않았는지 확인
