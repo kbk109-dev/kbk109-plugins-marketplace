@@ -1,6 +1,7 @@
 {
   "enabledPlugins": {
-    "release-workflow@kbk109-plugins-marketplace": true
+    "release-workflow@kbk109-plugins-marketplace": true,
+    "project-conventions@kbk109-plugins-marketplace": true
   },
   "hooks": {
     "PreToolUse": [
