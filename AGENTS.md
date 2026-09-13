@@ -69,6 +69,16 @@ env -u NOTION_TOKEN python3 -B $NG <<< \
   '{"cwd":"/tmp","tool_name":"mcp__claude_ai_Notion__notion-fetch","tool_input":{}}'   # 무출력(토큰 없음)
 NOTION_TOKEN=dummy python3 -B $NG <<< \
   '{"cwd":"/tmp","tool_name":"mcp__claude_ai_Notion__notion-fetch","tool_input":{}}'   # deny — 재시도해도 계속 막힘
+
+# commit-agent 훅 — 마찬가지로 프로젝트 로컬 설치, 탈출구 없음. 발화 조건은
+# ".claude/rules/commit-agent.md" 설치 여부. agent_type 접미사로 commit-agent 자신을 통과시킨다.
+CG=plugins/project-conventions/skills/init-agent-rules/templates/commit_agent_gate.py
+mkdir -p /tmp/ca-fixture/.claude/rules && touch /tmp/ca-fixture/.claude/rules/commit-agent.md
+P='{"cwd":"/tmp/ca-fixture","tool_name":"Bash","tool_input":{"command":"git commit -m \"feat: x\""}}'
+echo "$P" | python3 -B $CG   # → permissionDecision: deny
+echo "$P" | python3 -B $CG   # → deny — 재시도해도 계속 막힘
+echo '{"cwd":"/tmp/ca-fixture","agent_type":"project-conventions:commit-agent","tool_name":"Bash","tool_input":{"command":"git commit -m \"feat: x\""}}' \
+  | python3 -B $CG            # 무출력(commit-agent 자신)
 ```
 
 `evals/evals.json` 은 공식 `claude plugin eval` CLI 가 읽는 포맷이 아니다(공식은 플러그인 루트
@@ -138,6 +148,16 @@ scripts/slugify.py · skills/release-plan/scripts/slugify.py      # 깨짐
 `slugify.py` 출력으로 정한다 — 모델이 kebab-case 를 직접 만들면 경로가 호출마다 달라진다.
 Notion 접근 방법은 플러그인이 모른다 — 프로젝트에 `notion-api-only` 규칙이 있으면 위임하고,
 없으면 로컬 파일·사용자 입력으로 대체한다(자세한 내용은 `release-workflow/README.md`).
+
+## 커밋 위임 — commit-agent
+
+`release-workflow` 의 스킬(`release-impl`)은 `git commit` 을 직접 지시하지 않는다. 커밋은
+`project-conventions` 가 플러그인 루트 `agents/` 에 번들한 `commit-agent` 서브에이전트(모델
+haiku)가 전담하고, 프로젝트가 `--commit-rule on` 으로 옵트인하면 `.claude/hooks/commit_agent_gate.py`
+가 메인 에이전트의 직접 커밋을 막아 위임을 강제한다. `project-conventions:main-branch-merge`
+의 `release: {버전명}` 단일 커밋(Step 8)만 예외다 — 릴리스 커밋은 태그가 그 커밋의 최종
+HEAD 를 가리켜야 하는 원자적 단일 커밋이라 그룹 분할 대상이 아니다. 설계 근거는
+`project-conventions/README.md` 의 `commit-agent` 절 참조.
 
 ## Harness Engineering — 스킬 수정 시 지켜야 할 근거
 
@@ -255,9 +275,10 @@ soft 다 — 넘겨도 거부되지 않고 스킬 목록에서 잘릴 뿐이다.
   (설계 근거는 그 플러그인 README).
   **예외** — 이 ③ 은 플러그인이 번들해 **모든 프로젝트**에 뜨는 훅을 전제로 한다.
   `project-conventions:init-agent-rules` 가 사용자의 명시적 옵트인에 따라 **그 프로젝트에만**
-  설치하는 `notion_mcp_gate.py` 는 전역 발화가 아니므로 이 요구사항의 적용 대상이 아니다 —
-  탈출구 없이 영구 차단해도 된다(단, 토큰을 구할 수 있을 때만 발화 — 대체 경로 없이 막지
-  않는다는 ①②는 그대로 지킨다).
+  설치하는 `notion_mcp_gate.py` 와 `commit_agent_gate.py` 는 전역 발화가 아니므로 이 요구사항의
+  적용 대상이 아니다 — 탈출구 없이 영구 차단해도 된다(단, `notion_mcp_gate.py` 는 토큰을 구할
+  수 있을 때만, `commit_agent_gate.py` 는 규칙이 설치된 프로젝트에서만 발화 — 대체 경로 없이
+  막지 않는다는 ①②는 그대로 지킨다).
 - **`commands/`** — 18개 전부 스킬이고 스킬은 이미 `/plugin:skill` 로 호출된다. 래퍼는 중복이다.
 
 ## 버전 관리

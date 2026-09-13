@@ -26,13 +26,17 @@ Checks:
     8  (notion-api-only only) .claude/hooks/notion_mcp_gate.py matches the plugin's template
     9  (notion-api-only only) .claude/settings.json registers exactly one PreToolUse hook
        for notion_mcp_gate.py, pointing at the file check 8 verified
+   10  (commit-agent only) .claude/hooks/commit_agent_gate.py matches the plugin's template
+   11  (commit-agent only) .claude/settings.json registers exactly one PreToolUse hook
+       for commit_agent_gate.py, pointing at the file check 10 verified
 
 Checks 4–6 run once per rule. A rule counts as installed when ANY of its three
 artefacts is present (.md, .mdc, marker block) — that way half an install is a
-failure rather than an invisible no-op. Checks 7–9 run only when notion-api-only
-is installed by that same definition — they compare the PROJECT'S installed
-copy against THIS PLUGIN'S OWN template, the same "generated copy can drift"
-concern check 5 already covers for the .mdc mirror, not a cross-plugin check.
+failure rather than an invisible no-op. Checks 7–11 run only when the owning
+rule (notion-api-only / commit-agent) is installed by that same definition —
+they compare the PROJECT'S installed copy against THIS PLUGIN'S OWN template,
+the same "generated copy can drift" concern check 5 already covers for the
+.mdc mirror, not a cross-plugin check.
 
 No check covers .claude/settings.local.json (the --auto-compact-window option).
 That's deliberate, not an oversight: settings.json/.claude/scripts//.claude/hooks/
@@ -56,14 +60,31 @@ from pathlib import Path
 RULES = (
     {"name": "git-branch-workflow", "required": True},
     {"name": "notion-api-only", "required": False},
+    {"name": "commit-agent", "required": False},
 )
 
-# Also duplicated from install_agent_rules.py — same reasoning.
-SCRIPT_INSTALLS = (
-    {"template": "notion_api.py", "dest": ".claude/scripts/notion_api.py"},
-    {"template": "notion_mcp_gate.py", "dest": ".claude/hooks/notion_mcp_gate.py"},
+# Also duplicated from install_agent_rules.py — same reasoning. Each entry is a
+# rule that installs scripts/hooks beyond the plain .md/.mdc pair; check
+# numbers continue from where check_rule's 1-6 leave off, in RULE_ASSETS order.
+RULE_ASSETS = (
+    {
+        "name": "notion-api-only",
+        "scripts": (
+            {"template": "notion_api.py", "dest": ".claude/scripts/notion_api.py"},
+            {"template": "notion_mcp_gate.py", "dest": ".claude/hooks/notion_mcp_gate.py"},
+        ),
+        "hook_marker": "notion_mcp_gate.py",
+        "start_check": 7,
+    },
+    {
+        "name": "commit-agent",
+        "scripts": (
+            {"template": "commit_agent_gate.py", "dest": ".claude/hooks/commit_agent_gate.py"},
+        ),
+        "hook_marker": "commit_agent_gate.py",
+        "start_check": 10,
+    },
 )
-HOOK_MARKER = "notion_mcp_gate.py"
 
 
 def claude_rel(name: str) -> str:
@@ -166,10 +187,12 @@ def _sha256(path: Path) -> str | None:
         return None
 
 
-def check_notion_scripts(root: Path) -> list[str]:
-    """Checks 7, 8, 9 — only when notion-api-only is installed (same three-artefact
-    definition as check_rule uses for the other rules)."""
-    name = "notion-api-only"
+def check_hook_rule_assets(root: Path, asset: dict) -> list[str]:
+    """The script/hook checks for one RULE_ASSETS entry — only when that rule is
+    installed (same three-artefact definition as check_rule uses for the other
+    rules). Check numbers start at asset['start_check'] and run consecutively:
+    one per script, then one for the settings.json hook registration."""
+    name = asset["name"]
     agents_path = root / "AGENTS.md"
     agents_text = agents_path.read_text(encoding="utf-8") if agents_path.is_file() else ""
     has_marker = mark_begin(name) in agents_text or mark_end(name) in agents_text
@@ -180,46 +203,52 @@ def check_notion_scripts(root: Path) -> list[str]:
     errors: list[str] = []
     templates_dir = Path(__file__).resolve().parents[2] / "init-agent-rules" / "templates"
     hook_dest = None
+    cli_flag = "--notion-rule on" if name == "notion-api-only" else "--commit-rule on"
 
-    for n, item in enumerate(SCRIPT_INSTALLS, start=7):
+    n = asset["start_check"]
+    for item in asset["scripts"]:
         dest = root / item["dest"]
         template = templates_dir / item["template"]
-        if item["template"] == "notion_mcp_gate.py":
+        if item["template"] == asset["hook_marker"]:
             hook_dest = dest
         if not dest.is_file():
-            errors.append(f"{n}. {item['dest']}: not found — run /project-conventions:init-agent-rules --notion-rule on")
+            errors.append(f"{n}. {item['dest']}: not found — run /project-conventions:init-agent-rules {cli_flag}")
+            n += 1
             continue
         template_hash = _sha256(template)
         if template_hash is None:
             print(f"warning: template not found, skipping check {n}: {template}", file=sys.stderr)
+            n += 1
             continue
         if _sha256(dest) != template_hash:
             errors.append(
                 f"{n}. {item['dest']}: drifted from the plugin template — "
-                "re-run /project-conventions:init-agent-rules --notion-rule on"
+                f"re-run /project-conventions:init-agent-rules {cli_flag}"
             )
+        n += 1
 
-    # 9 -----------------------------------------------------------------
+    # hook registration check ------------------------------------------------
+    hook_marker = asset["hook_marker"]
     settings_path = root / ".claude" / "settings.json"
     if not settings_path.is_file():
-        errors.append("9. .claude/settings.json: not found — Notion MCP is not blocked")
+        errors.append(f"{n}. .claude/settings.json: not found — {hook_marker} is not registered")
     else:
         try:
             data = json.loads(settings_path.read_text(encoding="utf-8"))
         except (OSError, ValueError) as exc:
-            errors.append(f"9. .claude/settings.json: parse failed — {exc}")
+            errors.append(f"{n}. .claude/settings.json: parse failed — {exc}")
             data = {}
         entries = [
             h
             for entry in (data.get("hooks", {}).get("PreToolUse", []) if isinstance(data, dict) else [])
             for h in entry.get("hooks", [])
-            if HOOK_MARKER in h.get("command", "")
+            if hook_marker in h.get("command", "")
         ]
         if len(entries) != 1:
             errors.append(
-                f"9. .claude/settings.json: expected exactly 1 PreToolUse hook for "
-                f"{HOOK_MARKER}, found {len(entries)} — "
-                "re-run /project-conventions:init-agent-rules --notion-rule on"
+                f"{n}. .claude/settings.json: expected exactly 1 PreToolUse hook for "
+                f"{hook_marker}, found {len(entries)} — "
+                f"re-run /project-conventions:init-agent-rules {cli_flag}"
             )
         elif hook_dest is not None:
             # $CLAUDE_PROJECT_DIR 는 실행 시점에만 전개되므로 command 문자열엔 그대로
@@ -227,7 +256,7 @@ def check_notion_scripts(root: Path) -> list[str]:
             command = entries[0].get("command", "")
             if hook_dest.name not in command:
                 errors.append(
-                    f"9. .claude/settings.json: registered hook command does not point at "
+                    f"{n}. .claude/settings.json: registered hook command does not point at "
                     f".claude/hooks/{hook_dest.name}"
                 )
 
@@ -273,8 +302,9 @@ def check(root: Path) -> list[str]:
     for rule in RULES:
         errors.extend(check_rule(root, agents_text, rule))
 
-    # 7, 8, 9 — notion-api-only only, and only when it's installed -----------
-    errors.extend(check_notion_scripts(root))
+    # 7+ — one rule's scripts/hook at a time, only when that rule is installed
+    for asset in RULE_ASSETS:
+        errors.extend(check_hook_rule_assets(root, asset))
 
     return errors
 
