@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.21.0
+## 1.22.0
 
 커밋을 전담 서브에이전트에게 위임하는 구조를 도입한다. `project-conventions` 에 플러그인 루트
 `agents/commit-agent.md`(모델 haiku)를 신설했다 — 변경을 논리 그룹(생성물–원본 짝, 변경 종류,
