@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.23.0
+
+`commit-agent` 규칙에 커밋 승인 전 `/simplify` 호출 단계를 추가한다. `--commit-rule on` 프로젝트에서
+메인 에이전트는 사용자에게 커밋 승인을 묻기 전에 Claude Code 내장 `/simplify` 스킬로 변경분의
+재사용·단순화·효율 정리를 한 번 거친 뒤, 그 결과를 포함한 요약으로 승인을 받는다. 순서가 승인
+**앞**인 이유는 `/simplify` 가 파일을 고치기 때문이다 — 승인 뒤에 돌리면 사용자가 승인한 diff 와
+실제 커밋되는 diff 가 달라져 승인 게이트가 무의미해진다.
+
+`/code-review` 대신 `/simplify` 를 골랐다: `/simplify` 는 수정 적용이 기본이고 플래그가 없어
+호출마다 동작이 같다. `/code-review` 는 보고가 기본(`--fix` 필요)이고 레벨 생략 시 직전 세션
+값을 재사용해 호출마다 비용·깊이가 달라지며, 현재 세션 모델(Opus 5)에서는 `medium`/`high` 가
+서브에이전트 없는 correctness 전용 단일 패스로 라우팅돼 cleanup 을 하지 않는다. `/code-review`
+전용인 `Conventions`(CLAUDE.md 규칙 위반) 앵글은 이번 절차에 넣지 않는다 — 필요하면 사용자가
+직접 호출한다.
+
+`commit-agent` 서브에이전트 자신은 이 단계를 수행하지 않는다 — 도구가 `Bash`/`Read`/`Grep`/`Glob`
+뿐이라 코드를 고칠 수 없고, 커밋을 실행하는 에이전트가 커밋 직전에 코드를 고치는 것도 적절하지
+않다. 지시 대상은 메인 에이전트이며, `commit-agent` 정의(`agents/commit-agent.md`)와
+`commit_agent_gate.py` 훅은 그대로 둔다 — 훅은 커밋 시도(승인 이후) 시점에 발화하므로 승인 전
+단계를 강제할 수 없다.
+
+규칙 사본 3곳(`templates/commit-agent.md`, `.claude/rules/commit-agent.md`,
+`.cursor/rules/commit-agent.mdc`)에 동일 문단을 추가했다. `project-conventions` 를 3.5.0 으로
+올린다.
+
 ## 1.22.0
 
 커밋을 전담 서브에이전트에게 위임하는 구조를 도입한다. `project-conventions` 에 플러그인 루트
