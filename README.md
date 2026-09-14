@@ -35,8 +35,8 @@
 
 ## 릴리스
 
-현재 마켓플레이스 버전은 **1.22.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
-이번 태그 노트는 [docs/release/v1.22.0.md](./docs/release/v1.22.0.md) 를 본다.
+현재 마켓플레이스 버전은 **1.23.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
+이번 태그 노트는 [docs/release/v1.23.0.md](./docs/release/v1.23.0.md) 를 본다.
 
 ## 플러그인
 
