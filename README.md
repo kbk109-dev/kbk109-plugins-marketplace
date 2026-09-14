@@ -1,7 +1,7 @@
 # kbk109 plugins marketplace
 
 [![License](https://img.shields.io/badge/license-MIT-green)](./LICENSE)
-[![Marketplace](https://img.shields.io/badge/marketplace-1.20.0-blue)](./docs/release/v1.20.0.md)
+[![Marketplace](https://img.shields.io/badge/marketplace-1.22.0-blue)](./docs/release/v1.22.0.md)
 [![Plugins](https://img.shields.io/badge/plugins-6-informational)](./plugins)
 
 직접 제작한 Claude Code 커스텀 플러그인 모음. Harness Engineering 원칙으로 집필한 스킬 18개를
@@ -35,8 +35,8 @@
 
 ## 릴리스
 
-현재 마켓플레이스 버전은 **1.20.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
-이번 태그 노트는 [docs/release/v1.20.0.md](./docs/release/v1.20.0.md) 를 본다.
+현재 마켓플레이스 버전은 **1.22.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
+이번 태그 노트는 [docs/release/v1.22.0.md](./docs/release/v1.22.0.md) 를 본다.
 
 ## 플러그인
 
@@ -44,10 +44,10 @@
 |---|---|---|
 | [`expo-app-kit`](./plugins/expo-app-kit) | 4 | Expo/RN 앱의 AdMob 광고 계획·구현, EAS Update(OTA) 핫픽스 |
 | [`firebase-observability`](./plugins/firebase-observability) | 4 | Firebase Analytics(GA4)·Crashlytics 도입 계획·구현 |
-| [`release-workflow`](./plugins/release-workflow) | 4 | 릴리즈 계획·구현·패치·main 머지. Notion 은 선택 상태 저장소다 |
+| [`release-workflow`](./plugins/release-workflow) | 3 | 릴리즈 계획·구현·패치. Notion 은 선택 상태 저장소다 |
 | [`harness-devkit`](./plugins/harness-devkit) | 2 | 3-에이전트(Planner→Generator→Evaluator) 자율 개발 워크플로, dev 서버 로그 감시 |
 | [`product-planning`](./plugins/product-planning) | 1 | 문서·회의록 → PRD 10개 섹션 정규화 (Notion 은 선택) |
-| [`project-conventions`](./plugins/project-conventions) | 3 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로, 선택적 Notion 토큰 API 강제) 동기화. 이관 전 본문을 200줄 목표로 다듬는다. 생성물인 `.mdc` 사본·설치 스크립트가 원본과 갈라졌는지 바이트 단위로 검사한다 |
+| [`project-conventions`](./plugins/project-conventions) | 4 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로, 선택적 Notion 토큰 API 강제, 선택적 커밋 서브에이전트 강제) 동기화, dev→main 릴리스 자동화. 이관 전 본문을 200줄 목표로 다듬는다. 생성물인 `.mdc` 사본·설치 스크립트가 원본과 갈라졌는지 바이트 단위로 검사한다 |
 
 ## 스킬 전체 목록
 
@@ -77,7 +77,6 @@
 | `release-plan` | "릴리즈 계획", "작업 분해해서 노션에 등록" | `harness_docs_templates.md` 외 3 |
 | `release-impl` | "v1.2.0 구현", "릴리즈 작업 시작" | `contract_consumer.md` 외 6 |
 | `fix-plan-impl` | "버그 수정 릴리즈", "패치 릴리즈", "핫픽스 계획+구현" | `notion_version_rules.md` |
-| `main-branch-merge` | "main 머지", "릴리스 노트", "태그 찍어줘" | `readme-best-practices.md` 외 1 |
 
 ### harness-devkit
 | 스킬 | 트리거 예 | references |
@@ -98,6 +97,7 @@
 | `init-agent-rules` | "CLAUDE.md 를 AGENTS.md 로 옮겨줘", "커서랑 클로드 규칙 같이 쓰게 해줘", "git 브랜치 규칙 넣어줘", "Notion MCP 막아줘" | `claude_md_rewrite.md` 외 2 |
 | `check-agent-rules` | "규칙 갈라졌는지 확인", "cursor rules 랑 claude rules 같은지 봐줘" | — |
 | `refresh-agent-rules` | "AGENTS.md 업데이트", "AGENTS.md 가 지금 코드랑 맞는지 봐줘", "프로젝트 바뀌었으니 문서 반영해줘" | `refresh_policy.md` |
+| `main-branch-merge` | "main 머지", "릴리스 노트", "태그 찍어줘" | `readme-best-practices.md` 외 1 |
 
 > 사용 가이드: [docs/guide/project-conventions.md](./docs/guide/project-conventions.md) — 왜 쓰는지, 쓰면 저장소가 어떻게 바뀌는지
 

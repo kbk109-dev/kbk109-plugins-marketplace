@@ -1,8 +1,9 @@
 # project-conventions
 
 Claude 와 Cursor 를 번갈아 쓰는 프로젝트에서, 에이전트 지시 문서를 한 곳으로 모으고 작업 규칙을
-양쪽에 설치한다. 스킬 3개. `git-branch-workflow` 는 항상 설치되고, `notion-api-only`(Notion
-MCP 차단 훅 + 토큰 기반 REST 클라이언트)는 사용자가 선택했을 때만 설치된다.
+양쪽에 설치한다. `git-branch-workflow` 는 항상 설치되고, `notion-api-only`(Notion MCP 차단 훅 +
+토큰 기반 REST 클라이언트)와 `commit-agent`(커밋 전담 서브에이전트 + 강제 훅)는 사용자가
+선택했을 때만 설치된다. `main-branch-merge` 는 dev→main 릴리스 자동화 스킬이다.
 
 ## 설치
 
@@ -24,21 +25,23 @@ Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 와 `.cursor/rules/` 를 읽�
 
 | 요건 | 비고 |
 |---|---|
-| `python3` | 세 스킬 모두 |
+| `python3` | 대부분의 스킬 |
 | 프로젝트 `CLAUDE.md` | `init-agent-rules` 의 실행 전제. 없으면 중단한다 |
-| git 저장소 | 이관 시 `git mv` 로 히스토리를 보존한다. git 저장소가 아니면 일반 이동으로 대체 |
-| Notion integration 토큰 (선택) | `notion-api-only` 규칙을 설치할 때만. 온보딩 절차는 `init-agent-rules/references/notion_onboarding.md` |
+| git 저장소 | 이관 시 `git mv` 로 히스토리를 보존한다(`init-agent-rules`). `main-branch-merge` 는 브랜치·머지·태그에 git CLI 를 직접 쓴다 |
+| Notion integration 토큰 (선택) | `notion-api-only` 규칙, `main-branch-merge` 의 문서 동기화. 온보딩 절차는 `init-agent-rules/references/notion_onboarding.md` |
 
 ## 스킬
 
-세 스킬의 역할이 갈린다. **구조를 만드는 것 · 구조가 깨졌는지 보는 것 · 내용이 사실과
-어긋났는지 보는 것**은 서로 다른 문제다.
+앞의 세 스킬은 역할이 갈린다. **구조를 만드는 것 · 구조가 깨졌는지 보는 것 · 내용이 사실과
+어긋났는지 보는 것**은 서로 다른 문제다. `main-branch-merge` 는 별개로, dev→main 릴리스
+자동화를 맡는다.
 
 | 스킬 | 보는 것 | 언제 |
 |---|---|---|
 | `init-agent-rules` | 구조를 **만든다** | 최초 1회 |
 | `check-agent-rules` | 구조가 **깨졌는지** — 사본 갈라짐 | 커밋 전·수시 |
 | `refresh-agent-rules` | 내용이 **사실과 어긋났는지** | 프로젝트가 바뀐 뒤 |
+| `main-branch-merge` | dev→main 릴리스 자동화 | 릴리스 시점 |
 
 ### `init-agent-rules`
 
@@ -63,6 +66,7 @@ Claude 는 `CLAUDE.md` 를, Cursor 는 `AGENTS.md` 와 `.cursor/rules/` 를 읽�
 |---|---|---|
 | `git-branch-workflow` | `dev` 에서 분기·네이밍, 커밋 승인 게이트, `dev` 로만 `--no-ff` 머지 (main 은 사람이) | 항상 설치 |
 | `notion-api-only` | Notion MCP 도구 호출을 훅으로 막고 `.claude/scripts/notion_api.py`(토큰 기반 REST)로만 접근하게 강제 | `--notion-rule on` 일 때만 |
+| `commit-agent` | `git commit` 호출을 훅으로 막고 `project-conventions:commit-agent` 서브에이전트(haiku)에게 위임을 강제 | `--commit-rule on` 일 때만 |
 
 스크립트는 어떤 경우에도 이미 설치된 규칙을 **지우지 않는다** — 제거는 수동 작업이다.
 
@@ -78,6 +82,12 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 `--notion-rule on` 이면 여기에 `.claude/rules/notion-api-only.md` + `.cursor/rules/notion-api-only.mdc`
 + `.claude/scripts/notion_api.py` + `.claude/hooks/notion_mcp_gate.py` +
 `.claude/settings.json` 의 `PreToolUse` 훅 등록(기존 키는 보존하며 병합)이 추가된다.
+
+`--commit-rule on` 이면 `.claude/rules/commit-agent.md` + `.cursor/rules/commit-agent.mdc` +
+`.claude/hooks/commit_agent_gate.py` + `.claude/settings.json` 의 `PreToolUse` 훅 등록이
+추가된다. 이 훅은 메인 에이전트의 `git commit` 실행을 막고 `project-conventions:commit-agent`
+서브에이전트(모델 haiku)로 위임하게 한다 — 변경을 논리 그룹으로 나눠 그룹마다 커밋한다.
+`main-branch-merge` 의 릴리스 커밋(`release:` 접두)은 예외로 통과시킨다.
 
 `--auto-compact-window {0~1 값}` 을 주면 `.claude/settings.local.json`(개인, gitignore
 대상)에 `autoCompactEnabled`/`autoCompactWindow` 를 기록한다. 압축 임계값은 프로젝트
@@ -103,7 +113,7 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 
 ### `check-agent-rules`
 
-설치된 구조가 갈라졌는지 검사한다. 검사 항목 9가지:
+설치된 구조가 갈라졌는지 검사한다. 검사 항목 9가지(선택 규칙마다 반복):
 
 | # | 검사 |
 |---|---|
@@ -113,13 +123,14 @@ CLAUDE.md                              ← 안내문 + @AGENTS.md
 | 4 | `.claude/rules/<규칙>.md` 존재 |
 | 5 | `.cursor/rules/<규칙>.mdc` 본문이 4번과 **바이트 동일** |
 | 6 | `AGENTS.md` 의 규칙별 마커 블록이 온전함 |
-| 7 | (`notion-api-only` 설치 시만) `.claude/scripts/notion_api.py` 가 플러그인 템플릿과 sha256 동일 |
-| 8 | (〃) `.claude/hooks/notion_mcp_gate.py` 가 플러그인 템플릿과 sha256 동일 |
+| 7 | (해당 규칙에 설치 스크립트가 있으면) 그 스크립트가 플러그인 템플릿과 sha256 동일 |
+| 8 | (〃) 그 훅 스크립트가 플러그인 템플릿과 sha256 동일 |
 | 9 | (〃) `.claude/settings.json` 에 그 훅이 정확히 1개 등록됨 |
 
 4·5·6 은 규칙마다 반복한다. `.md`·`.mdc`·마커 블록 셋 중 하나라도 있으면 그 규칙은 설치된 것으로
 보고 나머지 둘도 요구한다 — 반쪽 설치를 잡기 위해서다. 셋 다 없는 선택 규칙은 건너뛴다.
-7·8·9 도 `notion-api-only` 가 그 정의로 설치돼 있을 때만 수행된다.
+7·8·9 는 `notion-api-only`(`notion_api.py`/`notion_mcp_gate.py`)와 `commit-agent`
+(`commit_agent_gate.py`) 각각에 대해, 그 규칙이 설치돼 있을 때만 수행된다.
 
 ```
 /project-conventions:check-agent-rules

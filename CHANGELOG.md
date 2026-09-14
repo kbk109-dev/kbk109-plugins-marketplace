@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.22.0
+
+커밋을 전담 서브에이전트에게 위임하는 구조를 도입한다. `project-conventions` 에 플러그인 루트
+`agents/commit-agent.md`(모델 haiku)를 신설했다 — 변경을 논리 그룹(생성물–원본 짝, 변경 종류,
+디렉토리 경계)으로 나눠 그룹마다 커밋한다. 프로젝트가 `init-agent-rules --commit-rule on` 으로
+옵트인하면 `.claude/hooks/commit_agent_gate.py`(PreToolUse) 가 메인 에이전트의 직접
+`git commit` 실행을 막고 위임을 지시한다 — `notion_mcp_gate.py` 와 같은 계약(프로젝트가 명시적
+옵트인한 정책이므로 탈출구 없음, 전 구간 fail-open)을 따른다. `agent_type` 접미사(`commit-agent`)
+로 서브에이전트 자신의 호출은 통과시키고, `release: {버전명}` 형태의 릴리스 커밋(heredoc·한 줄
+형태 모두)은 원자적 단일 커밋이라 예외로 통과시킨다.
+
+`init-agent-rules`/`check-agent-rules` 의 설치기·검사기를 규칙별 스크립트·훅 자산 목록으로
+일반화했다 — 기존에는 `notion-api-only` 하나만 전제한 모듈 상수(`SCRIPT_INSTALLS`,
+`HOOK_MARKER`, `HOOK_ENTRY`)였던 것을 각 규칙 정의 안의 `scripts`/`hook` 필드로 옮겨, 새 규칙을
+추가할 때 설치·검사 로직을 다시 쓰지 않게 했다. `check-agent-rules` 의 검사 항목은 9개에서
+11개로 늘었다(10·11 이 `commit-agent` 전용).
+
+**release-workflow 에서 커밋 지시를 전부 제거한다.** `release-impl`(Step 7 초기 커밋, Step C
+verdict 표, 작업 완료 후 처리, `generator_guide.md` 세션 종료 절차, `generator.md` 절대 규칙
+7번)에 있던 `git commit feat(release/v{version}): ...` 지시 4곳을 `project-conventions:commit-agent`
+위임으로 교체했다. task 단위 pre-commit 검증 훅(`release-impl/scripts/install_hooks.sh`)은
+누가 커밋하든 동일하게 작동하므로 그대로 둔다.
+
+**`main-branch-merge` 스킬을 `release-workflow` 에서 `project-conventions` 로 옮긴다.** 이
+스킬은 dev→main 릴리스 전반(버전 업데이트, Notion 문서 동기화, README·릴리스 노트 생성, 머지,
+태그, 릴리스 커밋)을 다루는데, 커밋 위임 구조가 `project-conventions` 에 생기면서 릴리스
+커밋(Step 8)의 예외 처리도 그 플러그인이 함께 관장하는 편이 응집도가 높다. 아웃바운드 의존이
+없어(내부 `${CLAUDE_PLUGIN_ROOT}` 참조 3곳은 `skills/main-branch-merge/` 경로가 그대로라 이동 후에도
+해석된다) 이동 자체는 저위험이었다. 인바운드 참조(`fix-plan-impl`, `release-impl` 의 다음 단계
+안내, `git-branch-workflow` 규칙 본문·`.mdc` 사본, 양쪽 README, 두 `plugin.json`/`marketplace.json`
+의 `description`)를 `project-conventions:main-branch-merge` 로 갱신했다.
+
+`.claude/skills/new-plugin/SKILL.md` 와 `AGENTS.md` 를 이번 구조에 맞게 개정했다. 플러그인 루트
+`agents/` 는 원래 "스킬 내부 서브에이전트 전용, 최상위에 두지 않는다" 로 못박혀 있었는데,
+`commit-agent` 처럼 `subagent_type` 으로 실제 등록되는 서브에이전트(프론트매터 있음)는 Claude
+Code 가 플러그인 루트 `agents/` 만 자동 탐색하므로 정확히 거기 둬야 한다 — 문서를 그 구분(진짜
+서브에이전트 vs 스킬이 시스템 프롬프트로 주입하는 프론트매터 없는 문서)이 드러나게 고쳤다.
+"조건 없는 `hooks/`" 항목의 예외 절에도 `commit_agent_gate.py` 를 `notion_mcp_gate.py` 와
+나란히 추가했다 — 둘 다 플러그인 번들이 아니라 프로젝트 옵트인이라 전역 발화 훅의 "재시도하면
+반드시 통과" 요구사항이 적용되지 않는다.
+
+영향받은 플러그인 2개 모두 minor 버전을 올린다: `project-conventions` 3.4.0(신규
+`commit-agent` 서브에이전트·`commit-agent` 규칙·`main-branch-merge` 스킬 편입),
+`release-workflow` 2.2.0(커밋 지시 제거·`main-branch-merge` 스킬 방출).
+
 ## 1.20.0
 
 스킬 18개 전체의 `description` 을 재작성해 세션당 상시 컨텍스트 고정비를 줄인다.

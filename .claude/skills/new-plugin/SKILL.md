@@ -47,7 +47,11 @@ description: "Creates a new plugin or adds a skill to an existing one in this ma
 ## 만들면서 지킬 것
 
 - **스킬 자산 디렉토리는 실제로 쓰는 5종만 둔다** — `scripts/` `references/` `agents/` `evals/`
-  `templates/`. `agents/` 는 스킬 내부 서브에이전트 전용이며 플러그인 최상위에 두지 않는다
+  `templates/`. `skills/<skill>/agents/` 는 그 스킬이 `Task` 도구로 시스템 프롬프트를 주입하는
+  문서 전용이다(프론트매터 없음, `subagent_type` 으로 등록되지 않는다). **`subagent_type` 으로
+  실제 호출되는 서브에이전트**(프론트매터에 `name`/`description`/`model` 등을 갖춘 것)는
+  Claude Code 가 플러그인 루트 `agents/` 만 자동 탐색하므로 반드시 거기 둔다 —
+  `plugins/project-conventions/agents/commit-agent.md` 가 그 예다
 - **`SKILL.md` 안에서 스크립트를 부를 때는 `${CLAUDE_PLUGIN_ROOT}` 기준, 다른 스킬을 부를 때는
   `<plugin>:<skill>`** — `AGENTS.md` 의 두 불변식이 적용되는 지점이 정확히 여기다
 - 플러그인에 넣지 **않는** 것(`commands/`, `.mcp.json`, `.skill` 번들, 조건 없는 `hooks/`)은
