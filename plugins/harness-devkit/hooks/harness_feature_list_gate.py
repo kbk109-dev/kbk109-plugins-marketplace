@@ -27,18 +27,14 @@ validate_feature_list.py 이고, 그건 사람이 결과를 본다.
 """
 from __future__ import annotations
 
-import hashlib
 import json
-import os
 import sys
-import tempfile
 from pathlib import Path
-
-from _feature_list_rules import check
 
 MAX_REMEMBERED = 200
 
-# 훅이 보는 파일. harness-dev 가 만드는 경로는 `docs/harness/{slug}/feature_list.json` 하나뿐이라
+# 훅이 보는 파일. harness-dev 가 만드는 경로는 `docs/harness/{slug}/feature_list.json`(v1) 또는
+# `docs/harness/{slug}/epics/{NN}/feature_list.json`(v2) 이고 둘 다
 # 이 두 조각의 문자열 검사만으로 판정된다 — 파일시스템을 건드리지 않는다. 이게 ① 무출력 조건의
 # 값을 결정한다: 이 훅은 모든 Write/Edit 마다 뜨지만, 무관한 호출은 파일을 열기도 전에 빠진다.
 TARGET_BASENAME = "feature_list.json"
@@ -50,7 +46,8 @@ REASON = """harness-dev 의 기계적 제약을 깨는 변경입니다.
 
 `feature_list.json` 은 이 하네스의 Task State Machine 입니다. acceptance_criteria 를 고치면
 어려운 기능을 "쉽게 통과"시키는 지름길이 되고, status 를 임의 값으로 두면 통과 증명이
-무의미해집니다.
+무의미해집니다. 2.0 파일(schema_version 2)에서 pass 는 evaluator 서브에이전트만 증거 로그
+(`logs/<FID>/`)와 함께 기록합니다 — 제약 #9·#10·#11.
 
 고쳐야 할 것을 고친 뒤 다시 쓰세요. **이 변경이 의도된 것이면 같은 호출을 그대로 다시 하면
 통과합니다** — 범위가 실제로 바뀌었다면 사용자에게 먼저 확인받는 편이 낫습니다."""
@@ -88,15 +85,29 @@ def resulting_content(tool_name: str, tool_input: dict, file_path: str):
 
 def load_lock(file_path: str):
     """같은 폴더의 .criteria_lock.json. 없으면 None — 제약 2 만 건너뛴다."""
+    from _feature_list_rules import CRITERIA_LOCK_NAME
+
     try:
-        raw = (Path(file_path).parent / ".criteria_lock.json").read_text("utf-8")
+        raw = (Path(file_path).parent / CRITERIA_LOCK_NAME).read_text("utf-8")
         lock = json.loads(raw)
     except (OSError, ValueError):
         return None
     return lock if isinstance(lock, dict) else None
 
 
+def load_previous(file_path: str):
+    """디스크에 지금 있는 feature_list. 없거나 깨졌으면 None — 전이 판정(제약 9·10)만 건너뛴다."""
+    try:
+        previous = json.loads(Path(file_path).read_text("utf-8"))
+    except (OSError, ValueError):
+        return None
+    return previous if isinstance(previous, dict) else None
+
+
 def state_path(agent_key: str) -> Path:
+    import hashlib
+    import tempfile
+
     digest = hashlib.sha256(agent_key.encode("utf-8", "replace")).hexdigest()[:32]
     return Path(tempfile.gettempdir()) / "harness-feature-list-gate" / f"{digest}.json"
 
@@ -160,6 +171,11 @@ def run() -> None:
     if not targets_feature_list(file_path):
         return  # 가장 흔한 경로. 여기까지가 문자열 검사뿐이다
 
+    # 규칙 모듈은 여기서 불러온다 — 모든 Write/Edit 마다 뜨는 훅이라, 무관한 호출이 import 비용을
+    # 내지 않게 하려는 것이다 (re 컴파일 포함).
+    from _feature_list_rules import (check, check_evidence, check_pass_author,
+                                     check_transition, newly_passed)
+
     content = resulting_content(tool_name, tool_input, file_path)
     if content is None:
         return
@@ -170,7 +186,16 @@ def run() -> None:
         # 제약 6 — JSON 이 아니면 상태 머신이 아니다. 그 자체가 위반이다.
         violations = [{"rule": 6, "detail": f"JSON 파싱 실패: {exc}"}]
     else:
-        violations = check(feature_list, load_lock(file_path))
+        previous = load_previous(file_path)
+        # 서브에이전트가 아니면 agent_type 이 없다 — 빈 문자열은 "메인 세션" 이지 "모름" 이 아니다.
+        agent_type = payload.get("agent_type")
+        agent_type = agent_type if isinstance(agent_type, str) else ""
+        violations = (
+            check(feature_list, load_lock(file_path))
+            + check_transition(previous, feature_list)
+            + check_pass_author(previous, feature_list, agent_type)
+            + check_evidence(feature_list, None, newly_passed(previous, feature_list))
+        )
     if not violations:
         return
 

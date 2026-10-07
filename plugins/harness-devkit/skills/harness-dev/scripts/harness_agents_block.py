@@ -37,25 +37,29 @@ BLOCK_BODY = """## Harness 작업 규율
 `harness-devkit:harness-dev` 로 진행하는 작업에 적용된다. 이 절은 그 스킬이 관리한다 —
 직접 고치지 말 것, 재설치하면 덮어쓴다.
 
-**harness 상태는 `docs/harness/*/` 에 있다.** 작업을 재개할 때 그 폴더의
-`progress.md` → `feature_list.json` 순으로 **먼저 읽는다.** 이 문서에는 진행 상태를 적지 않는다.
+**harness 상태는 `docs/harness/*/` 에 있다.** 작업을 재개할 때 그 폴더의 `PROGRESS.md`
+(1.x 작업은 `progress.md`) → 해당 에픽의 `feature_list.json` 순으로 **먼저 읽는다.**
+이 문서에는 진행 상태를 적지 않는다.
 
 **재정의할 수 없는 제약:**
 
 1. **한 번에 하나의 기능만** 구현한다 — 여러 기능을 동시에 작업하지 않는다
 2. `acceptance_criteria` 를 **수정·삭제하지 않는다** — 어려운 기능을 쉽게 통과시키는 지름길이 된다
-3. Generator 의 자체 평가는 참고일 뿐, **Evaluator 의 판정이 최종**이다
+3. 구현자의 자체 평가는 참고일 뿐, **Evaluator 의 판정이 최종**이다
 4. **스텁·TODO·placeholder·mock 으로 기능을 통과시키지 않는다**
-5. 매 스프린트 종료 시 **`progress.md` 를 갱신한다**
+5. 기능 하나를 끝낼 때마다 **진행 기록(`PROGRESS.md`)을 갱신한다**
 6. `feature_list.json` 은 **JSON 형식을 유지한다** — Markdown 으로 바꾸지 않는다
-7. 동일 스프린트 **재시도는 2회까지**. 그 뒤에는 사용자에게 에스컬레이션한다
+7. 동일 기능 **재시도는 2회까지**. 그 뒤에는 사용자에게 에스컬레이션한다
 8. `status` 기본값은 **`"fail"`**. `"pending"` 은 존재하지 않는다 — 통과를 증명해야 `"pass"` 가 된다
+9. `"pass"` 는 **evaluator 서브에이전트만** 기록한다 (`schema_version: 2` 파일)
+10. status 전이는 `fail→pass`, `fail→blocked`, `blocked→fail` 뿐이다
+11. `"pass"` 는 **증거 로그**(`logs/<FID>/*.log`)와 `eval/<FID>.md` 의 `VERDICT: PASS` 가 있어야 한다
 
-2·6·7·8 은 PreToolUse 훅과 아래 검사가 기계적으로 잡는다. 1·3·5 는 판단 영역이라 검사할 수 없다.
+2·6~11 은 PreToolUse 훅과 아래 검사가 기계적으로 잡는다. 1·3·5 는 판단 영역이라 검사할 수 없다.
 
 ```bash
 python3 <플러그인>/skills/harness-dev/scripts/validate_feature_list.py \\
-  docs/harness/<slug>/feature_list.json --stubs src
+  docs/harness/<slug>/epics/<NN-slug>/feature_list.json --stubs src
 ```"""
 
 

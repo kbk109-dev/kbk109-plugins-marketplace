@@ -1,0 +1,3 @@
+{"schema_version":2,"product_slug":"demo","epic":"01-core","features":[
+ {"id":"F001","name":"add","description":"","acceptance_criteria":["`todo add x` 가 종료코드 0 을 반환한다"],"priority":"high","status":"pass","attempts":0,"dependencies":[],"evidence":["logs/F001/1.log"],"eval_report":"eval/F001.md"},
+ {"id":"F002","name":"list","description":"","acceptance_criteria":["`todo list` 가 추가한 항목을 출력한다"],"priority":"high","status":"fail","attempts":0,"dependencies":["F001"],"evidence":[],"eval_report":null}]}
