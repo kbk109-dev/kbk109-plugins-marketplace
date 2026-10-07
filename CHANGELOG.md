@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.24.0
+
+`harness-devkit` 2.0.0 — `harness-dev` 를 PRD 에서 QA 까지 전 과정을 관리하는 하네스로 다시 쓴다.
+1.x 는 PRD·세부 계획 단계가 없었고, Generator 와 Evaluator 가 같은 컨텍스트에서 역할만 바꿔 자기평가
+편향이 그대로였으며, 스프린트 계약이 대화 안에만 있어 세션이 끊기면 사라졌다. pass 기록 주체와
+status 전이도 문서에만 있고 코드가 강제하지 않았다.
+
+2.0 은 제품(PRD 1개) → 에픽(N개) → 기능 단위로 돌고, 단계마다 새 서브에이전트가 일한다. 진입 스킬
+`harness-dev` 는 사용자 대화와 호출 순서 지휘와 상태 파일 갱신만 하는 얇은 오케스트레이터다. 에이전트
+9개를 플러그인 루트 `agents/` 에 추가했다: `prd-writer`·`prd-critic`, `planner`·`plan-critic`,
+`feature-planner`, `tc-writer`·`tc-critic`, `generator`, `evaluator`. critic 은 PRD·PLAN 을
+회의적으로, TC 를 보수적으로 검토하고 writer→critic→revise 는 최대 2라운드다. 인터뷰는
+`/mattpocock-skills:grill-with-docs`(없으면 같은 방식을 직접 수행)로 하고 결과를 `BRIEF.md` 에 남긴다.
+
+QA 는 TC 기반이다. 에픽마다 개발 전에 구현 코드를 보지 않고 `TC.md` 를 쓰고, `tc-critic` 이 누락과
+타당성을 검토해 확정하면 `.tc_lock.json` 으로 잠근다. evaluator 는 확정 TC 를 PLAN 의 Run & Verify
+(기동·test·E2E 명령, 승인 전 필수)로 실앱에서 실행하고, 그 로그만 증거로 인정한다.
+
+"지금 어느 단계인가" 는 모델이 아니라 `harness_state.py status` 가 파일 상태에서 판정한다 — 새 세션은
+앞선 대화를 모르므로 재진입할 때마다 같은 답이 나와야 한다. `validate_harness_doc.py` 는 PRD·PLAN 의
+필수 섹션, PLAN 의 Run & Verify, TC 의 추적성(모든 acceptance criterion 을 덮는지)과 잠금을 검사한다.
+
+기계적 제약을 8개에서 11개로 늘렸다 (`_feature_list_rules.py`, 훅과 `validate_feature_list.py` 가 공유):
+9 pass 는 evaluator 만 기록(v2 파일), 10 status 전이는 `fail→pass`·`fail→blocked`·`blocked→fail` 뿐
+(디스크의 이전 파일과 비교, `--prev`), 11 pass 는 `logs/<FID>/*.log` 와 `eval/<FID>.md` 의
+`VERDICT: PASS` 가 있어야 성립. 9·11 은 `schema_version: 2` 파일에만 적용해 1.x 파일을 깨지 않는다.
+훅은 페이로드의 `agent_type` 으로 호출 주체를 구분하며 기존의 1회 탈출구와 fail-open 을 유지한다.
+
+자동 커밋은 없다. 에픽 종료 때 `/simplify` 로 변경분을 정리한 뒤 evaluator 가 회귀 모드로 확정 TC 를
+다시 돌리고, 요약으로 사용자 승인을 받은 다음에 커밋한다 (`commit-agent` 규칙이 있는 프로젝트는 그쪽이
+`/simplify` 와 커밋을 맡는다). push 는 하지 않는다. 1.x 레이아웃(`<slug>/feature_list.json`)은
+`legacy` stage 로 계속 재개된다. `dev-monitor` 는 변경 없다.
+
+`plugins/harness-devkit/CONTEXT.md`(용어집)와 `docs/adr/0001-per-stage-subagents-thin-orchestrator.md`
+를 추가했다. `harness-devkit` 2.0.0, 마켓플레이스 1.24.0.
+
 ## 1.23.0
 
 `commit-agent` 규칙에 커밋 승인 전 `/simplify` 호출 단계를 추가한다. `--commit-rule on` 프로젝트에서
