@@ -1,7 +1,7 @@
 {
   "name": "harness-devkit",
-  "version": "1.3.0",
-  "description": "3-에이전트(Planner→Generator→Evaluator) 자율 개발 워크플로와 dev 서버 로그 감시·오류 분석 모니터",
+  "version": "2.0.0",
+  "description": "PRD→PLAN→에픽별 feature_list→TC→개발→QA 전 과정을 단계별 서브에이전트로 관리하는 하네스와 dev 서버 로그 감시·오류 분석 모니터",
   "author": {
     "name": "kbk109",
     "url": "https://github.com/kbk109-dev"
@@ -12,6 +12,9 @@
   "keywords": [
     "skill-development",
     "harness-engineering",
+    "prd",
+    "qa",
+    "subagents",
     "dev-server",
     "log-monitoring",
     "evals"

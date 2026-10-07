@@ -35,8 +35,8 @@
 
 ## 릴리스
 
-현재 마켓플레이스 버전은 **1.23.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
-이번 태그 노트는 [docs/release/v1.23.0.md](./docs/release/v1.23.0.md) 를 본다.
+현재 마켓플레이스 버전은 **1.24.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
+이번 태그 노트는 [docs/release/v1.24.0.md](./docs/release/v1.24.0.md) 를 본다.
 
 ## 플러그인
 
@@ -45,7 +45,7 @@
 | [`expo-app-kit`](./plugins/expo-app-kit) | 4 | Expo/RN 앱의 AdMob 광고 계획·구현, EAS Update(OTA) 핫픽스 |
 | [`firebase-observability`](./plugins/firebase-observability) | 4 | Firebase Analytics(GA4)·Crashlytics 도입 계획·구현 |
 | [`release-workflow`](./plugins/release-workflow) | 3 | 릴리즈 계획·구현·패치. Notion 은 선택 상태 저장소다 |
-| [`harness-devkit`](./plugins/harness-devkit) | 2 | 3-에이전트(Planner→Generator→Evaluator) 자율 개발 워크플로, dev 서버 로그 감시 |
+| [`harness-devkit`](./plugins/harness-devkit) | 2 | PRD→PLAN→feature_list→TC→개발→QA 를 단계별 서브에이전트로 관리하는 하네스, dev 서버 로그 감시 |
 | [`product-planning`](./plugins/product-planning) | 1 | 문서·회의록 → PRD 10개 섹션 정규화 (Notion 은 선택) |
 | [`project-conventions`](./plugins/project-conventions) | 4 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로, 선택적 Notion 토큰 API 강제, 선택적 커밋 서브에이전트 강제) 동기화, dev→main 릴리스 자동화. 이관 전 본문을 200줄 목표로 다듬는다. 생성물인 `.mdc` 사본·설치 스크립트가 원본과 갈라졌는지 바이트 단위로 검사한다 |
 
@@ -81,10 +81,10 @@
 ### harness-devkit
 | 스킬 | 트리거 예 | references |
 |---|---|---|
-| `harness-dev` | "복잡한 앱 만들어줘", "스프린트로 나눠서 개발해줘", "계획-구현-평가 루프" | `feature_list_template.json` 외 3 |
+| `harness-dev` | "복잡한 앱 만들어줘", "스프린트로 나눠서 개발해줘", "계획-구현-평가 루프", "PRD 부터 QA 까지" | `prd_template.md` 외 9 |
 | `dev-monitor` | `/harness-devkit:dev-monitor <port>` — 서버 기동 + 로그 감시 | — |
 
-> 사용 가이드: [docs/guide/harness-devkit.md](./docs/guide/harness-devkit.md) — 3-에이전트가 무엇을 막는지, 다른 하네스 스킬과 언제 갈리는지
+> 사용 가이드: [docs/guide/harness-devkit.md](./docs/guide/harness-devkit.md) — 단계별 서브에이전트가 무엇을 막는지, 다른 하네스 스킬과 언제 갈리는지
 
 ### product-planning
 | 스킬 | 트리거 예 | references |

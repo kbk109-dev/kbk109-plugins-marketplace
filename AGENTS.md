@@ -62,6 +62,20 @@ echo "$P" | python3 -B $HG   # → 무출력
 python3 -B plugins/harness-devkit/skills/harness-dev/scripts/validate_feature_list.py \
   /tmp/hd-fixture/docs/harness/demo/feature_list.json; echo "exit=$?"
 
+# 2.0 규칙 — v2 파일(schema_version 2)의 pass 는 evaluator 만, 증거 로그가 있어야 한다 (제약 9·10·11).
+# agent_type 접미사로 evaluator 를 구분한다. generator 의 fail→pass 는 1번째 deny, 재시도는 무출력.
+mkdir -p /tmp/hd-fixture/docs/harness/demo/epics/01-x
+echo '{"schema_version":2,"features":[{"id":"F1","acceptance_criteria":["a"],"status":"fail","attempts":0}]}' \
+  > /tmp/hd-fixture/docs/harness/demo/epics/01-x/feature_list.json
+P='{"cwd":"/tmp/hd-fixture","session_id":"S","agent_id":"A","agent_type":"harness-devkit:generator","tool_name":"Write","tool_input":{"file_path":"/tmp/hd-fixture/docs/harness/demo/epics/01-x/feature_list.json","content":"{\"schema_version\":2,\"features\":[{\"id\":\"F1\",\"acceptance_criteria\":[\"a\"],\"status\":\"pass\",\"attempts\":1,\"evidence\":[\"logs/F1/1.log\"]}]}"}}'
+echo "$P" | python3 -B $HG   # → deny (제약 9: evaluator 가 아닌 주체)
+echo "$P" | python3 -B $HG   # → 무출력
+echo "${P/harness-devkit:generator/harness-devkit:evaluator}" | python3 -B $HG   # 무출력 (새 에이전트 키라 별개 판정)
+
+# 상태 판정·문서 검증 스크립트 (2.0)
+python3 -B plugins/harness-devkit/skills/harness-dev/scripts/harness_state.py status /tmp/hd-fixture/docs/harness
+python3 -B plugins/harness-devkit/skills/harness-dev/scripts/validate_harness_doc.py plan PLAN.md   # Run & Verify 누락이면 exit 1
+
 # notion-api-only 훅 — 프로젝트 로컬 설치이므로 탈출구가 없다(harness 훅과 대조).
 # 발화 조건은 "이 프로젝트에서 토큰을 구할 수 있는가" 하나뿐이다.
 NG=plugins/project-conventions/skills/init-agent-rules/templates/notion_mcp_gate.py
@@ -162,7 +176,7 @@ HEAD 를 가리켜야 하는 원자적 단일 커밋이라 그룹 분할 대상�
 ## Harness Engineering — 스킬 수정 시 지켜야 할 근거
 
 전체 문서: [`docs/harness-engineering/`](./docs/harness-engineering/) ·
-3-에이전트 하네스의 참조 구현: `harness-devkit:harness-dev`
+단계별 서브에이전트 하네스의 참조 구현: `harness-devkit:harness-dev`
 
 **에이전트 = 모델 + 하네스.** 이 저장소 스킬들의 구조는 전부 LLM 의 5가지 구조적 실패 모드를
 막기 위한 것이다. 아래 장치를 "불필요한 복잡성"으로 보고 걷어내지 말 것 — 각각이 특정 실패 모드에

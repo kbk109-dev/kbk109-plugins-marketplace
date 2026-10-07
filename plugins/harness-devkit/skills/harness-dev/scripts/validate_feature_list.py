@@ -2,7 +2,7 @@
 """feature_list.json 이 harness-dev 의 기계적 제약을 지키는지 검사한다.
 
 사용:
-    validate_feature_list.py <feature_list.json> [--stubs PATH ...] [--update-lock]
+    validate_feature_list.py <feature_list.json> [--stubs PATH ...] [--update-lock] [--prev OLD.json]
 
 출력: stdout JSON { ok, violations[], checked{} }
 종료코드: 0 = 통과, 1 = 위반 있음, 3 = 입력 오류(파일 없음·JSON 깨짐·인자 오류)
@@ -25,9 +25,15 @@ import sys
 # 고정 상대 경로이므로 이 한 단계는 안전하다.
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "..", "..", "..", "hooks"))
-from _feature_list_rules import check, criteria_digest, scan_stubs  # noqa: E402
-
-LOCK_NAME = ".criteria_lock.json"
+from _feature_list_rules import (  # noqa: E402
+    CRITERIA_LOCK_NAME as LOCK_NAME,
+    check,
+    check_evidence,
+    check_transition,
+    criteria_digest,
+    newly_passed,
+    scan_stubs,
+)
 
 
 def fail(message: str, code: int) -> None:
@@ -42,12 +48,18 @@ def parse_args(argv):
     path = argv[0]
     stubs = []
     update_lock = False
+    prev = None
     i = 1
     while i < len(argv):
         arg = argv[i]
         if arg == "--update-lock":
             update_lock = True
             i += 1
+        elif arg == "--prev":
+            if i + 1 >= len(argv):
+                fail("--prev 뒤에 이전 feature_list.json 경로가 필요합니다.", 3)
+            prev = argv[i + 1]
+            i += 2
         elif arg == "--stubs":
             i += 1
             while i < len(argv) and not argv[i].startswith("--"):
@@ -57,7 +69,7 @@ def parse_args(argv):
                 fail("--stubs 뒤에 검사할 경로가 필요합니다.", 3)
         else:
             fail(f"알 수 없는 인자: {arg}", 3)
-    return path, stubs, update_lock
+    return path, stubs, update_lock, prev
 
 
 def build_lock(feature_list) -> dict:
@@ -73,7 +85,15 @@ def build_lock(feature_list) -> dict:
 
 
 def main() -> int:
-    path, stub_paths, update_lock = parse_args(sys.argv[1:])
+    path, stub_paths, update_lock, prev_path = parse_args(sys.argv[1:])
+
+    previous = None
+    if prev_path:
+        try:
+            with open(prev_path, "r", encoding="utf-8") as fh:
+                previous = json.load(fh)
+        except (OSError, ValueError) as exc:
+            fail(f"--prev 파일을 읽을 수 없습니다: {exc}", 3)
 
     try:
         with open(path, "r", encoding="utf-8") as fh:
@@ -103,7 +123,14 @@ def main() -> int:
         except (OSError, ValueError):
             lock = None  # 잠금이 아직 없는 것은 위반이 아니다 — 제약 2 만 건너뛴다
 
-    violations = check(feature_list, lock)
+    # 제약 9(pass 기록 주체)는 누가 썼는지 알 수 없어 여기서는 판정하지 않는다 — 훅의 몫이다.
+    # 제약 11 은 파일 실존까지 본다. v1 파일의 기존 pass 는 대상이 아니다.
+    violations = (
+        check(feature_list, lock)
+        + check_transition(previous, feature_list)
+        + check_evidence(feature_list, os.path.dirname(os.path.abspath(path)),
+                         newly_passed(previous, feature_list) if previous else None)
+    )
     if stub_paths:
         violations.extend(scan_stubs(stub_paths))
 

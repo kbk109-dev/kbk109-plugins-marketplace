@@ -1,8 +1,7 @@
 {
-  "project_name": "",
-  "project_slug": "",
-  "total_features": 0,
-  "sprints": 0,
+  "schema_version": 2,
+  "product_slug": "",
+  "epic": "01-example",
   "features": [
     {
       "id": "F001",
@@ -10,10 +9,11 @@
       "description": "",
       "acceptance_criteria": [],
       "priority": "high",
-      "sprint": 1,
       "status": "fail",
       "attempts": 0,
-      "dependencies": []
+      "dependencies": [],
+      "evidence": [],
+      "eval_report": null
     }
   ]
 }

@@ -1,372 +1,219 @@
 ---
 name: harness-dev
-description: "Runs a 3-agent (Planner-Generator-Evaluator) sprint loop for complex builds — decomposes a multi-feature app into sprints, then implements, evaluates, and retries each independently. Trigger: '복잡한 앱 만들어줘', '스프린트로 나눠서 개발해줘', '계획-구현-평가 루프'. Not for a single bug fix, one-file refactor, or Q&A."
+description: "Drives a product from idea to QA — PRD, PLAN, per-epic feature_list.json, TC, build, evaluate — through fresh per-stage subagents, saving state under docs/harness/<slug>/ so any new session resumes. Needs no prior plan file (fallback when no domain skill fits). Trigger: '복잡한 앱 만들어줘', '스프린트로 나눠서 개발해줘', '계획-구현-평가 루프', 'PRD 부터 QA 까지'. Not for a single bug fix, one-file refactor, or Q&A."
 ---
 
-# Harness-Dev: 3-에이전트 자율 개발 워크플로
-
-## 철학
+# Harness-Dev: PRD 에서 QA 까지 — 단계별 서브에이전트 하네스
 
 "더 똑똑한 모델이 아니라, 모델을 둘러싼 더 똑똑한 환경"
 
-에이전트 실패의 5가지 패턴을 구조적으로 방지한다:
+이 스킬의 메인 세션은 **얇은 오케스트레이터**다. 단계마다 새 서브에이전트가 일하고(컨텍스트 리셋),
+세션 사이의 연속성은 전부 `docs/harness/<slug>/` 의 파일이 맡는다. 메인이 직접 하는 일은 셋뿐이다 —
+사용자와의 대화(인터뷰·승인·에스컬레이션), 서브에이전트 호출 순서 지휘, 상태 파일 갱신.
 
-1. **한 번에 모든 것 처리** → 스프린트 단위 분해로 해결
-2. **컨텍스트 불안** → progress.md로 세션 연속성 확보
-3. **조기 성공 선언** → 독립 Evaluator가 검증
-4. **자기 평가 편향** → Generator의 자체 평가는 참고만, Evaluator 판단이 최종
-5. **목표 표류** → Ralph Loop 패턴으로 매 스프린트 목표 재주입
+방지하는 실패: 한 번에 다 하기 · 컨텍스트 불안 · 조기 성공 선언 · 자기평가 편향 · 목표 표류.
+설계 근거는 `docs/adr/0001-per-stage-subagents-thin-orchestrator.md`, 용어는 `CONTEXT.md`.
 
----
+## 0. 적합성
 
-## Phase 0: 복잡도 판단
+기능이 5개 이상이거나 여러 모듈이 얽힌 제품 빌드에 쓴다. 단순 버그 수정·단일 파일 리팩토링·
+질의응답·기능 3개 이하는 일반 개발로 처리한다.
 
-요구사항을 받으면 먼저 이 스킬이 적합한지 판단한다.
+## 1. 매 진입의 첫 동작 — 상태 판정
 
-**이 스킬을 사용하는 경우:**
-
-- 기능이 5개 이상 필요한 앱/서비스 빌드
-- 여러 모듈이 서로 의존하는 복잡한 구현
-- 품질 게이트가 필요한 대규모 개발
-
-**일반 개발로 전환하는 경우:**
-
-- 단순 버그 수정, 단일 파일 리팩토링
-- 간단한 스크립트, 질문/답변, 문서 작성
-- 기능 3개 이하의 소규모 작업
-
----
-
-## Phase 0.5: 상태 복원 (재개할 때만)
-
-`docs/harness/` 아래에 폴더가 이미 있으면 **새로 시작하는 것이 아니다.** 진행 중이던 작업을
-이어받는 것이므로, 상태를 복원하기 전에는 아무것도 구현하지 않는다.
+새 시작이든 재개든 **먼저** 이것을 실행한다. 판정은 코드가 한다 — 모델이 판정하면 재진입할 때마다
+달라진다. 이 출력을 읽기 전에는 아무것도 구현하지 않는다.
 
 ```bash
-ls docs/harness/                       # 진행 중인 slug 목록
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/harness_state.py status docs/harness
 ```
 
-해당 slug 폴더에서 **`progress.md` → `feature_list.json` 순으로 읽는다.** progress.md 가 어디까지
-갔는지 말해 주고, feature_list.json 이 무엇이 남았는지 말해 준다.
+출력 `{slug, stage, epic, epic_dir, feature, round, reason}` 의 `stage` 로 아래 표를 따른다.
+`stage: choose` 면 `candidates` 중 어느 것을 이어 갈지 사용자에게 묻고 `--slug` 를 붙여 다시 실행한다.
+새 제품이면 slug 는 `harness_state.py slug "<제품 이름>" docs/harness` 로 정한다 (직접 만들면 호출마다 달라진다).
 
-**상태 파일 확인 없이 Phase 2 로 진행하지 않는다.** LLM 은 세션 간 영구 메모리가 없어서, 복원을
-건너뛰면 이미 끝난 기능을 다시 만들거나 끝나지 않은 기능을 끝난 것으로 취급한다 — 상태를 파일로
-외부화한 이유가 그것을 막는 것인데, 읽지 않으면 외부화가 무의미하다.
+| stage | 하는 일 |
+|---|---|
+| `interview` | §3 인터뷰 → `BRIEF.md` |
+| `prd-draft` / `prd-revise` | `prd-writer` 호출 |
+| `prd-critic` | `prd-critic` 호출 |
+| `prd-approval` | §4 문서 승인 |
+| `plan-draft` / `plan-revise` | `planner` 호출 |
+| `plan-critic` | `plan-critic` 호출 |
+| `plan-approval` | §4 문서 승인 (`validate_harness_doc.py plan` 통과 필수) |
+| `feature-plan` | `feature-planner` 호출 |
+| `epic-approval` | §5 에픽 승인 |
+| `tc-draft` / `tc-revise` | `tc-writer` 호출 |
+| `tc-critic` | `tc-critic` 호출 |
+| `tc-lock` | §6 TC 확정 |
+| `dev` | §7 개발·QA 릴레이 (기능 1개) |
+| `escalate` | §8 사용자 판단 |
+| `epic-close` | `references/epic_close.md` 의 절차 |
+| `final` | §9 종합 보고 |
 
-slug 가 여러 개면 어느 것을 이어갈지 사용자에게 묻는다. 새 작업이면 Phase 1 로 간다.
+한 번의 진입에서 서브에이전트를 한 단계만 부르고 `harness_state.py` 를 다시 실행해 다음 stage 로
+간다. 사용자 승인 stage 에 닿으면 멈춘다. 에픽 하나가 끝나면 **새 세션을 권하고** 멈춘다 — 메인
+컨텍스트가 에픽을 넘어 쌓이는 것을 끊기 위해서다.
 
----
+## 2. 서브에이전트 호출
 
-## Phase 1: PLANNER (계획 에이전트)
+서브에이전트는 `harness-devkit:<이름>` 으로 Agent 도구로 부른다. 에이전트 문서는 플러그인 루트
+`agents/` 에 있다. **프롬프트에 절대 경로를 직접 넣는다** — 서브에이전트는 이 대화를 모른다.
 
-사용자의 1~4문장 요구사항을 완전한 제품 사양으로 확장한다.
+| 키 | 값 |
+|---|---|
+| `product_dir` | `<프로젝트>/docs/harness/<slug>` 절대 경로 |
+| `epic_dir` | `<product_dir>/epics/<NN-slug>` (에픽 단계에서) |
+| `refs_dir` | 이 스킬의 `references/` 절대 경로 |
+| `project_root` | 프로젝트 루트 |
+| `round` · `feature_id` · `mode` | 해당 단계가 필요로 할 때 |
 
-### 수행 순서
+서브에이전트의 마지막 메시지는 한 줄 JSON `{"status","artifact","summary"}` 하나다. 상세는 그 파일에
+있으니 메인은 JSON 만 읽는다 (메인 컨텍스트 보호). 호출이 끝날 때마다 `PROGRESS.md` 에 한 줄 덧붙인다:
+`- <일시> <stage> → <status> (<artifact>)`.
 
-1. **프로젝트 슬러그(slug) 생성** — 요구사항의 핵심을 2~4단어 영문 kebab-case로 요약
-   - 예: `todo-manager`, `retro-game-maker`, `realtime-chat`
-   - `docs/harness/` 아래에 동일 이름 폴더가 이미 있으면 숫자 접미사 추가 (`todo-manager-2`)
-   - 이 slug가 `docs/harness/{slug}/` 프로젝트 전용 폴더명이 됨
-2. 요구사항을 개별 기능(feature) 목록으로 분해
-3. `docs/harness/{slug}/feature_list.json` 생성 (`references/feature_list_template.json` 참조)
-4. 기능을 스프린트에 배분 (1 스프린트 = 2~4개 기능)
-5. `docs/harness/{slug}/project_spec.md` 생성 (전체 제품 사양, 기술 스택, 디자인 방향, 제약 조건)
-6. `docs/harness/{slug}/progress.md` 초기화
+| 에이전트 | 단계 | 산출 |
+|---|---|---|
+| `prd-writer` · `prd-critic` | PRD | `PRD.md` · `reviews/prd-critic-r{N}.md` |
+| `planner` · `plan-critic` | PLAN | `PLAN.md` · `reviews/plan-critic-r{N}.md` |
+| `feature-planner` | 에픽 분해 | `epics/<NN>/feature_list.json` |
+| `tc-writer` · `tc-critic` | TC | `epics/<NN>/TC.md` · `reviews/tc-critic-r{N}.md` |
+| `generator` | 구현 | 코드 · `sprint_contracts/<FID>.md` |
+| `evaluator` | QA | `logs/<FID>/` · `eval/<FID>.md` · status 기록 |
 
-### 핵심 원칙
+서브에이전트는 사용자와 대화할 수 없고 다른 서브에이전트를 부를 수 없다. 그래서 대화는 메인이,
+generator→evaluator 릴레이도 메인이 지휘한다.
 
-- 구현 세부사항을 과도하게 명시하지 않는다 (상위 단계 오류가 전체에 영향)
-- 제품 범위와 전반적 방향에 집중한다
-- 기능 수는 복잡도에 비례: 단순 5~8개, 중간 10~15개, 복잡 15~25개
+## 3. 인터뷰 (`interview`)
 
-### 기능 분해 기준
+`/mattpocock-skills:grill-with-docs` 가 사용 가능하면 그것을 호출한다. 설계 트리를 라운드로 돌며
+공유 이해에 닿을 때까지 묻고, 용어와 ADR 은 그 스킬이 프로젝트의 `CONTEXT.md`·`docs/adr/` 에 쓴다.
+없는 환경이면 같은 방식을 직접 한다 — 질문마다 추천안을 붙이고, 사실(코드·파일·도구)은 사용자에게
+묻지 않고 직접 조사하고, AskUserQuestion 으로 결정을 받는다.
 
-각 기능에 반드시 포함할 필드:
+끝나면 결정 사항을 `docs/harness/<slug>/BRIEF.md` 로 정리한다 (문제·사용자·범위·비목표·제약·
+성공 기준·열린 질문). 이 파일이 새 세션의 `prd-writer` 가 읽는 **유일한** 요구사항 출처다 —
+대화에만 있는 결정은 세션이 끊기면 사라진다.
 
-- `id`: F001, F002, ... 형식
-- `name`: 기능명
-- `description`: 상세 설명
-- `acceptance_criteria`: 통과/실패 판단 기준 (구체적, 측정 가능, 수정/삭제 불가)
-- `priority`: high / medium / low
-- `sprint`: 스프린트 번호
-- `status`: `"fail"` (기본값 — 에이전트는 통과를 *증명*해야 한다). 허용값은 `fail`/`pass`/`blocked`
-- `attempts`: 재시도 횟수. `0` 으로 시작하고 재작업할 때마다 +1 — 제약 7 의 상한을 파일에
-  남기기 위한 필드다. 세션 안에만 있으면 세션이 끊길 때 카운터가 사라진다
-- `dependencies`: 선행 기능 ID 목록
+## 4. 문서 승인 (PRD · PLAN)
 
-### 사용자 확인 (필수)
+critic 루프는 최대 2라운드다 (writer → critic → revise → critic). 2라운드 뒤에도 REVISE 면
+`unresolved_blocking: true` 로 온다 — 남은 blocking 을 사용자에게 **그대로** 보여 주고 판단을 받는다.
 
-Planner 완료 후, feature_list.json과 스프린트 계획을 사용자에게 보여주고 확인을 받는다:
+1. 문서 경로와 critic 의 최근 리뷰 요약(blocking·non-blocking)을 사용자에게 보여 준다.
+2. PLAN 이면 먼저 `validate_harness_doc.py plan <PLAN.md>` 를 돌려 exit 0 을 확인한다 (Run & Verify
+   누락이면 승인을 묻지 않고 `planner` 로 되돌린다). PRD 면 `validate_harness_doc.py prd <PRD.md>`.
+3. 승인되면 **메인이** 문서 frontmatter 를 `status: approved` 로 바꾼다. 수정 요청이면 요청을 반영해
+   `*-revise` 로 돌린다 (사용자 수정은 critic 라운드 수에 세지 않는다 — `reviews/` 에 새 파일이 없으면
+   상태 판정이 그대로 `*-approval` 이므로, 수정 후 다시 `prd-writer`/`planner` 를 직접 부른다).
 
-> "이 계획으로 진행할까요? 수정할 부분이 있으면 알려주세요."
+## 5. 에픽 승인 (`epic-approval`)
 
-사용자 승인 없이 Phase 2로 넘어가지 않는다.
-
-### 승인 직후 (필수)
-
-승인을 받은 **뒤에** 두 가지를 실행한다. 순서가 중요하다 — 승인 전에 잠그면 사용자의 계획 수정이
-그대로 제약 위반으로 잡힌다.
+`feature_list.json` 과 에픽 요약을 보여 주고 승인을 받는다. 승인 **뒤에** 실행한다 — 승인 전에
+잠그면 사용자의 수정이 제약 위반으로 잡힌다.
 
 ```bash
-# 1. acceptance_criteria 잠금 생성 — 제약 2 를 검사 가능하게 만든다
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_feature_list.py \
-  docs/harness/{slug}/feature_list.json --update-lock
-
-# 2. 작업 규율을 대상 프로젝트의 AGENTS.md 에 설치 (멱등, 이미 있으면 그대로)
+  <epic_dir>/feature_list.json --update-lock
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/harness_agents_block.py \
   --install --project-root .
 ```
 
-`--update-lock` 은 잠금을 새로 쓰는 **유일한** 경로다. 스프린트 도중에 부르면 제약 2 가
-무의미해지므로 여기서만 쓴다.
+`--update-lock` 은 `acceptance_criteria` 잠금을 쓰는 **유일한** 경로다. AGENTS.md 규율 블록은
+항구적 규약이라 에픽이 끝나도 제거하지 않는다.
 
-2번 블록은 **항구적 규약이지 진행 기록이 아니다.** slug 도 "진행 중" 도 쓰지 않는다 — 그건
-`docs/harness/*/` 를 보면 아는 사실이고, 두 번째 사본을 만들면 중단된 작업에서 AGENTS.md 가 틀린
-지시를 하게 된다. 그래서 작업이 끝나도 **제거하지 않는다.** 코드가 검사할 수 없는 제약
-1·3·5 가 컨텍스트 압축을 견디게 하는 것이 이 블록의 유일한 목적이다.
+## 6. TC 확정 (`tc-lock`)
 
----
-
-## Phase 2~N: Sprint Loop (Generator → Evaluator)
-
-각 스프린트마다 Generator가 구현하고, Evaluator가 독립적으로 평가한다.
-
-### Generator (구현 에이전트)
-
-**매 스프린트 시작 시 (Ralph Loop 패턴):**
-
-1. `docs/harness/{slug}/progress.md` 읽기 — 이전 스프린트 결과 파악
-2. `docs/harness/{slug}/feature_list.json` 읽기 — 현재 스프린트 대상 기능 확인
-3. **목표 재주입** — feature_list에서 현재 스프린트의 대상 기능과 acceptance_criteria를 명시적으로 재선언 (목표 표류 방지)
-4. 스프린트 "완료 기준"을 명시적으로 선언 (스프린트 계약)
-5. **한 번에 하나의 기능만 작업** (가장 중요한 규칙)
-
-**Reasoning Sandwich (추론 노력 차등 배분):**
-
-- **계획 단계**: 최대 노력 (꼼꼼한 분석, 전략 수립)
-- **구현 단계**: 중간 노력 (코드 작성에 집중)
-- **검증 단계**: 최대 노력 (코드가 작성되었다고 추론을 생략하지 않음)
-
-**구현 규칙:**
-
-- 각 기능 구현 후 즉시 동작 테스트 수행
-- 실제 동작 확인 후에만 기능을 "pass"로 표시
-- 스텁(stub), TODO, placeholder, mock 구현 금지 — 모든 기능은 실제로 동작해야 함
-- 기능 간 의존성 순서 준수
-
-**Loop Detection:**
-
-- 동일 파일을 5회 이상 수정하면 루프로 간주
-- 즉시 현재 접근을 중단하고, 완전히 다른 접근 시도
-- 2번의 접근 전환 후에도 실패 → 사용자에게 에스컬레이션
-
-**매 스프린트 종료 시:**
-
-1. `docs/harness/{slug}/feature_list.json` 업데이트 — status를 "pass" 또는 유지("fail"),
-   재시도했다면 `attempts` 증가
-2. `docs/harness/{slug}/progress.md` 업데이트 — 작업 요약, 이슈, 다음 스프린트 참고사항
-3. **검증 실행** — 통과해야 스프린트가 끝난다
+TC 는 사람 승인이 아니라 `tc-critic` 의 PASS 가 확정한다. 메인은 모양과 추적성을 검사하고 잠근다:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_feature_list.py \
-  docs/harness/{slug}/feature_list.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_harness_doc.py tc \
+  <epic_dir>/TC.md --feature-list <epic_dir>/feature_list.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_harness_doc.py tc-lock <epic_dir>/TC.md
 ```
 
-종료코드 1(위반 있음)이면 스프린트는 끝나지 않았다. 위반을 고치고 다시 돌린다. 이 검사는
-PreToolUse 훅과 같은 규칙을 쓰므로, 훅이 쓰기를 막았다면 여기서도 잡힌다.
+검사가 실패하면 잠그지 않고 `tc-writer` 로 되돌린다. 잠긴 뒤 TC.md 가 바뀌면 stage 가 `escalate` 가
+된다 — 기준을 완화해 통과시키는 지름길을 막는 장치다. 바꿔야 하면 사용자와 상의해 `.tc_lock.json`
+을 지우고 `tc-critic` 재검토를 거친다.
 
-상세 가이드: `references/generator_guide.md` 참조
+## 7. 개발·QA 릴레이 (`dev`)
 
-### Evaluator (평가 에이전트)
+`feature` 하나마다 아래를 돈다. 이 한 번의 진입에서 기능 하나만 처리한다.
 
-Generator 완료 후, 역할을 전환하여 독립적·회의적으로 평가한다.
+1. `generator` 호출 (`epic_dir`, `feature_id`, 재시도면 직전 `eval/<FID>.md`) → `generator-done`
+2. `evaluator` 호출 (`epic_dir`, `feature_id`) → `pass` | `fail` | `blocked`
+3. `fail` 이면 1 로 돌아간다 (`attempts` 가 2 가 될 때까지). evaluator 가 3번째 FAIL 에서 `blocked`
+   로 기록하면 §8 로 간다. `generator` 가 `error` 를 반환해도 같다.
+4. `pass` 면 `PROGRESS.md` 를 갱신하고 `harness_state.py status` 를 다시 실행한다.
 
-**채점 전에 기계 검사를 먼저 돌린다.** 사람의(모델의) 판단보다 앞에 두는 이유는 제약 2·4·6·7·8 이
-점수 매길 대상이 아니라 통과/실패이기 때문이다 — 여기서 걸리면 채점할 것도 없다.
+메인은 `feature_list.json` 의 `status` 를 직접 쓰지 않는다. `pass` 를 기록할 수 있는 것은 evaluator
+뿐이고, 그 증거는 `logs/<FID>/*.log` 와 `eval/<FID>.md` 의 `VERDICT: PASS` 다.
 
-```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_feature_list.py \
-  docs/harness/{slug}/feature_list.json --stubs <구현 경로>
-```
+## 8. 에스컬레이션 (`escalate`)
 
-출력 JSON 을 그대로 `sprint_reports/sprint_XX_eval.md` 에 붙인다. 위반이 있으면 **기능성·완성도를
-7점 미만으로 두고 스프린트 실패로 판정한다.** 특히 제약 4(스텁)는 Evaluator 가 눈으로 놓치기
-쉬운데 `--stubs` 가 파일:줄 단위로 짚어 준다.
+`reason` 을 그대로 사용자에게 보고하고 판단을 받는다: 재시도 한도를 넘은 blocked 기능, 의존이
+풀리지 않는 기능, tc-critic 이 2라운드 뒤에도 REVISE, TC 잠금 위반. 선택지를 준다 — 요구사항·TC 를
+고쳐 다시 시도(`blocked → fail`) / blocked 인정하고 계속(`blocked_ack.md` 작성) / 중단.
 
-**평가 5기준 (각 0~10점):**
+## 9. 종합 보고 (`final`)
 
-| 기준                     | 설명                                                     | 실패 임계값 |
-| ------------------------ | -------------------------------------------------------- | ----------- |
-| 기능성 (Functionality)   | acceptance_criteria 충족 여부                            | < 7점       |
-| 완성도 (Completeness)    | 스텁이나 미구현 없이 완전한가                            | < 7점       |
-| 코드 품질 (Code Quality) | 구조, 가독성, 유지보수성                                 | < 7점       |
-| 디자인/UX (Design)       | UI가 있는 경우에만 평가                                  | < 7점       |
-| 독창성 (Originality)     | 기존 패턴의 단순 복제가 아닌 요구사항에 맞는 창의적 구현 | < 7점       |
+모든 에픽의 `CLOSED.md` 와 `eval/EPIC.md` 를 읽어 보고한다: PRD 요구사항별 충족 여부, 남은 이슈,
+blocked 인정 사항, 다음 제안. 보고에 근거가 없는 항목(로그·리포트 없음)은 "미검증" 으로 쓴다.
 
-**어느 기준이든 7점 미만이면 스프린트 실패.**
+## 10. 레거시 레이아웃 (`docs/harness/<slug>/feature_list.json` 이 최상위에 있는 1.x 작업)
 
-**PreCompletion Checklist (PASS 판정 전 필수):**
+stage 가 `epic-approval` / `dev` / `epic-close` / `final` 로 오며 `epic` 은 `legacy` 다. `epic_dir` 는
+slug 디렉토리 자체다. TC.md 가 없으므로 evaluator 는 `acceptance_criteria` 를 직접 검증한다.
+`progress.md`(소문자)를 상태 기록으로 쓴다. 새 작업은 항상 2.0 레이아웃으로 시작한다.
 
-1. 모든 acceptance_criteria 테스트 통과 여부
-2. 기존 기능에 대한 회귀(regression) 없음
-3. 엔드투엔드 흐름 검증 완료
+## 11. 기계적 제약 (재정의 불가)
 
-**평가 원칙:**
+대괄호는 **무엇이 이 규칙을 실제로 지키게 하는지**다.
 
-- "회의적 평가자" 톤 유지 — 관대한 점수 금지
-- 겉보기에 작동하는 것과 실제로 작동하는 것을 구분
-- 가능한 경우 실제 실행하여 검증 (HTML → 브라우저, 코드 → 실행)
-- 사소한 문제는 넘어가되, 사용자 경험에 영향을 미치는 문제는 반드시 지적
+1. **한 번에 하나의 기능** — generator 는 기능 하나만 `[판단]`
+2. **acceptance_criteria 수정·삭제 금지** `[훅+스크립트]`
+3. **자기 평가 불신** — 판정은 evaluator 의 것 `[판단]`
+4. **스텁 금지** — TODO·placeholder 로 통과시키지 않음 `[스크립트 --stubs]`
+5. **진행 기록 필수** — `PROGRESS.md` 갱신 `[판단]`
+6. **JSON 유지** `[훅+스크립트]`
+7. **재시도 상한 2회** 뒤 에스컬레이션 `[훅+스크립트]`
+8. **status 기본값 fail**, 허용값은 `fail`/`pass`/`blocked` `[훅+스크립트]`
+9. **pass 는 evaluator 만 기록한다** (v2 파일) `[훅]` — 스크립트는 작성자를 알 수 없어 보지 못한다
+10. **status 전이는 `fail→pass`, `fail→blocked`, `blocked→fail` 뿐** `[훅+스크립트 --prev]`
+11. **pass 는 증거 로그 없이 성립하지 않는다** — `evidence` 의 `logs/<FID>/*.log` 가 실재·비어 있지
+    않고 `eval/<FID>.md` 에 `VERDICT: PASS` (v2 파일) `[훅(모양)+스크립트(실재)]`
 
-**실패 시:**
+훅은 같은 호출을 다시 하면 통과시킨다 (플러그인 훅이 전역 발화해도 안전하려면 차단이 복구 가능해야
+한다). 그래서 훅은 지름길을 **불가능하게** 만들지 않고 **의도된 선택**으로 바꾼다. 불가능하게 만드는
+쪽은 매 기능 끝에 evaluator 가 돌리는 검증 스크립트다. `[판단]` 셋(1·3·5)만 대상 프로젝트 AGENTS.md 의
+규율 블록이 담당한다 — 컨텍스트가 압축돼 이 문서가 빠져도 AGENTS.md 는 매 턴 다시 로드된다.
 
-- 구체적이고 실행 가능한 피드백 제공 (문제 위치, 원인, 수정 방향)
-- Generator에게 재작업 지시 (최대 2회 재시도)
-
-**2회 재시도 후에도 실패:**
-
-- 사용자에게 상황 보고 후 판단 요청
-  > "이 기능에서 반복적으로 실패하고 있습니다. [구체적 이슈]. 어떻게 진행할까요?"
-
-상세 가이드: `references/evaluator_guide.md` 참조
-
-### Sprint Loop 흐름
+## 12. 파일 구조
 
 ```
-스프린트 N 시작
-    │
-    ▼
-[Generator] progress.md + feature_list.json 읽기 + 목표 재주입 (Ralph Loop)
-    │
-    ▼
-[Generator] 기능 하나씩 구현 + 동작 확인 (Reasoning Sandwich 적용)
-    │
-    ▼
-[Generator] feature_list.json + progress.md 업데이트
-    │
-    ▼
-[Evaluator] PreCompletion Checklist + 5기준 독립 평가
-    │
-    ├── PASS (모든 기준 ≥ 7점) → 다음 스프린트
-    │
-    └── FAIL → 피드백 + Generator 재작업
-              │
-              ├── 재시도 1~2회 → 재평가
-              │
-              └── 2회 실패 → 사용자에게 에스컬레이션
+docs/harness/<slug>/
+├── BRIEF.md · PRD.md · PLAN.md · PROGRESS.md        (PRD·PLAN 은 frontmatter status)
+├── reviews/{prd,plan}-critic-r{N}.md
+└── epics/<NN-slug>/
+    ├── feature_list.json · .criteria_lock.json      (에픽 승인 표지)
+    ├── TC.md · .tc_lock.json · reviews/tc-critic-r{N}.md   (TC 확정 표지)
+    ├── sprint_contracts/<FID>.md · logs/<FID>/<n>.log · eval/<FID>.md · eval/EPIC.md
+    ├── blocked_ack.md                               (blocked 인정 시)
+    └── CLOSED.md                                    (에픽 종료 표지)
 ```
 
----
+기존 프로젝트에서 쓰면 기존 코드 구조를 존중한다. 서로 다른 제품은 slug 폴더로 격리한다.
 
-## Phase Final: 종합 보고
+## 13. 출력 언어
 
-모든 스프린트 완료 후:
+사용자와의 대화·상태 문서는 사용자 언어(기본 한국어), 코드·주석은 영어, 사용자가 영어로 요청하면 전체
+영어.
 
-1. **최종 검증 1회** — 종료코드 0 이 아니면 완료로 보고하지 않는다
+## 참고 자료 (`references/`)
 
-   ```bash
-   python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_feature_list.py \
-     docs/harness/{slug}/feature_list.json --stubs <구현 경로>
-   ```
-
-2. 전체 평가 요약 작성
-3. `docs/harness/{slug}/feature_list.json` 최종 상태 제시
-4. 산출물 목록 정리
-5. 남은 이슈나 개선 제안사항 제시
-
-**AGENTS.md 규율 블록은 제거하지 않는다.** 실행이 아니라 프로젝트에 붙는 항구적 규약이고, 다음
-harness 작업에서 그대로 쓰인다. 이 프로젝트에서 harness-dev 를 더 쓰지 않기로 했다면 사용자가
-`harness_agents_block.py --remove` 로 직접 지운다.
-
----
-
-## 8가지 기계적 제약 (절대 규칙)
-
-이 규칙들은 어떤 상황에서도 재정의할 수 없다. 대괄호는 **무엇이 이 규칙을 실제로 지키게 하는지**다.
-
-1. **"한 번에 하나의 기능"** — Generator는 절대 여러 기능을 동시에 작업하지 않음 `[판단]`
-2. **"테스트 삭제 금지"** — acceptance_criteria를 수정하거나 삭제하는 것은 허용되지 않음 `[훅+스크립트]`
-3. **"자기 평가 불신"** — Generator의 자체 평가는 참고만, Evaluator의 평가가 최종 판단 `[판단]`
-4. **"스텁 금지"** — TODO, placeholder, mock 구현으로 기능을 통과시키지 않음 `[스크립트 --stubs]`
-5. **"진행 기록 필수"** — 매 스프린트 종료 시 progress.md 업데이트 누락 불가 `[판단]`
-6. **"JSON 형식 유지"** — feature_list.json은 항상 JSON 형식 유지, Markdown 변환 금지 `[훅+스크립트]`
-7. **"재시도 상한"** — 동일 스프린트 최대 2회 재시도 후 사용자에게 에스컬레이션 `[훅+스크립트]`
-8. **"status 기본값은 fail"** — 모든 새 기능의 status는 "fail"로 시작. "pending"은 존재하지 않음. 통과를 증명해야만 "pass"로 전환 `[훅+스크립트]`
-
-`[훅]` 은 `feature_list.json` 쓰기를 가로채는 PreToolUse 훅이다 — 모델이 무엇을 기억하는지와
-무관하게 발화하지만, 같은 호출을 다시 하면 통과시킨다(플러그인 훅이 전역 발화해도 안전하려면
-차단이 복구 가능해야 한다). 그래서 훅은 지름길을 **불가능하게** 만들지 않고 **의도적인 선택으로**
-바꾼다. 불가능하게 만드는 쪽은 스프린트마다 돌리는 검증 스크립트이고, 사람이 그 결과를 본다.
-
-`[판단]` 셋은 코드가 볼 수 없다. 이 셋만 대상 프로젝트 AGENTS.md 의 규율 블록이 담당한다 —
-컨텍스트가 압축돼 이 문서가 빠져도 AGENTS.md 는 매 턴 다시 로드되기 때문이다.
-
-왜 이 규칙이 필요한가: 에이전트는 컨텍스트가 쌓이면 "거의 됐으니 넘어가자"는 유혹에 빠지기 쉽다. 기계적 제약은 이 경향을 구조적으로 차단한다. acceptance_criteria 수정을 허용하면 어려운 기능을 "쉽게 통과"시키는 지름길이 되고, 스텁을 허용하면 "겉으로만 완성"된 프로젝트가 된다.
-
----
-
-## 5-Component Harness Framework
-
-3-에이전트 아키텍처를 지탱하는 환경 설계 원칙. 각 컴포넌트는 LLM의 구조적 실패 모드를 시스템 수준에서 해결한다. 상세: `references/harness_framework.md`
-
-1. **Readable Environment** — slug 폴더 기반 점진적 정보 공개. feature_list.json + progress.md로 30초 내에 프로젝트 상태 재구성
-2. **Task State Machine** — 각 기능의 status가 `fail` → `pass` 또는 `fail` → `blocked`로만 전이. "pending"은 존재하지 않음
-3. **Verification Loop** — Generator 구현 → Evaluator 독립 검증의 반복. PreCompletion Checklist 강제
-4. **Architecture Enforcement** — 프로젝트 구조/컨벤션 준수를 기계적으로 강제. 첫 스프린트부터 규율 적용
-5. **Loop Detection** — 동일 파일 5회+ 편집 시 현재 접근 중단, 완전히 다른 방법 시도
-
----
-
-## 파일 구조
-
-프로젝트별로 `docs/harness/{slug}/` 전용 폴더를 생성하여 격리한다:
-
-```
-<project-root>/
-├── docs/harness/
-│   └── {slug}/                      ← 프로젝트 전용 폴더
-│       ├── feature_list.json        ← 기능 목록 (JSON, Planner 생성)
-│       ├── .criteria_lock.json      ← acceptance_criteria 지문 (승인 직후 1회 생성)
-│       ├── project_spec.md          ← Planner 산출물
-│       ├── progress.md              ← 세션 간 인수인계 로그
-│       └── sprint_reports/          ← 스프린트별 평가 보고서
-│           ├── sprint_01_eval.md
-│           └── ...
-└── src/                             ← 실제 구현 코드
-```
-
-**기존 프로젝트에서 사용하는 경우:** `docs/harness/{slug}/`를 생성하고, 기존 코드 구조 내에서 구현한다. 기존 파일 구조를 존중한다.
-
-**복수 프로젝트 격리:** 서로 다른 프로젝트의 파일은 절대 혼재하지 않는다. 각 slug 폴더가 독립 단위이다.
-
----
-
-## 출력 언어
-
-- 사용자와의 대화: 사용자 언어에 맞춤 (기본: 한국어)
-- feature_list.json, progress.md, sprint_reports: 사용자 언어
-- project_spec.md: 한국어 (기술 용어는 영어 병기)
-- 코드 및 주석: 영어
-- 사용자가 영어로 요청하면 전체 영어로 전환
-
----
-
-## 기술 스택별 Evaluator 검증 방식
-
-| 프로젝트 유형       | 검증 방법                              |
-| ------------------- | -------------------------------------- |
-| HTML/CSS/JS 웹앱    | 브라우저 렌더링으로 시각적 검증        |
-| React/React Native  | 코드 구조 + 로직 검증 + 빌드/lint 확인 |
-| Python 스크립트/API | 실행하여 출력 검증                     |
-| 일반 코드           | 정적 분석 + 로직 리뷰 + 테스트 실행    |
-
-가능한 한 실제 실행으로 검증한다. 환경 제약이 있으면 코드 리뷰 기반으로 평가하되, 그 한계를 명시한다.
-
----
-
-## 참고 자료
-
-- `references/feature_list_template.json` — feature_list.json 템플릿
-- `references/generator_guide.md` — Generator 상세 가이드 (Ralph Loop, Reasoning Sandwich, Loop Detection 포함)
-- `references/evaluator_guide.md` — Evaluator 상세 가이드 (PreCompletion Checklist, 평가 보고서 템플릿 포함)
-- `references/harness_framework.md` — 5-Component Harness Framework 상세 가이드
+- `prd_template.md` · `plan_template.md` · `tc_template.md` — 산출 문서 템플릿
+- `sprint_contract_template.md` · `eval_report_template.md` — 기능 단위 문서 템플릿
+- `epic_close.md` — 에픽 종료 절차 (`/simplify` → 회귀 평가 → 승인 → 커밋)
+- `feature_list_template.json` — v2 스키마
+- `generator_guide.md` · `evaluator_guide.md` — 에이전트 상세 가이드
+- `harness_framework.md` — 5-Component Harness Framework 와 상태 머신

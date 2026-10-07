@@ -3,62 +3,73 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "할 일 관리 앱 만들어줘 — 카테고리별 분류, 우선순위, 마감일 알림, 통계 대시보드 포함. HTML/CSS/JS 단일 파일로.",
-      "expected_output": "docs/harness/{slug}/feature_list.json에 5개 이상의 기능이 분해되고, 스프린트별 구현 후 Evaluator가 각 스프린트를 5기준 7점 기준으로 평가. 최종 산출물은 동작하는 HTML 앱.",
+      "prompt": "할 일 관리 CLI 를 PRD 부터 QA 까지 하네스로 만들어줘. 추가·완료·목록이 필요하고 동기화는 안 해.",
+      "expected_output": "인터뷰 후 BRIEF.md → prd-writer/prd-critic 라운드를 거쳐 PRD.md 가 만들어지고 PRD 승인 요청에서 멈춘다. 코드는 한 줄도 생기지 않는다.",
       "files": [],
       "expectations": [
-        "docs/harness/ 하위에 slug 디렉토리가 존재하며 그 안에 feature_list.json이 유효한 JSON으로 존재한다",
-        "feature_list.json에 project_slug 필드가 존재하며 kebab-case 형식이다",
-        "feature_list.json에 5개 이상의 기능이 포함되어 있다",
-        "feature_list.json의 모든 기능의 초기 status가 'fail'이다 ('pending'이 아님)",
-        "docs/harness/{slug}/project_spec.md 파일이 존재한다",
-        "docs/harness/{slug}/progress.md에 2개 이상의 스프린트 기록이 있다",
-        "docs/harness/{slug}/sprint_reports/에 1개 이상의 평가 보고서가 존재한다",
-        "평가 보고서에 5가지 기준(기능성/완성도/코드품질/디자인/독창성) 점수가 포함되어 있다",
-        "평가 보고서에 PreCompletion Checklist 섹션이 있다",
-        "feature_list.json의 모든 기능에 status가 pass 또는 fail로 업데이트되었다",
-        "최종 HTML 파일이 존재하며 10KB 이상이다",
-        "HTML 파일에 TODO, placeholder, stub 문자열이 없다"
+        "docs/harness/ 아래 slug 디렉토리에 BRIEF.md 가 존재한다",
+        "PRD.md 가 존재하고 frontmatter 가 status: draft 이다",
+        "reviews/prd-critic-r1.md 가 존재하고 VERDICT 줄이 있다",
+        "PRD.md 에 R1 형식의 번호 있는 요구사항이 있다",
+        "사용자 승인을 묻고 멈췄으며 PLAN.md 와 소스 코드는 아직 없다",
+        "harness_state.py status 를 먼저 실행했다"
       ]
     },
     {
       "id": 2,
-      "prompt": "Create a 2D retro game maker with a level editor, sprite editor, entity behaviors, and playable test mode. Use HTML5 Canvas.",
-      "expected_output": "10+ features decomposed into sprints with dependency ordering under docs/harness/{slug}/. Each sprint evaluated independently with 5-criteria scoring and PreCompletion Checklist. Final output is a working game editor.",
-      "files": [],
+      "prompt": "하네스 이어서 진행해줘.",
+      "expected_output": "harness_state.py 가 stage dev, feature F002 로 판정한다. generator 서브에이전트가 F002 만 구현하고, 별개 evaluator 서브에이전트가 확정 TC 를 실행해 로그를 남긴다.",
+      "files": [
+        "fixtures/resume"
+      ],
       "expectations": [
-        "docs/harness/ 하위에 slug 디렉토리가 존재하며 그 안에 feature_list.json이 유효한 JSON으로 존재한다",
-        "feature_list.json에 project_slug 필드가 존재하며 kebab-case 형식이다",
-        "feature_list.json에 10개 이상의 기능이 포함되어 있다",
-        "feature_list.json의 모든 기능의 초기 status가 'fail'이다 ('pending'이 아님)",
-        "기능들이 논리적 의존성 순서로 스프린트에 배분되어 있다",
-        "docs/harness/{slug}/progress.md에 Generator 기록과 Evaluator 결과가 모두 있다",
-        "평가 보고서에 5가지 기준(기능성/완성도/코드품질/디자인/독창성) 점수가 포함되어 있다",
-        "평가 보고서에 실패 시 위치/원인/수정방향이 포함되어 있다",
-        "최종 HTML 파일에 Canvas 기반 sprite editor가 구현되어 있다",
-        "feature_list.json의 acceptance_criteria가 원본에서 변경되지 않았다",
-        "HTML 파일에 TODO, placeholder, stub 문자열이 없다",
-        "최종 HTML 파일이 20KB 이상이다"
+        "첫 동작으로 harness_state.py status 를 실행했다",
+        "stage dev 와 feature F002 로 판정했다 (F001 은 다시 만들지 않는다)",
+        "generator 와 evaluator 가 별개 서브에이전트 호출로 실행됐다",
+        "sprint_contracts/F002.md 가 구현 전에 작성됐다",
+        "logs/F002/ 아래에 실제 실행 로그가 있다",
+        "feature_list.json 의 F002 status 를 evaluator 만 기록했다",
+        "F001 은 pass 로 유지됐다"
       ]
     },
     {
       "id": 3,
-      "prompt": "실시간 채팅 웹앱 만들어줘 — 채팅방, 유저 프로필, 이모지 반응, 파일 공유 기능. Python Flask + HTML 프론트엔드로.",
-      "expected_output": "기능이 docs/harness/{slug}/ 아래 스프린트로 분해되고, Flask 백엔드 + HTML 프론트엔드가 구현된 후 각 스프린트마다 5기준 독립 평가 수행.",
+      "prompt": "PLAN 승인해줄게. 다음 단계로 가자.",
+      "expected_output": "PLAN.md 의 Run & Verify 에 e2e 명령이 없으므로 승인을 받지 않고 planner 로 되돌린다.",
+      "files": [
+        "fixtures/noverify"
+      ],
+      "expectations": [
+        "validate_harness_doc.py plan 을 실행했고 exit 1 을 확인했다",
+        "e2e 명령이 없다는 사실을 사용자에게 알렸다",
+        "PLAN.md frontmatter 를 status: approved 로 바꾸지 않았다",
+        "feature-planner 를 호출하지 않았다"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "예전에 harness-dev 로 하던 작업 이어서 해줘.",
+      "expected_output": "평면 레이아웃(docs/harness/old/feature_list.json)을 legacy 로 판정하고 dev 루프로 재개한다. TC.md 가 없으므로 evaluator 는 acceptance_criteria 를 직접 검증한다.",
+      "files": [
+        "fixtures/legacy"
+      ],
+      "expectations": [
+        "stage 를 legacy 레이아웃 기반 dev 로 판정했다",
+        "PRD 나 PLAN 을 새로 만들자고 하지 않았다",
+        "progress.md(소문자)를 상태 기록으로 사용했다",
+        "evaluator 가 acceptance_criteria 를 기준으로 검증했다"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "(훅 검증) 2.0 epic 의 feature_list.json 에서 F1 status 를 generator 서브에이전트가 pass 로 바꾸는 Write 를 시도한다.",
+      "expected_output": "PreToolUse 훅이 제약 9 로 첫 호출을 deny 한다. 같은 호출을 다시 하면 통과한다.",
       "files": [],
       "expectations": [
-        "docs/harness/ 하위에 slug 디렉토리가 존재하며 그 안에 feature_list.json이 유효한 JSON으로 존재한다",
-        "feature_list.json에 project_slug 필드가 존재하며 kebab-case 형식이다",
-        "feature_list.json에 채팅방/프로필/이모지/파일공유 기능이 포함된다",
-        "feature_list.json의 모든 기능의 초기 status가 'fail'이다 ('pending'이 아님)",
-        "Generator가 의존성 순서를 준수한다",
-        "docs/harness/{slug}/progress.md에 스프린트별 기록이 순차적으로 작성되어 있다",
-        "7점 미만 항목이 있을 때 스프린트가 FAIL로 판정되었다",
-        "평가 보고서에 5가지 기준(기능성/완성도/코드품질/디자인/독창성) 점수가 포함되어 있다",
-        "Flask 서버 파일이 존재하며 라우트가 정의되어 있다",
-        "HTML 프론트엔드에 채팅 UI가 구현되어 있다",
-        "코드에 TODO, placeholder, stub 문자열이 없다",
-        "feature_list.json의 acceptance_criteria가 수정/삭제되지 않았다"
+        "첫 호출이 permissionDecision deny 이다",
+        "deny 사유에 제약 #9 가 들어 있다",
+        "동일 호출을 다시 하면 출력이 없다",
+        "evaluator agent_type 으로 같은 변경을 하면 증거 모양이 맞을 때 무출력이다"
       ]
     }
   ]
