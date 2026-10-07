@@ -13,19 +13,21 @@
 
 ### 점진적 정보 공개 (Progressive Disclosure)
 
-slug 폴더 구조가 이를 구현한다:
+slug 폴더 구조가 이를 구현한다 (2.0 레이아웃):
 
-| 파일                                    | 언제 읽는가           | 역할                  |
-| --------------------------------------- | --------------------- | --------------------- |
-| `docs/harness/{slug}/feature_list.json` | 항상 (진입점)         | 현재 상태 스냅샷      |
-| `docs/harness/{slug}/progress.md`       | 항상                  | 세션 간 인수인계 로그 |
-| `docs/harness/{slug}/project_spec.md`   | 필요 시               | 전체 제품 사양        |
-| `docs/harness/{slug}/sprint_reports/`   | 특정 스프린트 리뷰 시 | 스프린트별 상세 평가  |
+| 파일                                          | 언제 읽는가        | 역할                          |
+| --------------------------------------------- | ------------------ | ----------------------------- |
+| `harness_state.py status` 출력                | 매 진입의 첫 동작  | 파일 상태에서 판정한 현재 단계 |
+| `docs/harness/{slug}/PROGRESS.md`             | 항상               | 세션 간 인수인계 로그         |
+| `docs/harness/{slug}/epics/{NN}/feature_list.json` | 에픽 작업 중  | 현재 상태 스냅샷              |
+| `docs/harness/{slug}/PRD.md` · `PLAN.md`      | 필요 시            | 제품 요구사항 · 구현 계획     |
+| `epics/{NN}/TC.md` · `eval/` · `logs/`        | 기능 구현·평가 시  | 확정 TC · 판정 · 증거         |
 
 ### 설계 원칙
 
 - 하나의 거대한 파일에 모든 것을 담지 않음 — 컨텍스트 오염, 정보 노후화, 신호 대 잡음비 저하 방지
-- `feature_list.json` + `progress.md`를 함께 읽으면 프로젝트 상태를 빠르게 재구성 가능
+- "지금 어느 단계인가" 는 모델이 추론하지 않고 `harness_state.py` 가 파일 상태에서 판정한다 — 재진입마다 같은 답이 나와야 한다
+- 승인 표지는 전부 파일이다 (frontmatter `status: approved`, `.criteria_lock.json`, `.tc_lock.json`, `CLOSED.md`)
 - 각 파일은 "사람이 읽어도 5분 안에 이해할 수 있는" 수준이어야 한다
 
 ---
@@ -55,7 +57,11 @@ blocked → fail  (사용자가 차단 해제 시)
 ### 금지되는 전이
 
 - `pass → fail` — 한번 통과하면 유지 (회귀가 발견되면 새 이슈로 처리)
+- `blocked → pass` — 곧장 갈 수 없다 (`blocked → fail` 을 거쳐 다시 증명)
 - 어떤 상태 → `pending` — "pending"은 존재하지 않음
+
+2.0 에서는 이 전이를 코드가 강제한다 — `_feature_list_rules.py` 의 `check_transition`(제약 10)이 디스크의
+이전 파일과 비교한다. `pass` 는 evaluator 만 기록하고(제약 9) 증거 로그 없이는 성립하지 않는다(제약 11).
 
 ### 왜 "fail"이 기본값인가
 
@@ -80,19 +86,23 @@ blocked → fail  (사용자가 차단 해제 시)
 ### 구조
 
 ```
-Generator 구현 → Evaluator 독립 검증 → PASS/FAIL 판정
-                                          │
-                              FAIL → 피드백 + 재작업 (최대 2회)
-                                          │
-                              여전히 FAIL → 사용자 에스컬레이션
+TC 작성(tc-writer) → TC 검토·확정(tc-critic) → 잠금
+                                 │
+Generator(서브에이전트) 구현 → Evaluator(별개 서브에이전트)가 확정 TC 를 실앱에서 실행 → PASS/FAIL
+                                                          │
+                                              FAIL → 피드백 + 재작업 (최대 2회)
+                                                          │
+                                              여전히 FAIL → blocked → 사용자 에스컬레이션
 ```
+
+문서 단계도 같은 구조다 — writer → 회의적 critic → 수정(최대 2라운드) → 사용자 승인.
 
 ### PreCompletion Checklist
 
 Evaluator가 PASS를 선언하기 전 반드시 확인:
 
-1. **acceptance_criteria 전수 검증** — 모든 기능의 모든 criteria를 개별적으로 확인
-2. **회귀 없음** — 이전 스프린트에서 pass한 기능들이 여전히 동작
+1. **확정 TC 전수 실행** — 해당 기능의 모든 TC 를 개별적으로 실행하고 로그를 남김
+2. **회귀 없음** — 이전에 pass한 기능들이 여전히 동작
 3. **End-to-end 흐름 검증** — 구현된 기능들이 사용자 관점에서 연결된 흐름으로 동작
 
 ### Reasoning Sandwich
@@ -148,10 +158,11 @@ Generator가 동일 파일을 **5회 이상 수정**하면 루프로 간주한�
 
 ### Ralph Loop Pattern (목표 재주입)
 
-매 스프린트 시작 시 목표를 명시적으로 재선언한다. 여러 스프린트에 걸쳐 작업하면 원래 목표가 점진적으로 변형되는 "목표 표류"가 발생한다. 이를 방지하기 위해:
+기능 작업을 시작할 때마다 목표를 명시적으로 재선언한다. 여러 기능에 걸쳐 작업하면 원래 목표가 점진적으로 변형되는 "목표 표류"가 발생한다. 이를 방지하기 위해:
 
-1. 현재 스프린트의 대상 기능 ID와 이름을 재선언
+1. 대상 기능 ID와 이름을 재선언
 2. 각 기능의 acceptance_criteria를 feature_list.json에서 원문 복사
-3. 이전 스프린트의 Evaluator 피드백 요약 (있는 경우)
+3. 직전 Evaluator 피드백 요약 (있는 경우)
 
-이 선언은 형식적 절차가 아니라 목표를 컨텍스트에 고정하는 기제이다.
+이 선언은 형식적 절차가 아니라 목표를 컨텍스트에 고정하는 기제이다. 2.0 에서는 `sprint_contracts/<FID>.md`
+파일이 이 선언의 영속 형태다 — 새 세션의 evaluator 가 읽는다.
