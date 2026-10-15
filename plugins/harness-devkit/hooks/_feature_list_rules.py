@@ -34,7 +34,7 @@ CRITERIA_LOCK_NAME = ".criteria_lock.json"
 # 제약 9 — v2 에서 pass 를 쓸 수 있는 에이전트.
 EVALUATOR_NAME = "evaluator"
 
-# 제약 7 — "동일 스프린트 최대 2회 재시도 후 사용자에게 에스컬레이션".
+# 제약 7 — "동일 기능 최대 2회 재시도 후 사용자에게 에스컬레이션".
 MAX_ATTEMPTS = 2
 
 # 제약 4. `mock` 은 일부러 뺐다 — 테스트의 mock 은 정상이고, 그걸 잡으면 경고가 소음이 되어
