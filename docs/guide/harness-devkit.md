@@ -35,7 +35,7 @@ flowchart TB
   L["LLM 은 세션 간 기억이 없다"]
   L --> A["긴 구현<br/>→ 앞 단계를 잊는다<br/>→ '거의 됐으니 넘어가자'"]
   L --> B["서버 감시<br/>→ 이전 세션의 Monitor 를 못 본다<br/>→ 서버를 또 띄운다"]
-  A --> HD["harness-dev<br/>feature_list.json · progress.md"]
+  A --> HD["harness-dev<br/>feature_list.json · PROGRESS.md"]
   B --> DM["dev-monitor<br/>port-N.state.json"]
   HD --> S["상태를 파일로 외부화한다"]
   DM --> S
@@ -59,22 +59,75 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-  I["인터뷰<br/>grill-with-docs → BRIEF.md"] --> PRD["prd-writer ↔ prd-critic<br/>(최대 2라운드)"]
-  PRD --> A1{"사용자 승인"}
-  A1 --> PL["planner ↔ plan-critic<br/>Run & Verify 필수"]
-  PL --> A2{"사용자 승인"}
-  A2 --> FP["feature-planner<br/>에픽별 feature_list"]
-  FP --> A3{"사용자 승인 (잠금)"}
-  A3 --> TC["tc-writer ↔ tc-critic<br/>→ TC 잠금"]
-  TC --> G["generator<br/>기능 1개 구현"]
-  G --> E["evaluator<br/>확정 TC 를 실앱에서 실행"]
-  E -->|"FAIL (2회까지)"| G
-  E -->|"3번째 FAIL"| ESC["blocked → 사용자"]
-  E -->|"PASS"| NEXT{"남은 기능"}
-  NEXT -->|있음| G
-  NEXT -->|없음| CL["에픽 종료<br/>/simplify → 회귀 평가 → 승인 → 커밋"]
-  CL -->|"다음 에픽"| TC
+  I["인터뷰 (메인 + 사용자)<br/>grill-with-docs<br/>→ BRIEF.md"]
+
+  PW["prd-writer · inherit<br/>→ PRD.md"]
+  PC["prd-critic · opus<br/>→ reviews/prd-critic-rN.md"]
+  A1{{"사용자 승인: PRD<br/>status: approved"}}
+
+  PL["planner · opus<br/>→ PLAN.md (Run & Verify 필수)"]
+  LC["plan-critic · opus<br/>→ reviews/plan-critic-rN.md"]
+  A2{{"사용자 승인: PLAN<br/>status: approved"}}
+
+  FP["feature-planner · sonnet<br/>→ epics/NN/feature_list.json"]
+  A3{{"사용자 승인: 에픽<br/>→ .criteria_lock.json"}}
+
+  TW["tc-writer · inherit<br/>→ TC.md (코드를 읽지 않음)"]
+  TR["tc-critic · opus<br/>→ reviews/tc-critic-rN.md"]
+
+  G["generator · inherit<br/>기능 1개 구현<br/>→ 코드 · sprint_contracts/FID.md"]
+  E["evaluator · opus<br/>확정 TC 를 실앱에서 실행<br/>→ logs/FID/N.log · eval/FID.md"]
+  ESC{{"사용자 판단<br/>재시도 · blocked 인정 · 중단"}}
+  CL{{"에픽 종료 · 사용자 승인<br/>/simplify → 회귀 평가<br/>→ eval/EPIC.md · CLOSED.md"}}
+
+  I -->|"BRIEF.md"| PW
+  PW -->|"PRD.md"| PC
+  PC -->|"REVISE (최대 2라운드)"| PW
+  PC -->|"PASS · 의견"| A1
+  A1 -->|"수정 요청"| PW
+  A1 -->|"승인된 PRD.md"| PL
+
+  PL -->|"PLAN.md"| LC
+  LC -->|"REVISE (최대 2라운드)"| PL
+  LC -->|"PASS · 의견"| A2
+  A2 -->|"수정 요청 · Run & Verify 누락"| PL
+  A2 -->|"승인된 PLAN.md"| FP
+
+  FP -->|"feature_list.json (전부 fail)"| A3
+  A3 -->|"수정 요청"| FP
+  A3 -->|"잠금된 criteria"| TW
+
+  TW -->|"TC.md"| TR
+  TR -->|"REVISE (최대 2라운드)"| TW
+  TR -->|"PASS → .tc_lock.json"| G
+  TR -->|"2라운드 후에도 REVISE"| ESC
+
+  G -->|"코드 · 구현 전 계약"| E
+  E -->|"FAIL (2회까지): eval/FID.md 피드백"| G
+  E -->|"3번째 FAIL: status blocked"| ESC
+  E -->|"PASS: status pass + evidence"| G2{"남은 기능"}
+  G2 -->|"있음: 다음 FID"| G
+  G2 -->|"없음 (또는 blocked 인정)"| CL
+  ESC -->|"결정 반영"| G
+  CL -->|"다음 에픽 (새 세션 권장)"| FP
+
+  classDef writer fill:#1a3d2e,stroke:#10B981,color:#fff
+  classDef critic fill:#2e1a3d,stroke:#A855F7,color:#fff
+  classDef gate fill:#1e3a5f,stroke:#3B82F6,color:#fff
+  classDef impl fill:#3d2e1a,stroke:#F59E0B,color:#fff
+  class PW,PL,FP,TW writer
+  class PC,LC,TR,E critic
+  class A1,A2,A3,ESC,CL,I,G2 gate
+  class G impl
 ```
+
+색: 초록 = 문서 작성 에이전트, 보라 = 검토·판정 에이전트(critic · evaluator), 주황 = 구현 에이전트,
+파랑 = 사용자가 멈춰 서는 지점. 노드의 `inherit`·`opus`·`sonnet` 은 에이전트 frontmatter 의 `model` 이다.
+이 도식은 [인터랙티브 버전](./harness-devkit-flow.html)(저장소를 클론해 브라우저로 열기)에서 노드를
+눌러 연결을 따라가고, 마우스를 올려 각 에이전트가 읽고 쓰는 파일을 볼 수 있다.
+
+서브에이전트 9개의 호출 관계, 읽고 쓰는 파일, 기능 단위 재시도 흐름은
+[플러그인 README 의 관계도·흐름도](../../plugins/harness-devkit/README.md#서브에이전트-관계도--흐름도)에 있다.
 
 핵심은 화살표가 아니라 **누가 판정하느냐**다.
 
