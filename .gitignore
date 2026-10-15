@@ -10,3 +10,6 @@ __pycache__/
 .venv/
 node_modules/
 .claude/settings.local.json
+
+# Playwright MCP 로컬 캐시·산출물
+.playwright-mcp/
