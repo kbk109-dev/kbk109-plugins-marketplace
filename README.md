@@ -35,8 +35,8 @@
 
 ## 릴리스
 
-현재 마켓플레이스 버전은 **1.24.0**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
-이번 태그 노트는 [docs/release/v1.24.0.md](./docs/release/v1.24.0.md) 를 본다.
+현재 마켓플레이스 버전은 **1.24.1**이다. 변경 내역은 [CHANGELOG](./CHANGELOG.md),
+이번 태그 노트는 [docs/release/v1.24.1.md](./docs/release/v1.24.1.md) 를 본다.
 
 ## 플러그인
 
@@ -45,7 +45,7 @@
 | [`expo-app-kit`](./plugins/expo-app-kit) | 4 | Expo/RN 앱의 AdMob 광고 계획·구현, EAS Update(OTA) 핫픽스 |
 | [`firebase-observability`](./plugins/firebase-observability) | 4 | Firebase Analytics(GA4)·Crashlytics 도입 계획·구현 |
 | [`release-workflow`](./plugins/release-workflow) | 3 | 릴리즈 계획·구현·패치. Notion 은 선택 상태 저장소다 |
-| [`harness-devkit`](./plugins/harness-devkit) | 2 | PRD→PLAN→feature_list→TC→개발→QA 를 단계별 서브에이전트로 관리하는 하네스, dev 서버 로그 감시 |
+| [`harness-devkit`](./plugins/harness-devkit) | 2 | PRD→PLAN→feature_list→TC→개발→QA 를 단계별 서브에이전트(9개)로 관리하는 하네스, dev 서버 로그 감시 |
 | [`product-planning`](./plugins/product-planning) | 1 | 문서·회의록 → PRD 10개 섹션 정규화 (Notion 은 선택) |
 | [`project-conventions`](./plugins/project-conventions) | 4 | AGENTS.md 단일 소스화, Claude·Cursor 규칙(git 워크플로, 선택적 Notion 토큰 API 강제, 선택적 커밋 서브에이전트 강제) 동기화, dev→main 릴리스 자동화. 이관 전 본문을 200줄 목표로 다듬는다. 생성물인 `.mdc` 사본·설치 스크립트가 원본과 갈라졌는지 바이트 단위로 검사한다 |
 
@@ -110,6 +110,8 @@
 | [context7 MCP](https://github.com/upstash/context7) | expo-app-kit, firebase-observability, release-workflow, harness-devkit |
 | Notion 연동 (선택 — `project-conventions:init-agent-rules --notion-rule on`) | release-workflow, product-planning. 없으면 각 스킬이 로컬 파일/사용자 입력으로 대체한다 |
 | WebSearch | release-workflow, harness-devkit |
+| `/mattpocock-skills:grill-with-docs` (권장 — 없으면 같은 방식을 직접 수행) | harness-devkit (harness-dev 인터뷰 단계) |
+| Playwright MCP (선택 — 기본은 PLAN 의 E2E 명령) | harness-devkit (evaluator) |
 | `python3` | release-workflow, product-planning, project-conventions, harness-devkit |
 | EAS CLI (`eas`) | expo-app-kit (ota-hotfix) |
 | 프로젝트 `CLAUDE.md` | project-conventions (init-agent-rules), harness-devkit (dev-monitor) |

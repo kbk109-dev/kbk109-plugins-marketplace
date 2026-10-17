@@ -54,6 +54,125 @@ QA 는 확정된 TC 를 evaluator 가 PLAN 의 실행 명령으로 **실제 앱�
 
 참고 문서 — [`docs/harness-engineering/`](../../docs/harness-engineering/)
 
+#### 서브에이전트 관계도 · 흐름도
+
+메인 세션(진입 스킬)은 서브에이전트를 **직접 하나씩 부르고**, 서브에이전트끼리는 서로를 부르지 못한다.
+사용자와 대화하는 것도 메인뿐이다. 그래서 모든 연결이 메인을 거치고, 에이전트 사이의 전달은
+`docs/harness/<slug>/` 의 파일이 맡는다. 판단의 근거와 이유는
+[가이드](../../docs/guide/harness-devkit.md#2-harness-dev--단계마다-새-서브에이전트)에 있다.
+
+**1. 관계도 — 누가 누구를 부르고, 무엇을 주고받나**
+
+```mermaid
+flowchart LR
+  U(["사용자"])
+  M["메인 harness-dev<br/>얇은 오케스트레이터"]
+  S["harness_state.py<br/>파일 상태로 단계 판정"]
+
+  subgraph W["문서 작성 · 검토 (writer ↔ critic, 최대 2라운드)"]
+    PW["prd-writer"] <--> PC["prd-critic<br/>회의적"]
+    PL["planner"] <--> LC["plan-critic<br/>회의적"]
+    TW["tc-writer"] <--> TC["tc-critic<br/>보수적"]
+  end
+  FP["feature-planner"]
+
+  subgraph B["기능 단위 (메인이 릴레이)"]
+    G["generator<br/>구현"] --> E["evaluator<br/>확정 TC 를 실앱에서 실행"]
+  end
+
+  F[("docs/harness/&lt;slug&gt;/<br/>BRIEF · PRD · PLAN · feature_list<br/>TC · logs · eval · PROGRESS")]
+
+  U <-->|"인터뷰 · 승인 · 에스컬레이션"| M
+  M -->|"매 진입 첫 동작"| S
+  S -.->|"stage"| M
+  M ==>|"호출"| W
+  M ==>|"호출"| FP
+  M ==>|"호출"| B
+  W <-.->|"읽고 쓴다"| F
+  FP <-.-> F
+  B <-.-> F
+```
+
+| 에이전트 | 읽는 것 | 쓰는 것 | 하지 않는 것 |
+|---|---|---|---|
+| `prd-writer` | `BRIEF.md`, 프로젝트 `CONTEXT.md`, 최근 critic 리뷰 | `PRD.md` (초안) | 승인 표지 변경, 구현 방법 결정 |
+| `prd-critic` | `BRIEF.md`, `PRD.md` | `reviews/prd-critic-r{N}.md` | PRD 수정 |
+| `planner` | 승인된 `PRD.md`, 코드베이스, 최근 critic 리뷰 | `PLAN.md` (초안, Run & Verify 포함) | 승인 표지 변경, 코드 작성 |
+| `plan-critic` | `PRD.md`, `PLAN.md`, 코드베이스 | `reviews/plan-critic-r{N}.md` | PLAN 수정 |
+| `feature-planner` | `PRD.md`, `PLAN.md` | 에픽의 `feature_list.json` (모두 `fail`) | 잠금 파일 생성 |
+| `tc-writer` | `PRD.md`, `PLAN.md`, `feature_list.json`, 최근 critic 리뷰 | 에픽의 `TC.md` | **구현 코드 읽기**, TC 잠금 |
+| `tc-critic` | `TC.md`, `feature_list.json`, `PRD.md`, `PLAN.md` | `reviews/tc-critic-r{N}.md` | **구현 코드 읽기**, TC 수정 |
+| `generator` | `PROGRESS.md`, `feature_list.json`, 해당 기능의 TC, 직전 `eval/<FID>.md` | 코드, `sprint_contracts/<FID>.md`, `PROGRESS.md` 덧붙임 | **`status` 변경**, TC·criteria 수정, 커밋 |
+| `evaluator` | 확정 TC, PLAN 의 Run & Verify, 계약, 구현 | `logs/<FID>/`, `eval/<FID>.md`, `feature_list.json` 의 `status`·`attempts`·`evidence` | 코드·TC 수정. **`pass` 를 기록하는 유일한 주체** |
+
+메인이 직접 쓰는 것은 `BRIEF.md`, 승인 표지(PRD·PLAN 의 `status: approved`, `.criteria_lock.json`,
+`.tc_lock.json`), `PROGRESS.md`, `CLOSED.md` 뿐이다.
+
+**2. 단계 흐름도 — 언제 멈추고 언제 넘어가나**
+
+```mermaid
+flowchart TD
+  I["인터뷰<br/>grill-with-docs → BRIEF.md"] --> PRD["prd-writer ↔ prd-critic"]
+  PRD --> A1{{"사용자 승인<br/>PRD"}}
+  A1 -->|"수정 요청"| PRD
+  A1 --> PL["planner ↔ plan-critic<br/>Run & Verify 필수"]
+  PL --> A2{{"사용자 승인<br/>PLAN"}}
+  A2 -->|"수정 요청 · Run & Verify 누락"| PL
+  A2 --> FP["feature-planner<br/>다음 에픽 feature_list"]
+  FP --> A3{{"사용자 승인<br/>에픽 · criteria 잠금"}}
+  A3 -->|"수정 요청"| FP
+  A3 --> TCW["tc-writer ↔ tc-critic"]
+  TCW -->|"PASS"| LOCK["TC 잠금"]
+  TCW -->|"2라운드 후에도 REVISE"| ESC
+  LOCK --> DEV["기능 단위 개발 · QA<br/>(3. 기능 릴레이)"]
+  DEV -->|"다음 기능"| DEV
+  DEV -->|"blocked · TC 변조"| ESC["사용자 판단<br/>재시도 · blocked 인정 · 중단"]
+  ESC --> DEV
+  DEV -->|"모든 기능 pass 또는 인정"| CL["에픽 종료<br/>/simplify → 회귀 평가"]
+  CL --> A4{{"사용자 승인<br/>요약 · 커밋"}}
+  A4 -->|"다음 에픽 (새 세션 권장)"| FP
+  A4 -->|"모든 에픽 종료"| FIN["종합 보고"]
+```
+
+- 각 critic 루프는 writer → critic → 수정을 **최대 2라운드** 돈다. 2라운드 뒤에도 REVISE 면 남은
+  blocking 을 사용자에게 그대로 보여 준다 (TC 는 사람이 아니라 critic 의 PASS 가 확정한다).
+- 사용자 승인 stage 에서는 항상 멈추고, 에픽 하나가 끝나면 새 세션을 권한다. 새 세션에서는
+  `harness_state.py` 가 파일 상태로 같은 stage 를 다시 판정한다.
+
+**3. 기능 릴레이 — 기능 하나가 어떻게 도나**
+
+```mermaid
+sequenceDiagram
+  autonumber
+  participant M as 메인
+  participant G as generator
+  participant E as evaluator
+  participant F as 파일
+
+  M->>G: feature_id 전달
+  G->>F: sprint_contracts/FID.md (구현 전 선언)
+  G->>F: 코드 구현
+  G-->>M: generator-done
+  M->>E: 확정 TC 실행 요청
+  E->>F: TC 의 command 실행, logs/FID/n.log 저장
+  E->>F: eval/FID.md 에 VERDICT 기록
+  alt 모든 TC PASS
+    E->>F: status pass + evidence + eval_report
+    E-->>M: pass
+    M->>M: PROGRESS.md 갱신, 단계 재판정
+  else FAIL, attempts 2 미만
+    E->>F: attempts +1, status fail 유지
+    E-->>M: fail
+    M->>G: 재작업 (eval/FID.md 피드백 포함)
+  else 3번째 FAIL
+    E->>F: status blocked, attempts 2 유지
+    E-->>M: blocked
+    M->>M: 사용자에게 에스컬레이션
+  end
+```
+
+`pass` 는 evaluator 만 기록하고, 증거 로그가 없으면 성립하지 않는다 (훅과 검증 스크립트가 잡는다).
+
 ### `dev-monitor`
 `CLAUDE.md` 에서 서버 실행 명령을 추출한 뒤, 지정한 포트의 기존 프로세스를 정리하고 서버를
 백그라운드로 기동한다. 이후 로그를 실시간 감시하면서 WARNING/ERROR/CRITICAL/스택 트레이스/
@@ -79,8 +198,8 @@ HTTP 4xx·5xx 를 감지할 때마다 `[날짜, 시간]` 헤더와 함께 원인
 
 ## `feature_list.json` 규율 훅
 
-규칙 문서만으로는 규율이 지켜지지 않는다. 긴 스프린트에서 컨텍스트가 압축되면 SKILL.md 의
-8가지 제약이 컨텍스트에서 사라지고, `acceptance_criteria` 를 두 줄 지우면 어려운 기능이 갑자기
+규칙 문서만으로는 규율이 지켜지지 않는다. 긴 작업에서 컨텍스트가 압축되면 SKILL.md 의
+11가지 제약이 컨텍스트에서 사라지고, `acceptance_criteria` 를 두 줄 지우면 어려운 기능이 갑자기
 통과한다. 훅은 그 순간을 본다.
 
 `PreToolUse` 로 `Write|Edit` 를 받아, 대상이 `docs/harness/**/feature_list.json`(2.0 의

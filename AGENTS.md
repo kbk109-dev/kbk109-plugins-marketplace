@@ -107,6 +107,7 @@ echo '{"cwd":"/tmp/ca-fixture","agent_type":"project-conventions:commit-agent","
 .claude-plugin/marketplace.json     플러그인 목록 (source: ./plugins/<name>)
 plugins/<plugin>/
 ├── .claude-plugin/plugin.json      플러그인 매니페스트
+├── agents/<agent>.md               서브에이전트 (선택, 호출명 `<plugin>:<agent>`)
 └── skills/<skill>/SKILL.md         + scripts/ references/ agents/ evals/
 ```
 

@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>harness-devkit 2.0 흐름도</title>
+<style>
+  :root { --bg:#0f0f0f; --panel:#161616; --text:#fff; --sub:#888; --line:#444; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Apple SD Gothic Neo",sans-serif; }
+  header { padding:24px 24px 8px; }
+  h1 { margin:0 0 6px; font-size:22px; }
+  header p { margin:0; color:var(--sub); font-size:14px; line-height:1.5; }
+  .wrap { margin:16px 24px; background:var(--panel); border-radius:12px; overflow:auto; }
+  #stage { position:relative; width:1540px; height:620px; transform-origin:0 0; }
+  .lane { position:absolute; left:0; width:1540px; height:150px; border-top:1px solid #262626; }
+  .lane span { position:absolute; left:10px; top:6px; font-size:11px; color:var(--sub); letter-spacing:.04em; }
+  svg#edges { position:absolute; inset:0; width:1540px; height:620px; pointer-events:none; }
+  .node { position:absolute; width:180px; height:84px; padding:8px 10px; border:2px solid; border-radius:12px; cursor:pointer;
+          transition:transform .15s, box-shadow .15s, opacity .15s; display:flex; flex-direction:column; justify-content:center; gap:2px; }
+  .node:hover { transform:scale(1.05); z-index:5; }
+  .node .ic { font-size:15px; line-height:1; }
+  .node b { font-size:13px; line-height:1.2; }
+  .node small { color:#c8c8c8; font-size:11px; line-height:1.25; }
+  .badge { position:absolute; top:6px; right:8px; font-size:10px; padding:1px 6px; border-radius:8px; background:#00000066; color:#ddd; }
+  .t-trigger { background:#1e3a5f; border-color:#3B82F6; }
+  .t-proc    { background:#1a3d2e; border-color:#10B981; }
+  .t-tool    { background:#3d2e1a; border-color:#F59E0B; }
+  .t-out     { background:#3d1a1a; border-color:#EF4444; }
+  .t-store   { background:#1a1a2e; border-color:#6366F1; }
+  .t-dec     { background:#2e1a3d; border-color:#A855F7; }
+  .node.sel, .node:hover { box-shadow:0 0 14px currentColor; }
+  .t-trigger.sel,.t-trigger:hover{color:#3B82F6} .t-proc.sel,.t-proc:hover{color:#10B981} .t-tool.sel,.t-tool:hover{color:#F59E0B}
+  .t-out.sel,.t-out:hover{color:#EF4444} .t-store.sel,.t-store:hover{color:#6366F1} .t-dec.sel,.t-dec:hover{color:#A855F7}
+  .node * { color:inherit; } .node b{color:#fff} .node small{color:#c8c8c8}
+  .dim { opacity:.18; }
+  .edge path { fill:none; stroke:#444; stroke-width:1.6; }
+  .edge.dash path { stroke-dasharray:5 4; }
+  .edge text { fill:#9a9a9a; font-size:10px; paint-order:stroke; stroke:#161616; stroke-width:4px; }
+  .edge.on path { stroke:var(--c); stroke-width:2.4; stroke-dasharray:6 4; animation:flow 0.8s linear infinite; }
+  .edge.on text { fill:#fff; }
+  .edge.dim { opacity:.08; }
+  @keyframes flow { to { stroke-dashoffset:-20; } }
+  #tip { position:fixed; max-width:340px; background:#000d; border:1px solid #333; border-radius:8px; padding:10px 12px; font-size:12px; line-height:1.5; pointer-events:none; display:none; z-index:20; }
+  #tip h4 { margin:0 0 4px; font-size:13px; } #tip dt{color:var(--sub);margin-top:4px} #tip dd{margin:0}
+  .legend { display:flex; flex-wrap:wrap; gap:14px; padding:0 24px 24px; font-size:12px; color:#bbb; }
+  .legend i { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px; border:2px solid; }
+</style>
+</head>
+<body>
+<header>
+  <h1>harness-devkit 2.0 — 단계별 서브에이전트 흐름</h1>
+  <p>메인(harness-dev)이 에이전트 9개를 한 단계씩 부르고, 에이전트 사이의 전달은 <code>docs/harness/&lt;slug&gt;/</code> 의 파일이 맡는다.
+     노드에 마우스를 올리면 읽고 쓰는 파일, 누르면 연결된 흐름만 강조된다. 빈 곳을 누르면 해제.</p>
+</header>
+<div class="wrap" id="wrap"><div id="stage"></div></div>
+<div class="legend">
+  <span><i style="background:#1e3a5f;border-color:#3B82F6"></i>사용자·진입 (Trigger)</span>
+  <span><i style="background:#1a3d2e;border-color:#10B981"></i>작성 에이전트 (Processing)</span>
+  <span><i style="background:#3d2e1a;border-color:#F59E0B"></i>구현 에이전트 · 도구 (Tool)</span>
+  <span><i style="background:#3d1a1a;border-color:#EF4444"></i>종료·에스컬레이션 (Output)</span>
+  <span><i style="background:#1a1a2e;border-color:#6366F1"></i>파일 저장소 (Data Store)</span>
+  <span><i style="background:#2e1a3d;border-color:#A855F7"></i>검토·판정·승인 (Decision)</span>
+</div>
+<div id="tip"></div>
+<script>
+const COL = i => 30 + i * 260;
+const ROW = i => 36 + i * 150;
+const COLORS = { trigger:'#3B82F6', proc:'#10B981', tool:'#F59E0B', out:'#EF4444', store:'#6366F1', dec:'#A855F7' };
+
+const lanes = ['① PRD','② PLAN','③ 에픽 · TC','④ 기능 단위 개발 · QA'];
+
+// id, type, icon, title, subtitle, model, col, row, reads, writes, never
+const N = [
+ ['interview','trigger','💬','인터뷰','설계 결정을 라운드로 묻는다',null,0,0,'사용자 답변','BRIEF.md (메인이 직접 씀)','코드 작성'],
+ ['gprd','dec','✅','PRD 승인','critic 의견·blocking 확인 후 확정',null,3,0,'PRD.md, reviews/prd-critic-r{N}.md','PRD frontmatter status: approved','—'],
+ ['gplan','dec','✅','PLAN 승인','Run & Verify 있는지 확인 후 확정',null,1,1,'PLAN.md, reviews/plan-critic-r{N}.md','PLAN frontmatter status: approved','—'],
+ ['gepic','dec','🔒','에픽 승인','feature_list 확정 = criteria 잠금',null,2,2,'epics/NN/feature_list.json','.criteria_lock.json','—'],
+ ['esc','out','🚨','에스컬레이션','blocked · TC 2라운드 후 REVISE · 잠금 위반',null,5,2,'eval/FID.md, 리뷰 파일','결정(재시도 · blocked 인정 · 중단)','—'],
+ ['close','out','🏁','에픽 종료 승인','/simplify → 회귀 평가 → 커밋 승인',null,3,3,'eval/EPIC.md, 변경 요약','CLOSED.md (커밋은 commit-agent 위임)','push, 자동 커밋'],
+
+ ['main','trigger','🧭','메인 harness-dev','모든 서브에이전트를 직접 호출 — 한 진입에 한 단계',null,0,1,'harness_state.py 출력, PROGRESS.md','BRIEF.md · 승인 표지 · PROGRESS.md · CLOSED.md','서브에이전트끼리 직접 연결'],
+ ['state','tool','⚙️','harness_state.py','파일 상태로 현재 stage 를 코드가 판정',null,0,2,'PRD frontmatter, 리뷰·잠금 파일, feature_list','stage (stdout)','—'],
+
+ ['prdw','proc','✍️','prd-writer','BRIEF 를 출시 가능한 PRD 로','inherit',1,0,'BRIEF.md, 프로젝트 CONTEXT.md, 최근 critic 리뷰','PRD.md (초안)','승인 표지 변경, 구현 방법 결정'],
+ ['planner','proc','🏗️','planner','PRD 를 PLAN 으로, Run & Verify 필수','opus',3,1,'승인된 PRD.md, 코드베이스, 최근 critic 리뷰','PLAN.md (초안)','승인 표지 변경, 코드 작성'],
+ ['featp','proc','🧩','feature-planner','에픽 하나를 feature_list.json 으로','sonnet',1,2,'PRD.md, PLAN.md','epics/NN/feature_list.json (모두 fail)','잠금 파일 생성'],
+ ['tcw','proc','📝','tc-writer','구현 전에 TC 를 쓴다','inherit',3,2,'PRD.md, PLAN.md, feature_list.json, 최근 critic 리뷰','epics/NN/TC.md','구현 코드 읽기, TC 잠금'],
+
+ ['prdc','dec','🔍','prd-critic','PRD 를 회의적으로 검토','opus',2,0,'BRIEF.md, PRD.md','reviews/prd-critic-r{N}.md (VERDICT)','PRD 수정'],
+ ['planc','dec','🔍','plan-critic','PLAN 실현성·Run & Verify 검증','opus',2,1,'PRD.md, PLAN.md, 코드베이스','reviews/plan-critic-r{N}.md (VERDICT)','PLAN 수정'],
+ ['tcc','dec','🔍','tc-critic','TC 를 보수적으로 검토 (누락 의심 = REVISE)','opus',4,2,'TC.md, feature_list.json, PRD.md, PLAN.md','reviews/tc-critic-r{N}.md (VERDICT)','구현 코드 읽기, TC 수정'],
+
+ ['gen','tool','🛠️','generator','기능 1개 구현','inherit',5,3,'PROGRESS.md, feature_list.json, 해당 기능 TC, 직전 eval/FID.md','코드, sprint_contracts/FID.md, PROGRESS.md 덧붙임','status 변경, TC·criteria 수정, 커밋'],
+ ['eval','dec','🧪','evaluator','확정 TC 를 실앱에서 실행해 판정','opus',4,3,'확정 TC, PLAN 의 Run & Verify, 계약, 구현','logs/FID/N.log, eval/FID.md, feature_list 의 status·attempts·evidence','코드·TC 수정. pass 를 기록하는 유일한 주체'],
+
+ ['files','store','🗂️','docs/harness/<slug>/','BRIEF · PRD · PLAN · feature_list · TC · logs · eval · PROGRESS',null,0,3,'모든 에이전트가 읽는다','모든 에이전트가 쓴다 (에이전트 간 전달 통로)','—'],
+];
+
+// from, to, label, kind (flow|dash), 곡률 부호
+const E = [
+ ['interview','prdw','BRIEF.md'],
+ ['prdw','prdc','PRD.md',,.6],
+ ['prdc','prdw','REVISE ≤2라운드',,.6],
+ ['prdc','gprd','PASS · 의견'],
+ ['gprd','prdw','수정 요청',,2.4],
+ ['gprd','planner','승인된 PRD.md'],
+ ['planner','planc','PLAN.md',,.6],
+ ['planc','planner','REVISE ≤2라운드',,.6],
+ ['planc','gplan','PASS · 의견'],
+ ['gplan','planner','수정 요청 · R&V 누락',,-2.4],
+ ['gplan','featp','승인된 PLAN.md'],
+ ['featp','gepic','feature_list',,.6],
+ ['gepic','featp','수정 요청',,.6],
+ ['gepic','tcw','잠긴 criteria'],
+ ['tcw','tcc','TC.md',,.6],
+ ['tcc','tcw','REVISE ≤2라운드',,.6],
+ ['tcc','gen','PASS → .tc_lock.json'],
+ ['tcc','esc','2라운드 후 REVISE'],
+ ['gen','eval','코드 + 계약',,.6],
+ ['eval','gen','FAIL ≤2: 피드백',,.6],
+ ['eval','esc','3번째 FAIL: blocked'],
+ ['eval','close','전 기능 pass'],
+ ['esc','gen','결정 반영'],
+ ['close','featp','다음 에픽 (새 세션)'],
+ ['main','interview','진행 · 질문'],
+ ['main','state','매 진입 첫 동작'],
+ ['files','state','파일 상태 읽기','dash'],
+ ['main','files','승인 표지 · PROGRESS','dash',-1.2],
+];
+
+const stage = document.getElementById('stage');
+lanes.forEach((t,i)=>{ const d=document.createElement('div'); d.className='lane'; d.style.top=(ROW(i)-24)+'px'; d.innerHTML='<span>'+t.replace(/</g,'&lt;')+'</span>'; stage.appendChild(d); });
+
+const svgNS='http://www.w3.org/2000/svg';
+const svg=document.createElementNS(svgNS,'svg'); svg.id='edges'; stage.appendChild(svg);
+svg.innerHTML='<defs>'+Object.entries(COLORS).map(([k,c])=>`<marker id="a-${k}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="${c}"/></marker>`).join('')+'<marker id="a-g" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#666"/></marker></defs>';
+
+const nodes={};
+N.forEach(([id,type,ic,title,sub,model,c,r,rd,wr,nv])=>{
+  const el=document.createElement('div'); el.className='node t-'+type; el.dataset.id=id;
+  el.style.left=COL(c)+'px'; el.style.top=ROW(r)+'px';
+  el.innerHTML=`<span class="ic">${ic}</span><b>${title.replace(/</g,'&lt;')}</b><small>${sub}</small>`+(model?`<span class="badge">${model}</span>`:'');
+  stage.appendChild(el);
+  nodes[id]={el,type,x:COL(c),y:ROW(r),w:180,h:84,title,model,rd,wr,nv,sub};
+});
+
+function anchor(a,b){ // a 의 중심에서 b 중심 방향으로 사각형 경계와 만나는 점
+  const ax=a.x+a.w/2, ay=a.y+a.h/2, bx=b.x+b.w/2, by=b.y+b.h/2;
+  const dx=bx-ax, dy=by-ay; if(!dx&&!dy) return [ax,ay];
+  const s=Math.min((a.w/2)/Math.abs(dx||1e-9),(a.h/2)/Math.abs(dy||1e-9));
+  return [ax+dx*s, ay+dy*s];
+}
+const edgeEls=[];
+E.forEach(([f,t,label,kind,bend])=>{
+  const a=nodes[f], b=nodes[t];
+  let [x1,y1]=anchor(a,b), [x2,y2]=anchor(b,a);
+  const mx=(x1+x2)/2, my=(y1+y2)/2, dx=x2-x1, dy=y2-y1, len=Math.hypot(dx,dy)||1;
+  const off=(bend||0)*34 + (bend?0:0);
+  const cx=mx - dy/len*off, cy=my + dx/len*off;
+  const g=document.createElementNS(svgNS,'g'); g.setAttribute('class','edge'+(kind==='dash'?' dash':''));
+  g.style.setProperty('--c', COLORS[a.type]);
+  const p=document.createElementNS(svgNS,'path');
+  p.setAttribute('d',`M${x1},${y1} Q${cx},${cy} ${x2},${y2}`);
+  p.setAttribute('marker-end',`url(#a-g)`);
+  g.appendChild(p);
+  if(label){ const tx=document.createElementNS(svgNS,'text'); tx.setAttribute('x',(mx+cx)/2); tx.setAttribute('y',(my+cy)/2); tx.setAttribute('text-anchor','middle'); tx.textContent=label; g.appendChild(tx); }
+  svg.appendChild(g);
+  edgeEls.push({g,f,t,p,type:a.type});
+});
+
+// 상호작용
+const tip=document.getElementById('tip');
+let selected=null;
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+Object.entries(nodes).forEach(([id,n])=>{
+  n.el.addEventListener('mouseenter',()=>{
+    tip.innerHTML=`<h4>${esc(n.title)}${n.model?' · '+n.model:''}</h4>${esc(n.sub)}<dl><dt>읽는 것</dt><dd>${esc(n.rd)}</dd><dt>쓰는 것</dt><dd>${esc(n.wr)}</dd><dt>하지 않는 것</dt><dd>${esc(n.nv)}</dd></dl>`;
+    tip.style.display='block';
+  });
+  n.el.addEventListener('mousemove',e=>{ tip.style.left=Math.min(e.clientX+16,innerWidth-360)+'px'; tip.style.top=Math.min(e.clientY+16,innerHeight-180)+'px'; });
+  n.el.addEventListener('mouseleave',()=>tip.style.display='none');
+  n.el.addEventListener('click',e=>{ e.stopPropagation(); select(id); });
+});
+function select(id){
+  selected=id;
+  const linked=new Set([id]);
+  edgeEls.forEach(({g,f,t,p,type})=>{
+    const on=f===id||t===id;
+    if(on){linked.add(f);linked.add(t);}
+    g.classList.toggle('on',on); g.classList.toggle('dim',!on);
+    p.setAttribute('marker-end',on?`url(#a-${type})`:'url(#a-g)');
+  });
+  Object.entries(nodes).forEach(([k,n])=>{ n.el.classList.toggle('dim',!linked.has(k)); n.el.classList.toggle('sel',k===id); });
+}
+function reset(){
+  selected=null;
+  edgeEls.forEach(({g,p})=>{g.classList.remove('on','dim'); p.setAttribute('marker-end','url(#a-g)');});
+  Object.values(nodes).forEach(n=>n.el.classList.remove('dim','sel'));
+}
+document.addEventListener('click',reset);
+
+// 화면 폭에 맞춰 축소 (확대는 하지 않는다)
+function fit(){
+  const wrap=document.getElementById('wrap'); const s=Math.min(1,(wrap.clientWidth)/1540);
+  stage.style.transform=`scale(${s})`; wrap.style.height=(620*s)+'px'; wrap.style.overflowX=s<0.55?'auto':'hidden';
+}
+addEventListener('resize',fit); fit();
+</script>
+</body>
+</html>
