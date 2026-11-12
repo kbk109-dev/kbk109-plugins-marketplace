@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.25.0
+
+`harness-devkit` 2.1.0 — `harness-dev` 의 소요 시간을 줄인다. 실제 실행 기록 1건(에픽 13 · 기능 132 ·
+TC 2,140 · 활성 86시간)의 `PROGRESS.md` 시각을 집계하니 evaluator 32%, generator 30%, TC 작성·검토
+20%, 에픽 종료 14% 였다. 안전장치(Generator/Evaluator 분리, 기본 `fail`, 증거 로그, 구현 전 TC 잠금,
+한 번에 한 기능)는 그대로 두고, 판단이 필요 없는 일을 LLM 턴에서 스크립트로 옮겼다.
+
+**TC 러너 `run_tc.py` 추가.** evaluator 는 TC 명령을 한 턴에 하나씩 돌리고 TC 마다 로그 파일을 손으로
+썼다(105 TC 에픽의 회귀에서 로그 680개). 이제 러너가 확정 TC 의 `command` 를 실행해
+`logs/<FID>/<n>.log` 와 `summary.json` 을 쓴다. TC 잠금이 맞을 때만 실행하고, TC 마다 timeout 을 걸어
+프로세스 그룹째 정리하고, Bash 도구의 10분 상한 전에 멈춰 `--resume` 으로 이어 간다. evaluator 는
+실행자에서 감사자가 된다 — 통과한 TC 가 부르는 테스트가 `expected` 를 정말 단언하는지 확인하고
+`파일:줄` 을 보고서에 남긴다. 이에 맞춰 TC 규칙에 "`command` 는 `expected` 를 종료 코드로 답한다" 를
+더했고, 끝을 `|| true` 로 가린 명령은 `validate_harness_doc.py tc` 가 위반으로 잡는다.
+
+**제약 11 강화.** 새 `pass` 는 `logs/<FID>/summary.json` 이 "전부 돌려 전부 통과, 잠금 일치" 여야
+한다(`validate_feature_list.py --prev`). 이전에 pass 가 된 기능과 `TC.md` 가 없는 1.x 레이아웃은
+대상이 아니다. 회귀·자가 점검·에픽 회귀의 로그는 `logs/_regression/` · `logs/_self/` · `logs/_epic/`
+에만 쓰여 증거 자리(`logs/<FID>/`)와 섞이지 않는다.
+
+**회귀 범위.** 기능 평가의 회귀는 직접 의존 기능의 TC 와 PLAN `test` 1회다(`run_tc.py --regression`).
+기능마다 이전 pass 기능의 TC 를 전부 다시 돌리던 것이 에픽 안에서 기능 수의 제곱으로 늘었다. 확정 TC
+전체는 에픽 종료 회귀(`--all --out _epic`)에서 돈다 — 기능 사이의 파손이 그때 처음 드러날 수 있다.
+
+**tc-critic 은 2라운드부터 바뀐 블록만 본다.** `MAX_ROUNDS = 2` 인데도 실측은 에픽당 3~11라운드였다.
+새 critic 이 매번 전체를 처음부터 읽어 이미 통과한 블록에서 새 지적이 나왔고, 잠금 뒤 TC 한 건만
+고쳐도 전체를 재검토했다. `validate_harness_doc.py tc-review-prep` 이 critic 호출 직전에 그 라운드가
+볼 내용의 스냅샷을 남기고, 블록 해시로 직전 라운드 이후 바뀐 블록을 가려
+`reviews/tc-critic-r{N}.scope.md` 를 쓴다. 모양·추적성이 깨진 TC 는 `harness_state.py` 가 `tc-critic`
+대신 `tc-revise` 로 판정해, 코드가 잡을 수 있는 결함에 critic 라운드를 쓰지 않는다. critic 은 추적성
+표를 손으로 만들지 않는다.
+
+**잠금 뒤 수정의 재검토를 코드가 강제한다.** 이전에는 2라운드를 넘긴 뒤 TC 를 고치면 상태 머신이
+재검토 없이 `tc-lock` 을 냈다. 이제 `harness_state.py` 는 리뷰 스냅샷이 있으면 mtime 대신 내용 해시로
+"리뷰 뒤에 바뀌었는가" 를 판정해 라운드 수와 무관하게 `tc-critic` 을 내고, `tc-lock` 은 모양·추적성이
+맞고 최신 리뷰가 PASS 이며 그 리뷰가 본 내용이 지금과 같을 때만 잠근다. 사용자가 에스컬레이션에서
+남은 지적을 안고 잠그기로 한 경우는 `--user-approved` 다 (면제되는 것은 critic 의 VERDICT 뿐이다).
+스냅샷이 없는 기존 작업은 이전 판정을 그대로 쓴다.
+
+**`PROGRESS.md` 는 메인만 한 줄씩 쓴다.** generator 가 문단을 덧붙여 540 KB 까지 커진 파일을 매 시작에
+읽고 있었다. generator 는 끝 40줄과 의존 기능의 `notes/<FID>.md` 만 읽고, 작업 기록은 자기
+`notes/<FID>.md` 에 쓴다. 메인은 `harness_state.py log` 로 시각이 찍힌 한 줄을 남긴다.
+
+그 밖의 수정:
+- `parse_tcs` 가 TC 가 아닌 제목에서 블록을 닫는다. 이전에는 `## 제외한 관점` 아래의 `- command:` 줄이
+  마지막 TC 의 명령을 덮어썼다.
+- `tc-writer` · `feature-planner` 의 `tools` 에 `Bash` 추가. 본문이 검증 스크립트 실행을 요구하는데
+  실행할 수 없었다.
+- 에픽 종료의 `/simplify` 는 항상 회귀 평가 **앞**에서 한 번 돈다. commit-agent 규칙이 있는 프로젝트에서
+  회귀 뒤로 밀려 검증되지 않은 수정이 커밋될 수 있었다.
+- 4,000바이트를 넘는 TC 블록은 `warnings` 로 알린다 (위반 아님).
+
+generator 의 구현 시간과 테스트 실행 시간 자체는 이 변경으로 줄지 않는다. 기능 병렬 구현은 넣지 않았다.
+`harness-devkit` 2.1.0, 마켓플레이스 1.25.0.
+
 ## 1.24.0
 
 `harness-devkit` 2.0.0 — `harness-dev` 를 PRD 에서 QA 까지 전 과정을 관리하는 하네스로 다시 쓴다.

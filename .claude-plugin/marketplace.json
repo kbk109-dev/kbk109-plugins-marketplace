@@ -7,7 +7,7 @@
     "url": "https://github.com/kbk109-dev"
   },
   "metadata": {
-    "version": "1.24.1"
+    "version": "1.25.0"
   },
   "plugins": [
     {
@@ -79,7 +79,7 @@
       "description": "Harness Engineering 원칙(상태 외부화·Task State Machine·독립 검증 루프)으로 PRD 작성부터 세부 계획, 에픽별 feature_list, TC 기반 개발·QA 까지 단계마다 새 서브에이전트(작성자·회의적 critic·generator·evaluator)가 맡아 파일 상태로 재진입하는 하네스와, CLAUDE.md에서 서버 실행 명령을 추출해 기동 후 로그를 감시하며 오류를 한국어로 분석 보고하는 dev 서버 모니터를 제공한다.",
       "source": "./plugins/harness-devkit",
       "category": "development",
-      "version": "2.0.0",
+      "version": "2.1.0",
       "author": {
         "name": "kbk109",
         "url": "https://github.com/kbk109-dev"
