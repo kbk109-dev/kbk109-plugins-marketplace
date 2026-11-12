@@ -1,7 +1,7 @@
 ---
 name: feature-planner
 description: Breaks one PLAN epic into a v2 feature_list.json with machine-checkable acceptance criteria. Invoked only by harness-devkit:harness-dev.
-tools: Read, Write, Edit, Glob, Grep
+tools: Read, Write, Edit, Glob, Grep, Bash
 model: sonnet
 ---
 

@@ -4,6 +4,7 @@
 사용:
     harness_state.py status <docs/harness> [--slug S]
     harness_state.py slug "<제품 이름>" <docs/harness>
+    harness_state.py log <product_dir> <stage> <status> [artifact]   # PROGRESS.md 에 한 줄
 
 출력: stdout JSON { slug, stage, epic, epic_dir, feature, round, reason, candidates? }
 종료코드: 0 (단계 판정은 위반이 아니다), 3 = 입력 오류
@@ -23,35 +24,32 @@ import json
 import os
 import re
 import sys
+import time
 
 _HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, _HERE)
 sys.path.insert(0, os.path.join(_HERE, "..", "..", "..", "hooks"))
-from _feature_list_rules import CRITERIA_LOCK_NAME  # noqa: E402
-from validate_harness_doc import EPIC_ROW, tc_lock_ok  # noqa: E402
+from _feature_list_rules import CRITERIA_LOCK_NAME, TC_LOCK_NAME  # noqa: E402
+from validate_harness_doc import (  # noqa: E402
+    EPIC_ROW,
+    REVIEW_PREFIX,
+    changed_since_review,
+    check_tc,
+    latest_review,
+    read_json,
+    read_text,
+    reviews_dir_of,
+    tc_lock_ok,
+)
 
 MAX_ROUNDS = 2
+# PROGRESS.md 한 줄의 상한. 상세는 산출물 파일에 있다 — 이 파일은 매 시작에 읽히는 색인이다.
+LOG_LINE_MAX = 200
 
 
 def fail(message: str) -> None:
     json.dump({"ok": False, "error": message}, sys.stdout, ensure_ascii=False)
     sys.exit(3)
-
-
-def read_json(path: str):
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            return json.load(fh)
-    except (OSError, ValueError):
-        return None
-
-
-def read_text(path: str) -> str:
-    try:
-        with open(path, "r", encoding="utf-8") as fh:
-            return fh.read()
-    except OSError:
-        return ""
 
 
 def exists(*parts) -> bool:
@@ -66,32 +64,28 @@ def frontmatter_status(path: str):
     return s.group(1) if s else None
 
 
-def latest_review(reviews_dir: str, prefix: str):
-    """(라운드 N, VERDICT, 경로). 리뷰가 없으면 (0, None, None)."""
-    best = (0, None, None)
-    try:
-        names = os.listdir(reviews_dir)
-    except OSError:
-        return best
-    for name in names:
-        m = re.fullmatch(rf"{re.escape(prefix)}-r(\d+)\.md", name)
-        if m and int(m.group(1)) > best[0]:
-            path = os.path.join(reviews_dir, name)
-            v = re.search(r"VERDICT:\s*(PASS|REVISE)", read_text(path))
-            best = (int(m.group(1)), v.group(1) if v else None, path)
-    return best
-
-
 def review_loop(doc: str, reviews_dir: str, prefix: str) -> tuple:
     """작성 → critic → 수정 루프의 다음 동작. (동작, 라운드, 마지막 VERDICT)
 
     동작: critic | revise | done. `done` 은 PASS 이거나 라운드를 다 쓴 것이다 —
     후자는 남은 blocking 을 사용자에게 보여야 하므로 호출자가 라운드로 구분한다.
-    문서가 마지막 리뷰보다 새로우면 그 리뷰 이후 수정된 것이다.
+
+    "마지막 리뷰 뒤에 문서가 바뀌었는가" 는 그 리뷰의 스냅샷이 있으면 내용 해시로, 없으면
+    mtime 으로 본다 (스냅샷은 TC 의 tc-review-prep 만 남긴다). mtime 은 checkout 한 번에
+    흔들리므로, 해시로 확인된 "PASS 뒤 변경" 만 라운드를 다 쓴 뒤에도 다시 critic 으로 보낸다 —
+    mtime 판정만으로는 2라운드를 넘긴 수정본이 재검토 없이 잠금으로 갔다.
     """
     n, verdict, review_path = latest_review(reviews_dir, prefix)
-    if n == 0 or os.path.getmtime(doc) > os.path.getmtime(review_path):
-        return ("critic", n + 1, verdict) if n < MAX_ROUNDS else ("done", n, verdict)
+    hashed = changed_since_review(doc, reviews_dir, prefix, n) if n else None
+    if n == 0:
+        changed = True
+    elif hashed is None:
+        changed = os.path.getmtime(doc) > os.path.getmtime(review_path)
+    else:
+        changed = hashed
+    if changed:
+        again = n < MAX_ROUNDS or (hashed and verdict == "PASS")
+        return ("critic", n + 1, verdict) if again else ("done", n, verdict)
     if verdict == "PASS" or n >= MAX_ROUNDS:
         return "done", n, verdict
     return "revise", n, verdict
@@ -136,9 +130,15 @@ def epic_stage(slug: str, epic: str, epic_dir: str, legacy: bool = False) -> dic
         tc = os.path.join(epic_dir, "TC.md")
         if not exists(tc):
             return r("tc-draft", "TC.md 가 없다", round=1)
-        if not exists(epic_dir, ".tc_lock.json"):
-            action, n, verdict = review_loop(tc, os.path.join(epic_dir, "reviews"), "tc-critic")
+        if not exists(epic_dir, TC_LOCK_NAME):
+            action, n, verdict = review_loop(tc, reviews_dir_of(tc), REVIEW_PREFIX)
             if action == "critic":
+                # 코드가 잡을 수 있는 결함에는 critic 라운드를 쓰지 않는다.
+                violations = check_tc(read_text(tc), feature_list)
+                if violations:
+                    return r("tc-revise", f"TC 모양·추적성 위반 {len(violations)}건 — "
+                             "critic 을 부르기 전에 tc-writer 가 고친다",
+                             round=n, violations=violations[:20])
                 return r("tc-critic", "TC 검토 대기", round=n)
             if action == "revise":
                 return r("tc-revise", "tc-critic 이 REVISE", round=n)
@@ -228,6 +228,29 @@ def slugify(text: str, harness_dir: str) -> str:
     return slug
 
 
+def log_line(product_dir: str, stage: str, status_text: str, artifact) -> str:
+    """PROGRESS.md 에 `- <일시> <stage> → <status> (<artifact>)` 한 줄을 덧붙인다.
+
+    시각을 코드가 찍어야 단계별 소요 시간을 나중에 잴 수 있고, 길이를 코드가 잘라야 이 파일이
+    매 시작에 읽을 수 있는 크기로 남는다.
+    """
+    if not os.path.isdir(product_dir):
+        fail(f"디렉토리가 없습니다: {product_dir}")
+    name = "PROGRESS.md"
+    if not exists(product_dir, name) and exists(product_dir, "progress.md"):
+        name = "progress.md"  # 1.x 레이아웃
+    body = " ".join(f"{stage} → {status_text}".split())
+    if artifact:
+        body += f" ({' '.join(artifact.split())})"
+    line = f"- {time.strftime('%Y-%m-%d %H:%M')} {body}"[:LOG_LINE_MAX]
+    try:
+        with open(os.path.join(product_dir, name), "a", encoding="utf-8") as fh:
+            fh.write(line + "\n")
+    except OSError as exc:
+        fail(f"진행 기록을 쓸 수 없습니다: {exc}")
+    return line
+
+
 def main(argv) -> int:
     if len(argv) >= 2 and argv[0] == "status":
         slug = argv[argv.index("--slug") + 1] if "--slug" in argv[2:] else None
@@ -236,7 +259,12 @@ def main(argv) -> int:
     if len(argv) >= 3 and argv[0] == "slug":
         json.dump({"slug": slugify(argv[1], argv[2])}, sys.stdout, ensure_ascii=False)
         return 0
-    fail('사용: harness_state.py status <docs/harness> [--slug S] | slug "<이름>" <docs/harness>')
+    if len(argv) in (4, 5) and argv[0] == "log":
+        line = log_line(argv[1], argv[2], argv[3], argv[4] if len(argv) == 5 else None)
+        json.dump({"ok": True, "line": line}, sys.stdout, ensure_ascii=False)
+        return 0
+    fail('사용: harness_state.py status <docs/harness> [--slug S] | slug "<이름>" <docs/harness> '
+         "| log <product_dir> <stage> <status> [artifact]")
 
 
 if __name__ == "__main__":

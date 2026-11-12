@@ -18,10 +18,11 @@ slug 폴더 구조가 이를 구현한다 (2.0 레이아웃):
 | 파일                                          | 언제 읽는가        | 역할                          |
 | --------------------------------------------- | ------------------ | ----------------------------- |
 | `harness_state.py status` 출력                | 매 진입의 첫 동작  | 파일 상태에서 판정한 현재 단계 |
-| `docs/harness/{slug}/PROGRESS.md`             | 항상               | 세션 간 인수인계 로그         |
+| `docs/harness/{slug}/PROGRESS.md` 의 끝부분   | 항상               | 단계마다 한 줄인 진행 색인    |
 | `docs/harness/{slug}/epics/{NN}/feature_list.json` | 에픽 작업 중  | 현재 상태 스냅샷              |
 | `docs/harness/{slug}/PRD.md` · `PLAN.md`      | 필요 시            | 제품 요구사항 · 구현 계획     |
-| `epics/{NN}/TC.md` · `eval/` · `logs/`        | 기능 구현·평가 시  | 확정 TC · 판정 · 증거         |
+| `epics/{NN}/TC.md` 의 해당 기능 블록 · `notes/` | 기능 구현 시     | 확정 TC · 의존 기능의 인수인계 |
+| `epics/{NN}/eval/` · `logs/`                  | 기능 평가 시       | 판정 · 증거                   |
 
 ### 설계 원칙
 
@@ -101,9 +102,10 @@ Generator(서브에이전트) 구현 → Evaluator(별개 서브에이전트)가
 
 Evaluator가 PASS를 선언하기 전 반드시 확인:
 
-1. **확정 TC 전수 실행** — 해당 기능의 모든 TC 를 개별적으로 실행하고 로그를 남김
-2. **회귀 없음** — 이전에 pass한 기능들이 여전히 동작
+1. **확정 TC 전수 실행** — 러너(`run_tc.py`)가 해당 기능의 모든 TC 를 실행하고 TC 마다 로그를 남김
+2. **회귀 없음** — 직접 의존 기능의 TC 와 PLAN `test` 가 통과 (나머지 pass 기능은 에픽 종료 회귀에서)
 3. **End-to-end 흐름 검증** — 구현된 기능들이 사용자 관점에서 연결된 흐름으로 동작
+4. **단언 확인** — 통과한 TC 가 부르는 테스트가 `expected` 를 실제로 단언함
 
 ### Reasoning Sandwich
 
