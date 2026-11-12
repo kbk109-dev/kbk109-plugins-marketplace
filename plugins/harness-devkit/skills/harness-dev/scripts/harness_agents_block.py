@@ -38,8 +38,8 @@ BLOCK_BODY = """## Harness 작업 규율
 직접 고치지 말 것, 재설치하면 덮어쓴다.
 
 **harness 상태는 `docs/harness/*/` 에 있다.** 작업을 재개할 때 그 폴더의 `PROGRESS.md`
-(1.x 작업은 `progress.md`) → 해당 에픽의 `feature_list.json` 순으로 **먼저 읽는다.**
-이 문서에는 진행 상태를 적지 않는다.
+(1.x 작업은 `progress.md`)의 **끝부분** → 해당 에픽의 `feature_list.json` 순으로 **먼저 읽는다.**
+`PROGRESS.md` 는 제품이 커질수록 길어지므로 통째로 읽지 않는다. 이 문서에는 진행 상태를 적지 않는다.
 
 **재정의할 수 없는 제약:**
 

@@ -31,6 +31,11 @@ ALLOWED_TRANSITIONS = {("fail", "pass"), ("fail", "blocked"), ("blocked", "fail"
 # acceptance_criteria 잠금 파일 이름. 훅·검증 스크립트·상태 판정이 같은 파일을 봐야 한다.
 CRITERIA_LOCK_NAME = ".criteria_lock.json"
 
+# 제약 11 — TC 러너(run_tc.py)가 실행마다 쓰는 요약과, 그 실행이 본 TC 의 잠금.
+# 잠금을 쓰는 validate_harness_doc.py 와 상태 판정도 이 이름을 가져다 쓴다.
+RUN_SUMMARY_NAME = "summary.json"
+TC_LOCK_NAME = ".tc_lock.json"
+
 # 제약 9 — v2 에서 pass 를 쓸 수 있는 에이전트.
 EVALUATOR_NAME = "evaluator"
 
@@ -196,7 +201,8 @@ def check_evidence(feature_list, base_dir=None, fresh=None) -> list:
 
     대상: v2 파일의 모든 pass 항목, 또는 `fresh` 로 지목된 항목. v1 파일의 기존 pass 는
     증거 필드가 없는 것이 정상이므로 건드리지 않는다. base_dir 이 있으면 파일 실존까지 본다
-    (훅은 쓰기 직전이라 base_dir 없이 모양만 본다).
+    (훅은 쓰기 직전이라 base_dir 없이 모양만 본다). `fresh` 항목은 TC.md 가 있는 에픽이면
+    러너의 실행 요약까지 본다 — 로그가 "있다" 가 아니라 "통과했다" 여야 pass 다.
     """
     violations = []
     v2 = is_v2(feature_list)
@@ -226,7 +232,42 @@ def check_evidence(feature_list, base_dir=None, fresh=None) -> list:
                         violations.append(violation(11, f"eval/{fid}.md 에 `VERDICT: PASS` 가 없다", fid))
             except OSError:
                 violations.append(violation(11, f"eval/{fid}.md 가 없다", fid))
+            if fid in fresh and os.path.exists(os.path.join(base_dir, "TC.md")):
+                detail = _run_summary_problem(base_dir, fid)
+                if detail:
+                    violations.append(violation(11, detail, fid))
     return violations
+
+
+def tc_locked_sha(epic_dir: str) -> str | None:
+    """TC 잠금이 기록한 TC.md 의 sha256. 잠금이 없거나 깨졌으면 None."""
+    try:
+        with open(os.path.join(epic_dir, TC_LOCK_NAME), "r", encoding="utf-8") as fh:
+            return json.load(fh).get("sha256")
+    except (OSError, ValueError, AttributeError):
+        return None
+
+
+def _run_summary_problem(base_dir: str, fid: str) -> str | None:
+    """`logs/<FID>/summary.json` 이 "확정된 TC 를 전부 돌려 전부 통과했다" 를 말하는가.
+
+    이전에 pass 가 된 기능에는 묻지 않는다 (호출자가 `fresh` 로 거른다) — 러너가 생기기 전의
+    pass 는 요약이 없는 것이 정상이다.
+    """
+    rel = f"logs/{fid}/{RUN_SUMMARY_NAME}"
+    try:
+        with open(os.path.join(base_dir, rel), "r", encoding="utf-8") as fh:
+            summary = json.load(fh)
+    except (OSError, ValueError):
+        return f"{rel} 을 읽을 수 없다 — run_tc.py 로 실행한 결과가 아니다"
+    if not isinstance(summary, dict) or summary.get("complete") is not True \
+            or not summary.get("total"):
+        return f"{rel} — 러너 실행이 끝나지 않았다"
+    if summary.get("failed") != 0:
+        return f"{rel} — 실패한 TC 가 {summary.get('failed')}건 있다"
+    if summary.get("tc_sha256") != tc_locked_sha(base_dir):
+        return f"{rel} — 실행 이후 TC 잠금이 바뀌었다. 다시 실행해야 한다"
+    return None
 
 
 def scan_stubs(paths) -> list:

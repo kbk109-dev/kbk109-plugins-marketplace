@@ -73,10 +73,10 @@ flowchart TD
   A3{{"사용자 승인: 에픽<br/>→ .criteria_lock.json"}}
 
   TW["tc-writer · inherit<br/>→ TC.md (코드를 읽지 않음)"]
-  TR["tc-critic · opus<br/>→ reviews/tc-critic-rN.md"]
+  TR["tc-critic · opus<br/>2라운드부터 바뀐 블록만<br/>→ reviews/tc-critic-rN.md"]
 
-  G["generator · inherit<br/>기능 1개 구현<br/>→ 코드 · sprint_contracts/FID.md"]
-  E["evaluator · opus<br/>확정 TC 를 실앱에서 실행<br/>→ logs/FID/N.log · eval/FID.md"]
+  G["generator · inherit<br/>기능 1개 구현<br/>→ 코드 · sprint_contracts/FID.md · notes/FID.md"]
+  E["evaluator · opus<br/>run_tc.py 로 확정 TC 실행 · 단언 감사<br/>→ logs/FID/N.log · eval/FID.md"]
   ESC{{"사용자 판단<br/>재시도 · blocked 인정 · 중단"}}
   CL{{"에픽 종료 · 사용자 승인<br/>/simplify → 회귀 평가<br/>→ eval/EPIC.md · CLOSED.md"}}
 
@@ -160,6 +160,12 @@ generator 의 자체 평가는 **참고만** 한다. `pass` 는 evaluator 만 �
 2.0 은 한 걸음 더 간다. `pass` 는 evaluator 만 쓸 수 있고, `logs/<FID>/*.log`(실제 실행 로그)와
 `eval/<FID>.md` 의 `VERDICT: PASS` 가 없으면 성립하지 않는다.
 
+2.1 부터 그 로그는 모델이 아니라 **TC 러너(`run_tc.py`)** 가 쓴다. evaluator 가 TC 명령을 한 턴에
+하나씩 돌리고 출력을 로그로 옮겨 적던 일에는 판단이 없었고, 실제 실행 기록에서 가장 큰 시간
+구간이었다. 러너가 실행과 기록을 맡고, evaluator 는 러너가 볼 수 없는 것 — 종료 코드 0 이 정말
+기대 결과를 뜻하는가 — 을 감사한다. 새 `pass` 는 러너의 `logs/<FID>/summary.json` 이 "전부 돌려
+전부 통과" 일 때만 인정된다.
+
 ---
 
 ## 3. 실행하면 무슨 일이 일어나나
@@ -214,9 +220,11 @@ slug 는 `harness_state.py slug` 가 정한다 (이미 있으면 `-2`).
 └── epics/01-core/
     ├── feature_list.json · .criteria_lock.json    ← 에픽 승인 표지
     ├── TC.md · .tc_lock.json                      ← TC 확정 표지
-    ├── reviews/tc-critic-r{N}.md
+    ├── reviews/tc-critic-r{N}.md                  ← 옆의 .blocks.json · .scope.md 는 검토 범위 계산용
     ├── sprint_contracts/F001.md                   ← generator 의 구현 전 선언
-    ├── logs/F001/1.log                            ← evaluator 가 실행한 실제 출력
+    ├── notes/F001.md                              ← generator 의 구현 후 인수인계
+    ├── logs/F001/1.log · summary.json             ← 러너가 실행한 실제 출력 (증거)
+    ├── logs/_regression/ · _self/ · _epic/        ← 회귀·자가 점검·에픽 회귀 (증거 아님)
     ├── eval/F001.md · eval/EPIC.md                ← 판정 근거
     └── CLOSED.md                                  ← 에픽 종료 표지
 ```
@@ -400,9 +408,10 @@ pkill -f "tail -f <log>" ← 남은 고아 청소
 | 2 acceptance_criteria 불변 · 6 JSON 유지 · 7 재시도 상한 · 8 status enum | PreToolUse 훅 + `validate_feature_list.py` |
 | 10 전이 | 훅(디스크의 이전 파일과 비교) + `validate_feature_list.py --prev` |
 | 9 pass 기록 주체 | 훅만 — 호출한 `agent_type` 은 훅만 안다 |
-| 11 증거 | 훅(모양) + `validate_feature_list.py`(로그 실재·`VERDICT: PASS`) |
+| 11 증거 | 훅(모양) + `validate_feature_list.py`(로그 실재·`VERDICT: PASS`·러너 요약이 전부 통과) |
 | 4 스텁 금지 | `validate_feature_list.py --stubs` |
-| TC 모양·추적성·잠금, PLAN 의 Run & Verify | `validate_harness_doc.py` |
+| TC 모양·추적성·잠금·검토 범위, PLAN 의 Run & Verify | `validate_harness_doc.py` |
+| TC 실행과 증거 로그 기록 | `run_tc.py` |
 | 1 한 번에 하나씩 · 3 자기평가 불신 · 5 진행 기록 필수 | **판단 — 코드가 볼 수 없다** |
 
 훅은 `feature_list.json` 쓰기를 가로채므로 모델이 무엇을 기억하는지와 무관하게 발화한다. 다만

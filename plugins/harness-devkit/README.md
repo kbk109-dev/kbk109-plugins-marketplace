@@ -101,12 +101,18 @@ flowchart LR
 | `plan-critic` | `PRD.md`, `PLAN.md`, 코드베이스 | `reviews/plan-critic-r{N}.md` | PLAN 수정 |
 | `feature-planner` | `PRD.md`, `PLAN.md` | 에픽의 `feature_list.json` (모두 `fail`) | 잠금 파일 생성 |
 | `tc-writer` | `PRD.md`, `PLAN.md`, `feature_list.json`, 최근 critic 리뷰 | 에픽의 `TC.md` | **구현 코드 읽기**, TC 잠금 |
-| `tc-critic` | `TC.md`, `feature_list.json`, `PRD.md`, `PLAN.md` | `reviews/tc-critic-r{N}.md` | **구현 코드 읽기**, TC 수정 |
-| `generator` | `PROGRESS.md`, `feature_list.json`, 해당 기능의 TC, 직전 `eval/<FID>.md` | 코드, `sprint_contracts/<FID>.md`, `PROGRESS.md` 덧붙임 | **`status` 변경**, TC·criteria 수정, 커밋 |
-| `evaluator` | 확정 TC, PLAN 의 Run & Verify, 계약, 구현 | `logs/<FID>/`, `eval/<FID>.md`, `feature_list.json` 의 `status`·`attempts`·`evidence` | 코드·TC 수정. **`pass` 를 기록하는 유일한 주체** |
+| `tc-critic` | `TC.md`(2라운드부터는 바뀐 블록만 담은 `scope.md`), `feature_list.json`, `PRD.md`, `PLAN.md` | `reviews/tc-critic-r{N}.md` | **구현 코드 읽기**, TC 수정 |
+| `generator` | `PROGRESS.md` 끝부분, `feature_list.json`, 해당 기능의 TC, 의존 기능의 `notes/`, 직전 `eval/<FID>.md` | 코드, `sprint_contracts/<FID>.md`, `notes/<FID>.md` | **`status` 변경**, TC·criteria 수정, 커밋 |
+| `evaluator` | 확정 TC, PLAN 의 Run & Verify, 계약, 구현, 러너가 쓴 `logs/` | `eval/<FID>.md`, `feature_list.json` 의 `status`·`attempts`·`evidence` | 코드·TC·로그 수정. **`pass` 를 기록하는 유일한 주체** |
 
 메인이 직접 쓰는 것은 `BRIEF.md`, 승인 표지(PRD·PLAN 의 `status: approved`, `.criteria_lock.json`,
-`.tc_lock.json`), `PROGRESS.md`, `CLOSED.md` 뿐이다.
+`.tc_lock.json`), `PROGRESS.md`(단계마다 한 줄), `CLOSED.md` 뿐이다.
+
+**기계가 할 일은 스크립트가 한다.** TC 명령을 실행하고 로그를 남기는 것은 `run_tc.py` 다 —
+evaluator 는 그 결과를 감사한다(통과한 TC 가 기대 결과를 정말 단언하는가). TC 의 모양·추적성과
+"직전 검토 이후 무엇이 바뀌었는가" 는 `validate_harness_doc.py tc-review-prep` 이 판정해, critic 이
+2라운드부터는 바뀐 블록만 본다. 실제 실행 기록(기능 132개)에서 evaluator 의 수작업 실행과 TC 전체
+재검토가 활성 시간의 절반 가까이를 차지했다.
 
 **2. 단계 흐름도 — 언제 멈추고 언제 넘어가나**
 
@@ -154,8 +160,8 @@ sequenceDiagram
   G->>F: 코드 구현
   G-->>M: generator-done
   M->>E: 확정 TC 실행 요청
-  E->>F: TC 의 command 실행, logs/FID/n.log 저장
-  E->>F: eval/FID.md 에 VERDICT 기록
+  E->>F: run_tc.py 가 TC 실행, logs/FID/n.log · summary.json 저장
+  E->>F: 단언 감사 뒤 eval/FID.md 에 VERDICT 기록
   alt 모든 TC PASS
     E->>F: status pass + evidence + eval_report
     E-->>M: pass
@@ -172,6 +178,8 @@ sequenceDiagram
 ```
 
 `pass` 는 evaluator 만 기록하고, 증거 로그가 없으면 성립하지 않는다 (훅과 검증 스크립트가 잡는다).
+새 `pass` 는 러너의 `summary.json` 이 "전부 돌려 전부 통과" 일 때만 인정된다. 기능 평가의 회귀는
+직접 의존 기능의 TC 와 PLAN `test` 1회이고, 확정 TC 전체는 에픽 종료에서 돈다.
 
 ### `dev-monitor`
 `CLAUDE.md` 에서 서버 실행 명령을 추출한 뒤, 지정한 포트의 기존 프로세스를 정리하고 서버를

@@ -43,8 +43,8 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/harness_state.py status
 | `plan-approval` | §4 문서 승인 (`validate_harness_doc.py plan` 통과 필수) |
 | `feature-plan` | `feature-planner` 호출 |
 | `epic-approval` | §5 에픽 승인 |
-| `tc-draft` / `tc-revise` | `tc-writer` 호출 |
-| `tc-critic` | `tc-critic` 호출 |
+| `tc-draft` / `tc-revise` | `tc-writer` 호출 (`violations` 가 붙어 오면 함께 넘긴다) |
+| `tc-critic` | §6 검토 준비(`tc-review-prep`) → `tc-critic` 호출 |
 | `tc-lock` | §6 TC 확정 |
 | `dev` | §7 개발·QA 릴레이 (기능 1개) |
 | `escalate` | §8 사용자 판단 |
@@ -66,11 +66,18 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/harness_state.py status
 | `epic_dir` | `<product_dir>/epics/<NN-slug>` (에픽 단계에서) |
 | `refs_dir` | 이 스킬의 `references/` 절대 경로 |
 | `project_root` | 프로젝트 루트 |
-| `round` · `feature_id` · `mode` | 해당 단계가 필요로 할 때 |
+| `round` · `feature_id` · `mode` · `scope_file` | 해당 단계가 필요로 할 때 |
 
 서브에이전트의 마지막 메시지는 한 줄 JSON `{"status","artifact","summary"}` 하나다. 상세는 그 파일에
 있으니 메인은 JSON 만 읽는다 (메인 컨텍스트 보호). 호출이 끝날 때마다 `PROGRESS.md` 에 한 줄 덧붙인다:
-`- <일시> <stage> → <status> (<artifact>)`.
+
+```bash
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/harness_state.py log <product_dir> "<stage>" "<status>" "<artifact>"
+```
+
+`PROGRESS.md` 는 **메인만, 이 명령으로만** 쓴다. 모든 에이전트가 시작할 때 끝부분을 읽는 색인이라
+한 줄을 넘는 내용이 쌓이면 제품이 커질수록 모든 시작이 느려진다. 시각은 스크립트가 찍는다 —
+단계별 소요 시간을 이 파일에서 잴 수 있다.
 
 | 에이전트 | 단계 | 산출 |
 |---|---|---|
@@ -78,8 +85,8 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/harness_state.py status
 | `planner` · `plan-critic` | PLAN | `PLAN.md` · `reviews/plan-critic-r{N}.md` |
 | `feature-planner` | 에픽 분해 | `epics/<NN>/feature_list.json` |
 | `tc-writer` · `tc-critic` | TC | `epics/<NN>/TC.md` · `reviews/tc-critic-r{N}.md` |
-| `generator` | 구현 | 코드 · `sprint_contracts/<FID>.md` |
-| `evaluator` | QA | `logs/<FID>/` · `eval/<FID>.md` · status 기록 |
+| `generator` | 구현 | 코드 · `sprint_contracts/<FID>.md` · `notes/<FID>.md` |
+| `evaluator` | QA | `logs/<FID>/` (러너가 쓴다) · `eval/<FID>.md` · status 기록 |
 
 서브에이전트는 사용자와 대화할 수 없고 다른 서브에이전트를 부를 수 없다. 그래서 대화는 메인이,
 generator→evaluator 릴레이도 메인이 지휘한다.
@@ -122,19 +129,35 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/harness_agents_block.py
 `--update-lock` 은 `acceptance_criteria` 잠금을 쓰는 **유일한** 경로다. AGENTS.md 규율 블록은
 항구적 규약이라 에픽이 끝나도 제거하지 않는다.
 
-## 6. TC 확정 (`tc-lock`)
+## 6. TC 검토와 확정 (`tc-critic` · `tc-lock`)
 
-TC 는 사람 승인이 아니라 `tc-critic` 의 PASS 가 확정한다. 메인은 모양과 추적성을 검사하고 잠근다:
+TC 의 모양·추적성이 깨져 있으면 stage 가 `tc-critic` 이 아니라 `tc-revise` 로 오고 `violations` 가
+붙는다 — 코드가 잡을 수 있는 결함에 critic 라운드를 쓰지 않는다. 그 `violations` 를 붙여 `tc-writer`
+를 부른다. 같은 위반이 두 번 이어지면 사용자에게 올린다.
+
+**`tc-critic` 을 부르기 전에 항상** 검토 준비를 돌린다. 이 라운드가 볼 내용의 스냅샷을 남기고,
+직전 라운드 이후 바뀐 블록을 해시로 가려 검토 범위를 만든다:
 
 ```bash
-python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_harness_doc.py tc \
-  <epic_dir>/TC.md --feature-list <epic_dir>/feature_list.json
+python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_harness_doc.py tc-review-prep <epic_dir>/TC.md
+```
+
+출력의 `round` 와 `scope_file` 을 `tc-critic` 에 넘긴다. `scope_file` 이 `null` 이면 (1라운드) 전체
+검토이고, 있으면 critic 은 그 파일의 변경·추가 블록만 본다. 이 단계를 건너뛰면 스냅샷이 없어
+다음 라운드가 다시 전체 검토가 된다.
+
+TC 는 사람 승인이 아니라 `tc-critic` 의 PASS 가 확정한다. stage 가 `tc-lock` 이면 잠근다:
+
+```bash
 python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_harness_doc.py tc-lock <epic_dir>/TC.md
 ```
 
-검사가 실패하면 잠그지 않고 `tc-writer` 로 되돌린다. 잠긴 뒤 TC.md 가 바뀌면 stage 가 `escalate` 가
-된다 — 기준을 완화해 통과시키는 지름길을 막는 장치다. 바꿔야 하면 사용자와 상의해 `.tc_lock.json`
-을 지우고 `tc-critic` 재검토를 거친다.
+`tc-lock` 은 모양·추적성이 맞고, 최신 리뷰가 PASS 이며, 그 리뷰가 본 내용이 지금 TC.md 와 같을 때만
+잠근다 (러너는 잠금만 믿고 명령을 실행한다). 잠긴 뒤
+TC.md 가 바뀌면 stage 가 `escalate` 가 된다 — 기준을 완화해 통과시키는 지름길을 막는 장치다. 바꿔야
+하면 사용자와 상의해 `.tc_lock.json` 을 지운다. 그러면 stage 가 다시 `tc-critic` 이 되고, 검토 준비가
+고친 블록만 범위로 잡으므로 재검토는 고친 만큼만 든다. `--user-approved` 는 §8 에서 사용자가 남은
+지적을 안고 잠그기로 **명시적으로** 결정했을 때만 붙인다 (면제되는 것은 critic 의 VERDICT 뿐이다).
 
 ## 7. 개발·QA 릴레이 (`dev`)
 
@@ -144,10 +167,13 @@ python3 ${CLAUDE_PLUGIN_ROOT}/skills/harness-dev/scripts/validate_harness_doc.py
 2. `evaluator` 호출 (`epic_dir`, `feature_id`) → `pass` | `fail` | `blocked`
 3. `fail` 이면 1 로 돌아간다 (`attempts` 가 2 가 될 때까지). evaluator 가 3번째 FAIL 에서 `blocked`
    로 기록하면 §8 로 간다. `generator` 가 `error` 를 반환해도 같다.
-4. `pass` 면 `PROGRESS.md` 를 갱신하고 `harness_state.py status` 를 다시 실행한다.
+4. `pass` 면 `harness_state.py status` 를 다시 실행한다.
 
 메인은 `feature_list.json` 의 `status` 를 직접 쓰지 않는다. `pass` 를 기록할 수 있는 것은 evaluator
-뿐이고, 그 증거는 `logs/<FID>/*.log` 와 `eval/<FID>.md` 의 `VERDICT: PASS` 다.
+뿐이고, 그 증거는 러너(`run_tc.py`)가 쓴 `logs/<FID>/*.log` · `summary.json` 과 `eval/<FID>.md` 의
+`VERDICT: PASS` 다. TC 명령은 evaluator 가 손으로 돌리지 않고 러너가 돌린다 — evaluator 는 통과한
+TC 가 기대 결과를 정말 검증하는지 감사한다. 기능 평가의 회귀는 직접 의존 기능까지이고, 확정 TC
+전체는 에픽 종료에서 돈다.
 
 ## 8. 에스컬레이션 (`escalate`)
 
@@ -174,14 +200,15 @@ slug 디렉토리 자체다. TC.md 가 없으므로 evaluator 는 `acceptance_cr
 2. **acceptance_criteria 수정·삭제 금지** `[훅+스크립트]`
 3. **자기 평가 불신** — 판정은 evaluator 의 것 `[판단]`
 4. **스텁 금지** — TODO·placeholder 로 통과시키지 않음 `[스크립트 --stubs]`
-5. **진행 기록 필수** — `PROGRESS.md` 갱신 `[판단]`
+5. **진행 기록 필수** — 호출마다 `PROGRESS.md` 한 줄, 기능마다 `notes/<FID>.md` `[판단]`
 6. **JSON 유지** `[훅+스크립트]`
 7. **재시도 상한 2회** 뒤 에스컬레이션 `[훅+스크립트]`
 8. **status 기본값 fail**, 허용값은 `fail`/`pass`/`blocked` `[훅+스크립트]`
 9. **pass 는 evaluator 만 기록한다** (v2 파일) `[훅]` — 스크립트는 작성자를 알 수 없어 보지 못한다
 10. **status 전이는 `fail→pass`, `fail→blocked`, `blocked→fail` 뿐** `[훅+스크립트 --prev]`
 11. **pass 는 증거 로그 없이 성립하지 않는다** — `evidence` 의 `logs/<FID>/*.log` 가 실재·비어 있지
-    않고 `eval/<FID>.md` 에 `VERDICT: PASS` (v2 파일) `[훅(모양)+스크립트(실재)]`
+    않고 `eval/<FID>.md` 에 `VERDICT: PASS` (v2 파일). 새 pass 는 러너의 `logs/<FID>/summary.json` 이
+    "전부 돌려 전부 통과" 여야 한다 `[훅(모양)+스크립트(실재, 러너 결과는 --prev)]`
 
 훅은 같은 호출을 다시 하면 통과시킨다 (플러그인 훅이 전역 발화해도 안전하려면 차단이 복구 가능해야
 한다). 그래서 훅은 지름길을 **불가능하게** 만들지 않고 **의도된 선택**으로 바꾼다. 불가능하게 만드는
@@ -197,7 +224,10 @@ docs/harness/<slug>/
 └── epics/<NN-slug>/
     ├── feature_list.json · .criteria_lock.json      (에픽 승인 표지)
     ├── TC.md · .tc_lock.json · reviews/tc-critic-r{N}.md   (TC 확정 표지)
-    ├── sprint_contracts/<FID>.md · logs/<FID>/<n>.log · eval/<FID>.md · eval/EPIC.md
+    ├── reviews/tc-critic-r{N}.blocks.json · .scope.md      (검토 준비가 쓴 스냅샷 · 검토 범위)
+    ├── sprint_contracts/<FID>.md · notes/<FID>.md · eval/<FID>.md · eval/EPIC.md
+    ├── logs/<FID>/<n>.log · summary.json                   (증거 — 러너가 쓴다)
+    ├── logs/_regression/ · logs/_self/ · logs/_epic/       (증거가 아닌 실행)
     ├── blocked_ack.md                               (blocked 인정 시)
     └── CLOSED.md                                    (에픽 종료 표지)
 ```

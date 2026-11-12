@@ -76,6 +76,15 @@ echo "${P/harness-devkit:generator/harness-devkit:evaluator}" | python3 -B $HG  
 python3 -B plugins/harness-devkit/skills/harness-dev/scripts/harness_state.py status /tmp/hd-fixture/docs/harness
 python3 -B plugins/harness-devkit/skills/harness-dev/scripts/validate_harness_doc.py plan PLAN.md   # Run & Verify 누락이면 exit 1
 
+# TC 러너·검토 준비 (2.1) — 러너는 TC 잠금이 맞을 때만 돌고, tc-lock 은 PASS 리뷰가 있어야 잠근다.
+E=/tmp/hd-fixture/docs/harness/demo/epics/01-x; HS=plugins/harness-devkit/skills/harness-dev/scripts
+printf '### TC-F1-1: t\n- criterion: 1\n- type: unit\n- precondition: p\n- steps: s\n- expected: exit 0\n- command: `true`\n' > $E/TC.md
+python3 -B $HS/run_tc.py $E --feature F1; echo "exit=$?"                                             # 3 (잠금 없음)
+python3 -B $HS/validate_harness_doc.py tc-review-prep $E/TC.md                                       # round 1, scope_file null (전체 검토)
+python3 -B $HS/validate_harness_doc.py tc-lock $E/TC.md; echo "exit=$?"                              # 1 (PASS 리뷰 없음)
+echo 'VERDICT: PASS' > $E/reviews/tc-critic-r1.md
+python3 -B $HS/validate_harness_doc.py tc-lock $E/TC.md && python3 -B $HS/run_tc.py $E --feature F1  # exit 0 → logs/F1/1.log · summary.json
+
 # notion-api-only 훅 — 프로젝트 로컬 설치이므로 탈출구가 없다(harness 훅과 대조).
 # 발화 조건은 "이 프로젝트에서 토큰을 구할 수 있는가" 하나뿐이다.
 NG=plugins/project-conventions/skills/init-agent-rules/templates/notion_mcp_gate.py
