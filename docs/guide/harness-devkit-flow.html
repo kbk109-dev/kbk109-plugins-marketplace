@@ -89,10 +89,10 @@ const N = [
 
  ['prdc','dec','🔍','prd-critic','PRD 를 회의적으로 검토','opus',2,0,'BRIEF.md, PRD.md','reviews/prd-critic-r{N}.md (VERDICT)','PRD 수정'],
  ['planc','dec','🔍','plan-critic','PLAN 실현성·Run & Verify 검증','opus',2,1,'PRD.md, PLAN.md, 코드베이스','reviews/plan-critic-r{N}.md (VERDICT)','PLAN 수정'],
- ['tcc','dec','🔍','tc-critic','TC 를 보수적으로 검토 (누락 의심 = REVISE)','opus',4,2,'TC.md, feature_list.json, PRD.md, PLAN.md','reviews/tc-critic-r{N}.md (VERDICT)','구현 코드 읽기, TC 수정'],
+ ['tcc','dec','🔍','tc-critic','TC 를 보수적으로 검토 (누락 의심 = REVISE)','opus',4,2,'TC.md (2라운드부터 바뀐 블록만 담은 scope.md), feature_list.json, PRD.md, PLAN.md','reviews/tc-critic-r{N}.md (VERDICT)','구현 코드 읽기, TC 수정'],
 
- ['gen','tool','🛠️','generator','기능 1개 구현','inherit',5,3,'PROGRESS.md, feature_list.json, 해당 기능 TC, 직전 eval/FID.md','코드, sprint_contracts/FID.md, PROGRESS.md 덧붙임','status 변경, TC·criteria 수정, 커밋'],
- ['eval','dec','🧪','evaluator','확정 TC 를 실앱에서 실행해 판정','opus',4,3,'확정 TC, PLAN 의 Run & Verify, 계약, 구현','logs/FID/N.log, eval/FID.md, feature_list 의 status·attempts·evidence','코드·TC 수정. pass 를 기록하는 유일한 주체'],
+ ['gen','tool','🛠️','generator','기능 1개 구현','inherit',5,3,'PROGRESS.md 끝부분, feature_list.json, 해당 기능 TC, 의존 기능 notes, 직전 eval/FID.md','코드, sprint_contracts/FID.md, notes/FID.md','status 변경, TC·criteria 수정, 커밋'],
+ ['eval','dec','🧪','evaluator','run_tc.py 로 확정 TC 를 실행하고 단언을 감사해 판정','opus',4,3,'확정 TC, PLAN 의 Run & Verify, 계약, 구현','logs/FID/N.log · summary.json (러너가 쓴다), eval/FID.md, feature_list 의 status·attempts·evidence','코드·TC·로그 수정. pass 를 기록하는 유일한 주체'],
 
  ['files','store','🗂️','docs/harness/<slug>/','BRIEF · PRD · PLAN · feature_list · TC · logs · eval · PROGRESS',null,0,3,'모든 에이전트가 읽는다','모든 에이전트가 쓴다 (에이전트 간 전달 통로)','—'],
 ];
